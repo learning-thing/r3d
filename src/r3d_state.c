@@ -112,6 +112,32 @@ void r3d_framebuffer_load_lit(int width, int height)
     }
 }
 
+void r3d_framebuffer_load_post(int width, int height)
+{
+    struct r3d_fb_post_t* post = &R3D.framebuffer.post;
+
+    post->id = rlLoadFramebuffer();
+    if (post->id == 0) {
+        TraceLog(LOG_WARNING, "Failed to create framebuffer");
+    }
+
+    rlEnableFramebuffer(post->id);
+
+    // Generate (color) buffers
+    post->color = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
+
+    // Activate the draw buffers for all the attachments
+    rlActiveDrawBuffers(2);
+
+    // Attach the textures to the framebuffer
+    rlFramebufferAttach(post->id, post->color, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+
+    // Check if the framebuffer is complete
+    if (!rlFramebufferComplete(post->id)) {
+        TraceLog(LOG_WARNING, "Framebuffer is not complete");
+    }
+}
+
 void r3d_framebuffer_unload_gbuffer(void)
 {
     struct r3d_fb_gbuffer_t* gBuffer = &R3D.framebuffer.gBuffer;
@@ -130,7 +156,7 @@ void r3d_framebuffer_unload_gbuffer(void)
 
 void r3d_framebuffer_unload_lit(void)
 {
-    struct r3d_fb_lit_t* lit = &R3D.framebuffer.gBuffer;
+    struct r3d_fb_lit_t* lit = &R3D.framebuffer.lit;
 
     rlUnloadTexture(lit->color);
     rlUnloadTexture(lit->lum);
@@ -138,6 +164,17 @@ void r3d_framebuffer_unload_lit(void)
     rlUnloadFramebuffer(lit->id);
 
     memset(lit, 0, sizeof(struct r3d_fb_gbuffer_t));
+}
+
+void r3d_framebuffer_unload_post(void)
+{
+    struct r3d_fb_post_t* post = &R3D.framebuffer.post;
+
+    rlUnloadTexture(post->color);
+
+    rlUnloadFramebuffer(post->id);
+
+    memset(post, 0, sizeof(struct r3d_fb_gbuffer_t));
 }
 
 
@@ -285,6 +322,38 @@ void r3d_shader_load_screen_lighting(void)
     r3d_shader_disable();
 
     return shader;
+}
+
+void r3d_shader_load_screen_post(void)
+{
+    R3D.shader.screen.post.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_SCREEN_POST
+    );
+
+    r3d_shader_get_location(screen.post, uTexSceneHDR);
+    r3d_shader_get_location(screen.post, uTexSceneDepth);
+    r3d_shader_get_location(screen.post, uTexBloomBlurHDR);
+    r3d_shader_get_location(screen.post, uNear);
+    r3d_shader_get_location(screen.post, uFar);
+    r3d_shader_get_location(screen.post, uBloomMode);
+    r3d_shader_get_location(screen.post, uBloomIntensity);
+    r3d_shader_get_location(screen.post, uFogMode);
+    r3d_shader_get_location(screen.post, uFogColor);
+    r3d_shader_get_location(screen.post, uFogStart);
+    r3d_shader_get_location(screen.post, uFogEnd);
+    r3d_shader_get_location(screen.post, uFogDensity);
+    r3d_shader_get_location(screen.post, uTonemapMode);
+    r3d_shader_get_location(screen.post, uTonemapExposure);
+    r3d_shader_get_location(screen.post, uTonemapWhite);
+    r3d_shader_get_location(screen.post, uBrightness);
+    r3d_shader_get_location(screen.post, uContrast);
+    r3d_shader_get_location(screen.post, uSaturation);
+
+    r3d_shader_enable(screen.post);
+    r3d_shader_set_int(screen.post, uTexSceneHDR, 0);
+    r3d_shader_set_int(screen.post, uTexSceneDepth, 1);
+    r3d_shader_set_int(screen.post, uTexBloomBlurHDR, 2);
+    r3d_shader_disable();
 }
 
 

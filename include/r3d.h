@@ -24,21 +24,27 @@
 #include <rlgl.h>
 
 
-/* === Types === */
+/* === Enums === */
 
 typedef enum {
-    R3D_LIGHT_DIR,
-    R3D_LIGHT_SPOT,
-    R3D_LIGHT_OMNI,
-} R3D_LightType;
+    R3D_BLOOM_DISABLED,         ///< Bloom effect is disabled.
+    R3D_BLOOM_ADDITIVE,         ///< Additive bloom effect, where bright areas are enhanced by adding light to them.
+    R3D_BLOOM_SOFT_LIGHT        ///< Soft light bloom effect, which creates a softer, more diffused glow around bright areas.
+} R3D_Bloom;
 
-typedef unsigned int R3D_Light;
+typedef enum {
+    R3D_FOG_DISABLED,           ///< Fog effect is disabled.
+    R3D_FOG_LINEAR,             ///< Linear fog, where the density increases linearly based on distance from the camera.
+    R3D_FOG_EXP2,               ///< Exponential fog (exp2), where the density increases exponentially with distance.
+    R3D_FOG_EXP,                ///< Exponential fog, where the density increases exponentially but at a different rate compared to EXP2.
+} R3D_Fog;
 
-typedef struct {
-    TextureCubemap cubemap;     ///< The skybox cubemap texture for the background and reflections.
-    Texture2D irradiance;       ///< The irradiance cubemap for diffuse lighting (ambient light).
-    Texture2D prefilter;        ///< The prefiltered cubemap for specular reflections with mipmaps.
-} R3D_Skybox;
+typedef enum {
+    R3D_TONEMAP_LINEAR,         ///< Linear tone mapping, which performs a simple linear mapping of HDR values.
+    R3D_TONEMAP_REINHARD,       ///< Reinhard tone mapping, a popular algorithm for compressing HDR values.
+    R3D_TONEMAP_FILMIC,         ///< Filmic tone mapping, which simulates the response of film to light.
+    R3D_TONEMAP_ACES,           ///< ACES (Academy Color Encoding System) tone mapping, a high-quality algorithm used for cinematic rendering.
+} R3D_Tonemap;
 
 typedef enum {
     R3D_PLANE_BACK = 0,
@@ -49,6 +55,23 @@ typedef enum {
     R3D_PLANE_LEFT,
     R3D_PLANE_COUNT
 } R3D_Plane;
+
+
+/* === Types === */
+
+typedef unsigned int R3D_Light;
+
+typedef struct {
+    TextureCubemap cubemap;     ///< The skybox cubemap texture for the background and reflections.
+    Texture2D irradiance;       ///< The irradiance cubemap for diffuse lighting (ambient light).
+    Texture2D prefilter;        ///< The prefiltered cubemap for specular reflections with mipmaps.
+} R3D_Skybox;
+
+typedef enum {
+    R3D_LIGHT_DIR,
+    R3D_LIGHT_SPOT,
+    R3D_LIGHT_OMNI,
+} R3D_LightType;
 
 typedef struct {
     Vector4 planes[R3D_PLANE_COUNT];
@@ -117,6 +140,48 @@ void R3D_SetAmbientColor(Color color);
 
 void R3D_EnableSkybox(R3D_Skybox skybox);
 void R3D_DisableSkybox(void);
+
+void R3D_SetBloom(R3D_Bloom mode);
+R3D_Bloom R3D_GetBloom(void);
+
+void R3D_SetBloomIntensity(float value);
+float R3D_GetBloomIntensity(void);
+
+void R3D_SetBloomHdrThreshold(float value);
+float R3D_GetBloomHdrThreshold(void);
+
+void R3D_SetFogMode(R3D_Fog mode);
+R3D_Fog R3D_GetFogMode(void);
+
+void R3D_SetFogColor(Color color);
+Color R3D_GetFogColor(void);
+
+void R3D_SetFogStart(float value);
+float R3D_GetFogStart(void);
+
+void R3D_SetFogEnd(float value);
+float R3D_GetFogEnd(void);
+
+void R3D_SetFogDensity(float value);
+float R3D_GetFogDensity(void);
+
+void R3D_SetTonemapMode(R3D_Tonemap mode);
+R3D_Tonemap R3D_GetTonemapMode(void);
+
+void R3D_SetTonemapExposure(float value);
+float R3D_GetTonemapExposure(void);
+
+void R3D_SetTonemapWhite(float value);
+float R3D_GetTonemapWhite(void);
+
+void R3D_SetBrightness(float value);
+float R3D_GetBrightness(void);
+
+void R3D_SetContrast(float value);
+float R3D_GetContrast(void);
+
+void R3D_SetSaturation(float value);
+float R3D_GetSaturation(void);
 
 
 /* === Skybox functions === */

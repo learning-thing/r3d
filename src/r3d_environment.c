@@ -51,3 +51,150 @@ void R3D_SetSkyboxRotation(float pitch, float yaw, float roll)
 {
 	R3D.env.quatSky = QuaternionFromEuler(pitch, yaw, roll);
 }
+
+void R3D_SetBloom(R3D_Bloom mode)
+{
+	R3D.env.bloomMode = mode;
+}
+
+R3D_Bloom R3D_GetBloom(void)
+{
+	return R3D.env.bloomMode;
+}
+
+void R3D_SetBloomIntensity(float value)
+{
+	R3D.env.bloomIntensity = value;
+}
+
+float R3D_GetBloomIntensity(void)
+{
+	return R3D.env.bloomIntensity;
+}
+
+void R3D_SetBloomHdrThreshold(float value)
+{
+	R3D.env.bloomHdrThreshold = value;
+}
+
+float R3D_GetBloomHdrThreshold(void)
+{
+	return R3D.env.bloomHdrThreshold;
+}
+
+void R3D_SetFogMode(R3D_Fog mode)
+{
+	R3D.env.fogMode = mode;
+}
+
+R3D_Fog R3D_GetFogMode(void)
+{
+	return R3D.env.fogMode;
+}
+
+void R3D_SetFogColor(Color color)
+{
+	R3D.env.fogColor.x = (float)color.r / 255;
+	R3D.env.fogColor.y = (float)color.g / 255;
+	R3D.env.fogColor.z = (float)color.b / 255;
+}
+
+Color R3D_GetFogColor(void)
+{
+	Color color = { 0 };
+	color.r = R3D.env.fogColor.x * 255;
+	color.g = R3D.env.fogColor.y * 255;
+	color.b = R3D.env.fogColor.z * 255;
+	color.a = 255;
+	return color;
+}
+
+void R3D_SetFogStart(float value)
+{
+	R3D.env.fogStart = value;
+}
+
+float R3D_GetFogStart(void)
+{
+	return R3D.env.fogStart;
+}
+
+void R3D_SetFogEnd(float value)
+{
+	R3D.env.fogEnd = value;
+}
+
+float R3D_GetFogEnd(void)
+{
+	return R3D.env.fogEnd;
+}
+
+void R3D_SetFogDensity(float value)
+{
+	R3D.env.fogDensity = value;
+}
+
+float R3D_GetFogDensity(void)
+{
+	return R3D.env.fogDensity;
+}
+
+void R3D_SetTonemapMode(R3D_Tonemap mode)
+{
+	R3D.env.tonemapMode = mode;
+}
+
+R3D_Tonemap R3D_GetTonemapMode(void)
+{
+	return R3D.env.tonemapMode;
+}
+
+void R3D_SetTonemapExposure(float value)
+{
+	R3D.env.tonemapExposure = value;
+}
+
+float R3D_GetTonemapExposure(void)
+{
+	return R3D.env.tonemapExposure;
+}
+
+void R3D_SetTonemapWhite(float value)
+{
+	R3D.env.tonemapWhite = value;
+}
+
+float R3D_GetTonemapWhite(void)
+{
+	return R3D.env.tonemapExposure;
+}
+
+void R3D_SetBrightness(float value)
+{
+	R3D.env.brightness = value;
+}
+
+float R3D_GetBrightness(void)
+{
+	return R3D.env.brightness;
+}
+
+void R3D_SetContrast(float value)
+{
+	R3D.env.contrast = value;
+}
+
+float R3D_GetContrast(void)
+{
+	return R3D.env.contrast;
+}
+
+void R3D_SetSaturation(float value)
+{
+	R3D.env.saturation = value;
+}
+
+float R3D_GetSaturation(void)
+{
+	return R3D.env.saturation;
+}

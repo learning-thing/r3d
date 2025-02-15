@@ -41,6 +41,7 @@ void R3D_Init(int resWidth, int resHeight)
     // Load framebuffers
     r3d_framebuffer_load_gbuffer(resWidth, resHeight);
     r3d_framebuffer_load_lit(resWidth, resHeight);
+    r3d_framebuffer_load_post(resWidth, resHeight);
 
     // Load containers
     R3D.container.drawCallArray = r3d_array_create(256, sizeof(r3d_drawcall_t));
@@ -57,12 +58,27 @@ void R3D_Init(int resWidth, int resHeight)
 
     // Load screen shaders
     r3d_shader_load_screen_lighting();
+    r3d_shader_load_screen_post();
 
     // Environment data
     R3D.env.backgroundColor = (Vector3) { 0.2f, 0.2f, 0.2f };
     R3D.env.ambientColor = (Vector3) { 0.2f, 0.2f, 0.2f };
     R3D.env.quatSky = QuaternionIdentity();
     R3D.env.useSky = false;
+    R3D.env.bloomMode = R3D_BLOOM_DISABLED;
+    R3D.env.bloomIntensity = 1.0f;
+    R3D.env.bloomHdrThreshold = 1.0f;
+    R3D.env.fogMode = R3D_FOG_DISABLED;
+    R3D.env.fogColor = (Vector3) { 1.0f, 1.0f, 1.0f };
+    R3D.env.fogStart = 5.0f;
+    R3D.env.fogEnd = 100.0f;
+    R3D.env.fogDensity = 1.0f;
+    R3D.env.tonemapMode = R3D_TONEMAP_LINEAR;
+    R3D.env.tonemapExposure = 1.0f;
+    R3D.env.tonemapWhite = 1.0f;
+    R3D.env.brightness = 1.0f;
+    R3D.env.contrast = 1.0f;
+    R3D.env.saturation = 1.0f;
 
     // Init state data
     R3D.state.resolutionW = resWidth;
@@ -91,6 +107,7 @@ void R3D_Close(void)
 {
     r3d_framebuffer_unload_gbuffer();
     r3d_framebuffer_unload_lit();
+    r3d_framebuffer_unload_post();
 
     r3d_array_destroy(&R3D.container.drawCallArray);
     r3d_registry_destroy(&R3D.container.lightRegistry);
@@ -101,6 +118,7 @@ void R3D_Close(void)
     rlUnloadShaderProgram(R3D.shader.raster.geometry.id);
     rlUnloadShaderProgram(R3D.shader.raster.skybox.id);
     rlUnloadShaderProgram(R3D.shader.screen.lighting.id);
+    rlUnloadShaderProgram(R3D.shader.screen.post.id);
 
     rlUnloadTexture(R3D.texture.white);
     rlUnloadTexture(R3D.texture.black);
@@ -343,6 +361,8 @@ void R3D_End(void)
                 r3d_shader_set_mat4(screen.lighting, uMatInvView, MatrixInvert(R3D.state.matView));
                 r3d_shader_set_vec3(screen.lighting, uViewPosition, R3D.state.posView);
 
+                r3d_shader_set_float(screen.lighting, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
+
                 r3d_texture_bind_2D(0, R3D.framebuffer.gBuffer.albedo);
                 r3d_texture_bind_2D(1, R3D.framebuffer.gBuffer.emission);
                 r3d_texture_bind_2D(2, R3D.framebuffer.gBuffer.normal);
@@ -370,9 +390,46 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 5] - Blit the final result to the main framebuffer
+    // [PART 5] - TODO
     {
-        rlBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.lit.id);
+        rlEnableFramebuffer(R3D.framebuffer.post.id);
+        {
+            r3d_shader_enable(screen.post);
+            {
+                r3d_texture_bind_2D(0, R3D.framebuffer.lit.color);
+                r3d_texture_bind_2D(1, R3D.framebuffer.gBuffer.depth);
+                //r3d_texture_bind_2D(2, BLOOM_BLUR_TEX);
+
+                r3d_shader_set_float(screen.post, uNear, rlGetCullDistanceNear());
+                r3d_shader_set_float(screen.post, uFar, rlGetCullDistanceFar());
+
+                r3d_shader_set_int(screen.post, uBloomMode, R3D.env.bloomMode);
+                r3d_shader_set_float(screen.post, uBloomIntensity, R3D.env.bloomIntensity);
+
+                r3d_shader_set_int(screen.post, uFogMode, R3D.env.fogMode);
+                r3d_shader_set_vec3(screen.post, uFogColor, R3D.env.fogColor);
+                r3d_shader_set_float(screen.post, uFogStart, R3D.env.fogStart);
+                r3d_shader_set_float(screen.post, uFogEnd, R3D.env.fogEnd);
+                r3d_shader_set_float(screen.post, uFogDensity, R3D.env.fogDensity);
+
+                r3d_shader_set_int(screen.post, uTonemapMode, R3D.env.tonemapMode);
+                r3d_shader_set_float(screen.post, uTonemapExposure, R3D.env.tonemapExposure);
+                r3d_shader_set_float(screen.post, uTonemapWhite, R3D.env.tonemapWhite);
+
+                r3d_shader_set_float(screen.post, uBrightness, R3D.env.brightness);
+                r3d_shader_set_float(screen.post, uContrast, R3D.env.contrast);
+                r3d_shader_set_float(screen.post, uSaturation, R3D.env.saturation);
+
+                r3d_primitive_draw_quad();
+            }
+            r3d_shader_disable();
+        }
+        rlDisableFramebuffer();
+    }
+
+    // [PART 6] - Blit the final result to the main framebuffer
+    {
+        rlBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
         rlBindFramebuffer(RL_DRAW_FRAMEBUFFER, 0);
 
         rlBlitFramebuffer(
@@ -382,7 +439,7 @@ void R3D_End(void)
         );
     }
 
-    // [PART 6] - Reset global state
+    // [PART 7] - Reset global state
     {
         rlEnableColorBlend();
     }

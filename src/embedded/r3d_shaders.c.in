@@ -34,3 +34,4 @@ const char VS_RASTER_SKYBOX[] = "@VS_RASTER_SKYBOX@";
 const char FS_RASTER_SKYBOX[] = "@FS_RASTER_SKYBOX@";
 
 const char FS_SCREEN_LIGHTING[] = "@FS_SCREEN_LIGHTING@";
+const char FS_SCREEN_POST[] = "@FS_SCREEN_POST@";

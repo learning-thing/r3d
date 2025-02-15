@@ -51,9 +51,15 @@ extern struct R3D_State {
         // Lit scene
         struct r3d_fb_lit_t {
             unsigned int id;
-            unsigned color;
-            unsigned lum;
+            unsigned int color;
+            unsigned int lum;
         } lit;
+
+        // Post process
+        struct r3d_fb_post_t {
+            unsigned int id;
+            unsigned int color;
+        } post;
 
         // Final target (optional)
         RenderTexture final;
@@ -85,17 +91,39 @@ extern struct R3D_State {
         // Screen shaders
         struct {
             r3d_shader_screen_lighting_t lighting;
+            r3d_shader_screen_post_t post;
         } screen;
 
     } shader;
 
     // Environment data
     struct {
-        Vector3 backgroundColor;
-        Vector3 ambientColor;
-        Quaternion quatSky;
-        R3D_Skybox sky;
-        bool useSky;
+
+        Vector3 backgroundColor;    // Used as default albedo color when skybox is disabled (raster pass)
+        Vector3 ambientColor;       // Used as default ambient light when skybox is disabled (light pass)
+
+        Quaternion quatSky;         // Rotation of the skybox (raster / light passes)
+        R3D_Skybox sky;             // Skybox textures (raster / light passes)
+        bool useSky;                // Flag to indicate if skybox is enabled (light pass)
+
+        R3D_Bloom bloomMode;        // (post pass)
+        float bloomIntensity;       // (post pass)
+        float bloomHdrThreshold;    // (light pass)
+
+        R3D_Fog fogMode;            // (post pass)
+        Vector3 fogColor;           // (post pass)
+        float fogStart;             // (post pass)
+        float fogEnd;               // (post pass)
+        float fogDensity;           // (post pass)
+
+        R3D_Tonemap tonemapMode;    // (post pass)
+        float tonemapExposure;      // (post pass)
+        float tonemapWhite;         // (post pass)
+
+        float brightness;           // (post pass)
+        float contrast;             // (post pass)
+        float saturation;           // (post pass)
+
     } env;
 
     // Default textures
@@ -133,9 +161,11 @@ extern struct R3D_State {
 
 void r3d_framebuffer_load_gbuffer(int width, int height);
 void r3d_framebuffer_load_lit(int width, int height);
+void r3d_framebuffer_load_post(int width, int height);
 
 void r3d_framebuffer_unload_gbuffer(void);
 void r3d_framebuffer_unload_lit(void);
+void r3d_framebuffer_unload_post(void);
 
 
 /* === Shader loading functions === */
@@ -146,6 +176,7 @@ void r3d_shader_load_generate_prefilter(void);
 void r3d_shader_load_raster_geometry(void);
 void r3d_shader_load_raster_skybox(void);
 void r3d_shader_load_screen_lighting(void);
+void r3d_shader_load_screen_post(void);
 
 
 /* === Texture loading functions === */
