@@ -104,11 +104,6 @@ float SchlickFresnel(float u)
     return m2 * m2 * m; // pow(m,5)
 }
 
-vec3 SchlickFresnelRoughness(float cosTheta, vec3 F0, float roughness)
-{
-    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}  
-
 vec3 ComputeF0(float metallic, float specular, vec3 albedo)
 {
     float dielectric = 0.16 * specular * specular;
@@ -346,7 +341,9 @@ void main()
         const float MAX_REFLECTION_LOD = 4.0;
         vec3 prefilteredColor = textureLod(uCubePrefilter, R, roughness * MAX_REFLECTION_LOD).rgb;
 
-        vec3 F = SchlickFresnelRoughness(cNdotV, F0, roughness);
+        float fresnelTerm = SchlickFresnel(cNdotV);
+        vec3 F = F0 + (max(vec3(1.0 - roughness), F0) - F0) * fresnelTerm;
+
         vec2 brdf = texture(uTexBrdfLut, vec2(cNdotV, roughness)).rg;
         vec3 specularReflection = prefilteredColor * (F * brdf.x + brdf.y);
 
