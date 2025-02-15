@@ -75,3 +75,8 @@ add_executable(r3d_skybox "examples/skybox.c")
 target_link_libraries(r3d_skybox PRIVATE raylib r3d)
 target_compile_definitions(r3d_skybox PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
 target_include_directories(r3d_skybox PRIVATE "external/raylib/src" "include")
+
+add_executable(r3d_sponza "examples/sponza.c")
+target_link_libraries(r3d_sponza PRIVATE raylib r3d)
+target_compile_definitions(r3d_sponza PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
+target_include_directories(r3d_sponza PRIVATE "external/raylib/src" "include")
