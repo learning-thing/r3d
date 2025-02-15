@@ -39,19 +39,14 @@ r3d_skybox_load_from_panorama_hdr(const char* fileName, int size)
     // Load the HDR panorama texture
     Texture2D panorama = LoadTexture(fileName);
 
-    // Disable backface culling for inside rendering
-    rlDisableBackfaceCulling();
-
-    // Create cubemap texture
-    unsigned int cubemapId = rlLoadTextureCubemap(0, size, panorama.format, 1);
-
-    // Create renderbuffer for depth attachment
+    // Create skybox cubemap texture and depth renderbuffer
+    unsigned int cubemapId = rlLoadTextureCubemap(NULL, size, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
     unsigned int rbo = rlLoadTextureDepth(size, size, true);
 
     // Create and configure framebuffer
     unsigned int fbo = rlLoadFramebuffer();
-    rlFramebufferAttach(fbo, rbo, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
     rlFramebufferAttach(fbo, cubemapId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_CUBEMAP_POSITIVE_X, 0);
+    rlFramebufferAttach(fbo, rbo, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
 
     // Enable shader for converting HDR to cubemap
     r3d_shader_enable(generate.cubemapFromEquirectangular);
@@ -62,6 +57,7 @@ r3d_skybox_load_from_panorama_hdr(const char* fileName, int size)
 
     // Set viewport to framebuffer dimensions
     rlViewport(0, 0, size, size);
+    rlDisableBackfaceCulling();
 
     // Bind panorama texture for drawing
     r3d_texture_bind_2D(0, panorama.id);
@@ -105,29 +101,24 @@ static TextureCubemap r3d_skybox_generate_irradiance(TextureCubemap sky)
     int size = sky.width / 16;
     if (size < 32) size = 32;
 
-    // Create depth renderbuffer and irradiance cubemap texture
-    unsigned int rbo = rlLoadTextureDepth(size, size, true);
+    // Create irradiance cubemap texture and depth renderbuffer
     unsigned int irradianceId = rlLoadTextureCubemap(NULL, size, RL_PIXELFORMAT_UNCOMPRESSED_R32G32B32, 1);
-    rlCubemapParameters(irradianceId, RL_TEXTURE_MIN_FILTER, RL_TEXTURE_FILTER_NEAREST);
-    rlCubemapParameters(irradianceId, RL_TEXTURE_MAG_FILTER, RL_TEXTURE_FILTER_NEAREST);
+    unsigned int rbo = rlLoadTextureDepth(size, size, true);
 
     // Create and configure framebuffer
     unsigned int fbo = rlLoadFramebuffer();
-    rlFramebufferAttach(fbo, rbo, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
     rlFramebufferAttach(fbo, irradianceId, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_CUBEMAP_POSITIVE_X, 0);
-
-    // Enable shader for irradiance convolution
-    r3d_shader_enable(generate.irradianceConvolution);
-
-    // Set projection matrix and send it to shader
-    Matrix matProj = MatrixPerspective(90.0 * DEG2RAD, 1.0, 0.1, 10.0);
-    r3d_shader_set_mat4(generate.irradianceConvolution, uMatProj, matProj);
+    rlFramebufferAttach(fbo, rbo, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_RENDERBUFFER, 0);
 
     // Set viewport to framebuffer dimensions
     rlViewport(0, 0, size, size);
     rlDisableBackfaceCulling();
 
-    // Bind skybox cubemap texture
+    // Enable shader for irradiance convolution
+    r3d_shader_enable(generate.irradianceConvolution);
+    r3d_shader_set_mat4(generate.irradianceConvolution, uMatProj,
+        MatrixPerspective(90.0 * DEG2RAD, 1.0, 0.1, 10.0)
+    );
     r3d_texture_bind_cubemap(0, sky.id);
 
     // Render irradiance to cubemap faces
@@ -139,10 +130,13 @@ static TextureCubemap r3d_skybox_generate_irradiance(TextureCubemap sky)
         r3d_primitive_draw_cube();
     }
 
-    // Clean up
+    // Disable shader
     r3d_texture_unbind_cubemap(0);
-    rlDisableFramebuffer();
     r3d_shader_disable();
+
+    // Clean up
+    rlDisableFramebuffer();
+    rlUnloadFramebuffer(fbo);
 
     // Reset viewport to default dimensions
     rlViewport(0, 0, rlGetFramebufferWidth(), rlGetFramebufferHeight());
@@ -211,15 +205,17 @@ static TextureCubemap r3d_skybox_generate_prefilter(TextureCubemap sky)
         }
     }
 
-    // Clean up
+    // Disable shader
     r3d_texture_unbind_cubemap(0);
     r3d_shader_disable();
-    rlDisableBackfaceCulling();
-    rlDisableFramebuffer();
-    rlDisableShader();
 
-    // Reset viewport
+    // Clean up
+    rlDisableFramebuffer();
+    rlUnloadFramebuffer(fbo);
+    
+    // Reset viewport to default dimensions
     rlViewport(0, 0, rlGetFramebufferWidth(), rlGetFramebufferHeight());
+    rlDisableBackfaceCulling();
 
     // Return prefiltered cubemap
     TextureCubemap prefilter = {

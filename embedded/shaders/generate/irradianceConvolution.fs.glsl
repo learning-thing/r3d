@@ -28,7 +28,7 @@ in vec3 vPosition;
 
 uniform samplerCube uTexCubemap;
 
-out vec3 FragColor;
+out vec4 FragColor;
 
 void main()
 {
@@ -65,5 +65,5 @@ void main()
     }
 
     irradiance = PI * irradiance * (1.0 / float(nrSamples));
-    FragColor = irradiance;
+    FragColor = vec4(irradiance, 1.0);
 }
