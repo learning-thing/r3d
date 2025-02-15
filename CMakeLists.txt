@@ -70,3 +70,8 @@ add_executable(r3d_pbr "examples/pbr.c")
 target_link_libraries(r3d_pbr PRIVATE raylib r3d)
 target_compile_definitions(r3d_pbr PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
 target_include_directories(r3d_pbr PRIVATE "external/raylib/src" "include")
+
+add_executable(r3d_skybox "examples/skybox.c")
+target_link_libraries(r3d_skybox PRIVATE raylib r3d)
+target_compile_definitions(r3d_skybox PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
+target_include_directories(r3d_skybox PRIVATE "external/raylib/src" "include")
