@@ -53,6 +53,12 @@ void R3D_DestroyLight(R3D_Light id)
     r3d_registry_remove(&R3D.container.lightRegistry, id);
 }
 
+bool R3D_IsLightExist(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, false);
+    return true;
+}
+
 bool R3D_IsLightActive(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, false);

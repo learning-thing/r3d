@@ -73,6 +73,7 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
 
 R3D_Light R3D_CreateLight(void);
 void R3D_DestroyLight(R3D_Light id);
+bool R3D_IsLightExist(R3D_Light id);
 
 bool R3D_IsLightActive(R3D_Light id);
 void R3D_ToggleLight(R3D_Light id);
