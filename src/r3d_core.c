@@ -73,9 +73,9 @@ void R3D_Init(int resWidth, int resHeight)
     R3D.env.bloomHdrThreshold = 1.0f;
     R3D.env.fogMode = R3D_FOG_DISABLED;
     R3D.env.fogColor = (Vector3) { 1.0f, 1.0f, 1.0f };
-    R3D.env.fogStart = 5.0f;
-    R3D.env.fogEnd = 100.0f;
-    R3D.env.fogDensity = 1.0f;
+    R3D.env.fogStart = 1.0f;
+    R3D.env.fogEnd = 50.0f;
+    R3D.env.fogDensity = 0.05f;
     R3D.env.tonemapMode = R3D_TONEMAP_LINEAR;
     R3D.env.tonemapExposure = 1.0f;
     R3D.env.tonemapWhite = 1.0f;
