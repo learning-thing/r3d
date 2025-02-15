@@ -23,9 +23,15 @@ const char* Init(void)
 	{
 		model.transform = MatrixMultiply(model.transform, MatrixRotateY(PI / 2));
 
-		model.materials[0].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
-		model.materials[0].maps[MATERIAL_MAP_ROUGHNESS].value = 1.0f;
-		model.materials[0].maps[MATERIAL_MAP_METALNESS].value = 1.0f;
+		for (int i = 0; i < model.materialCount; i++) {
+			model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
+			model.materials[i].maps[MATERIAL_MAP_ROUGHNESS].value = 1.0f;
+			model.materials[i].maps[MATERIAL_MAP_METALNESS].value = 1.0f;
+			SetTextureFilter(model.materials[i].maps[MATERIAL_MAP_ALBEDO].texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(model.materials[i].maps[MATERIAL_MAP_ROUGHNESS].texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(model.materials[i].maps[MATERIAL_MAP_METALNESS].texture, TEXTURE_FILTER_BILINEAR);
+			SetTextureFilter(model.materials[i].maps[MATERIAL_MAP_NORMAL].texture, TEXTURE_FILTER_BILINEAR);
+		}
 	}
 
 	skybox = R3D_LoadSkybox(RESOURCES_PATH "sky/skybox2.png", CUBEMAP_LAYOUT_AUTO_DETECT);
