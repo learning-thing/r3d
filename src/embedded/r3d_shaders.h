@@ -42,9 +42,11 @@ extern const char FS_RASTER_GEOMETRY[];
 extern const char VS_RASTER_SKYBOX[];
 extern const char FS_RASTER_SKYBOX[];
 
-const char FS_SCREEN_LIGHTING[];
-const char FS_SCREEN_POST[];
-
+extern const char FS_SCREEN_LIGHTING[];
+extern const char FS_SCREEN_BLOOM[];
+extern const char FS_SCREEN_FOG[];
+extern const char FS_SCREEN_TONEMAP[];
+extern const char FS_SCREEN_ADJUSTMENT[];
 
 /* === Uniform types === */
 
@@ -142,23 +144,38 @@ typedef struct {
 typedef struct {
     unsigned int id;
     r3d_shader_uniform_int_t uTexSceneHDR;
-    r3d_shader_uniform_int_t uTexSceneDepth;
     r3d_shader_uniform_int_t uTexBloomBlurHDR;
-    r3d_shader_uniform_float_t uNear;
-    r3d_shader_uniform_float_t uFar;
     r3d_shader_uniform_int_t uBloomMode;
     r3d_shader_uniform_float_t uBloomIntensity;
+} r3d_shader_screen_bloom_t;
+
+typedef struct {
+    unsigned int id;
+    r3d_shader_uniform_int_t uTexSceneHDR;
+    r3d_shader_uniform_int_t uTexSceneDepth;
+    r3d_shader_uniform_float_t uNear;
+    r3d_shader_uniform_float_t uFar;
     r3d_shader_uniform_int_t uFogMode;
     r3d_shader_uniform_vec3_t uFogColor;
     r3d_shader_uniform_float_t uFogStart;
     r3d_shader_uniform_float_t uFogEnd;
     r3d_shader_uniform_float_t uFogDensity;
+} r3d_shader_screen_fog_t;
+
+typedef struct {
+    unsigned int id;
+    r3d_shader_uniform_int_t uTexSceneHDR;
     r3d_shader_uniform_int_t uTonemapMode;
     r3d_shader_uniform_float_t uTonemapExposure;
     r3d_shader_uniform_float_t uTonemapWhite;
+} r3d_shader_screen_tonemap_t;
+
+typedef struct {
+    unsigned int id;
+    r3d_shader_uniform_int_t uTexSceneHDR;
     r3d_shader_uniform_float_t uBrightness;
     r3d_shader_uniform_float_t uContrast;
     r3d_shader_uniform_float_t uSaturation;
-} r3d_shader_screen_post_t;
+} r3d_shader_screen_adjustment_t;
 
 #endif // R3D_EMBEDDED_SHADERS_H

@@ -1,15 +1,25 @@
+/*
+ * Copyright (c) 2025 Le Juez Victor
+ *
+ * This software is provided "as-is", without any express or implied warranty. In no event
+ * will the authors be held liable for any damages arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose, including commercial
+ * applications, and to alter it and redistribute it freely, subject to the following restrictions:
+ *
+ *   1. The origin of this software must not be misrepresented; you must not claim that you
+ *   wrote the original software. If you use this software in a product, an acknowledgment
+ *   in the product documentation would be appreciated but is not required.
+ *
+ *   2. Altered source versions must be plainly marked as such, and must not be misrepresented
+ *   as being the original software.
+ *
+ *   3. This notice may not be removed or altered from any source distribution.
+ */
+
 #version 330 core
 
 /* === Definitions === */
-
-#define BLOOM_DISABLED 0
-#define BLOOM_ADDITIVE 1
-#define BLOOM_SOFT_LIGHT 2
-
-#define FOG_DISABLED 0
-#define FOG_LINEAR 1
-#define FOG_EXP2 2
-#define FOG_EXP 3
 
 #define TONEMAP_LINEAR 0
 #define TONEMAP_REINHARD 1
@@ -23,72 +33,15 @@ in vec2 vTexCoord;
 /* === Uniforms === */
 
 uniform sampler2D uTexSceneHDR;
-uniform sampler2D uTexSceneDepth;
-uniform sampler2D uTexBloomBlurHDR;
-
-uniform float uNear;
-uniform float uFar;
-
-uniform lowp int uBloomMode;
-uniform float uBloomIntensity;
-
-uniform lowp int uFogMode;
-uniform vec3 uFogColor;
-uniform float uFogStart;
-uniform float uFogEnd;
-uniform float uFogDensity;
-
 uniform lowp int uTonemapMode;
 uniform float uTonemapExposure;
 uniform float uTonemapWhite;
-
-uniform float uBrightness;
-uniform float uContrast;
-uniform float uSaturation;
 
 /* === Fragments === */
 
 out vec4 FragColor;
 
 // === Helper functions === //
-
-float LinearizeDepth(float depth, float near, float far)
-{
-    return (2.0 * near * far) / (far + near - (2.0 * depth - 1.0) * (far - near));;
-}
-
-float FogFactorLinear(float dist, float start, float end)
-{
-    return 1.0 - clamp((end - dist) / (end - start), 0.0, 1.0);
-}
-
-float FogFactorExp2(float dist, float density)
-{
-    const float LOG2 = -1.442695;
-    float d = density * dist;
-    return 1.0 - clamp(exp2(d * d * LOG2), 0.0, 1.0);
-}
-
-float FogFactorExp(float dist, float density)
-{
-    return 1.0 - clamp(exp(-density * dist), 0.0, 1.0);
-}
-
-//vec3 LinearToSRGB(vec3 color)
-//{
-//    //color = clamp(color, vec3(0.0), vec3(1.0));
-//    //const vec3 a = vec3(0.055f);
-//    //return mix((vec3(1.0f) + a) * pow(color.rgb, vec3(1.0f / 2.4f)) - a, 12.92f * color.rgb, lessThan(color.rgb, vec3(0.0031308f)));
-//    // Approximation from http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
-//    return max(vec3(1.055) * pow(color, vec3(0.416666667)) - vec3(0.055), vec3(0.0));
-//}
-
-// This expects 0-1 range input, outside that range it behaves poorly.
-//vec3 SRGBToLinear(vec3 color)
-//{
-//    // Approximation from http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
-//    return color * (color * (color * 0.305306011 + 0.682171111) + 0.012522878);
-//}
 
 // Based on Reinhard's extended formula, see equation 4 in https://doi.org/cjbgrt
 vec3 TonemapReinhard(vec3 color, float pWhite)
@@ -152,17 +105,6 @@ vec3 TonemapACES(vec3 color, float pWhite)
     return colorTonemapped / pWhiteTonemapped;
 }
 
-
-// === Post process functions === //
-
-float FogFactor(float dist, int mode, float density, float start, float end)
-{
-    if (mode == FOG_LINEAR) return FogFactorLinear(dist, start, end);
-    if (mode == FOG_EXP2) return FogFactorExp2(dist, density);
-    if (mode == FOG_EXP) return FogFactorExp(dist, density);
-    return 1.0; // FOG_DISABLED
-}
-
 vec3 Tonemapping(vec3 color, float pWhite) // inputs are LINEAR
 {
     // Ensure color values passed to tonemappers are positive.
@@ -181,44 +123,9 @@ void main()
     // Sampling scene color texture
     vec3 result = texture(uTexSceneHDR, vTexCoord).rgb;
 
-    // Apply bloom
-    if (uBloomMode != BLOOM_DISABLED)
-    {
-        vec3 bloom = texture(uTexBloomBlurHDR, vTexCoord).rgb;
-        bloom *= uBloomIntensity;
-
-        if (uBloomMode == BLOOM_SOFT_LIGHT) {
-            bloom = clamp(bloom.rgb, vec3(0.0), vec3(1.0));
-            result = max((result + bloom) - (result * bloom), vec3(0.0));
-        } else if (uBloomMode == BLOOM_ADDITIVE) {
-            result += bloom;
-        }
-    }
-
-    if (uFogMode != FOG_DISABLED)
-    {
-        // Depth retrieval and distance calculation
-        float depth = texture(uTexSceneDepth, vTexCoord).r;
-        depth = LinearizeDepth(depth, uNear, uFar);
-
-        // Applying the fog factor to the resulting color
-        float fogFactor = FogFactor(depth, uFogMode, uFogDensity, uFogStart, uFogEnd);
-        result = mix(result, uFogColor, fogFactor);
-    }
-
     // Appply tonemapping
-    //result = SRGBToLinear(result);        // already linear
     result *= uTonemapExposure;
     result = Tonemapping(result, uTonemapWhite);
-
-    // Apply gamma correction (or LinearToSRGB)
-    result = pow(result, vec3(1.0/2.2));
-    //result = LinearToSRGB(result);
-
-    // Color adjustment
-	result = mix(vec3(0.0), result, uBrightness);
-	result = mix(vec3(0.5), result, uContrast);
-	result = mix(vec3(dot(vec3(1.0), result) * 0.33333), result, uSaturation);
 
     // Final color output
     FragColor = vec4(result, 1.0);

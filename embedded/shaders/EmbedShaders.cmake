@@ -24,7 +24,10 @@ function(EmbedShaders generated_shaders_source shaders_source shaders_header)
     ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/raster/skybox.fs.glsl" FS_RASTER_SKYBOX)
     # Minify and store screen shaders
     ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/lighting.fs.glsl" FS_SCREEN_LIGHTING)
-    ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/post.fs.glsl" FS_SCREEN_POST)
+    ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/bloom.fs.glsl" FS_SCREEN_BLOOM)
+    ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/fog.fs.glsl" FS_SCREEN_FOG)
+    ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/tonemap.fs.glsl" FS_SCREEN_TONEMAP)
+    ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/adjustment.fs.glsl" FS_SCREEN_ADJUSTMENT)
     # Generate shaders source file
     set(GENERATED_SHADERS_SOURCE "${CMAKE_BINARY_DIR}/generated/src/embedded/r3d_shaders.c")
     set(${generated_shaders_source} "${GENERATED_SHADERS_SOURCE}" PARENT_SCOPE)

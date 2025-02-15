@@ -58,7 +58,10 @@ void R3D_Init(int resWidth, int resHeight)
 
     // Load screen shaders
     r3d_shader_load_screen_lighting();
-    r3d_shader_load_screen_post();
+    r3d_shader_load_screen_bloom();
+    r3d_shader_load_screen_fog();
+    r3d_shader_load_screen_tonemap();
+    r3d_shader_load_screen_adjustment();
 
     // Environment data
     R3D.env.backgroundColor = (Vector3) { 0.2f, 0.2f, 0.2f };
@@ -118,7 +121,10 @@ void R3D_Close(void)
     rlUnloadShaderProgram(R3D.shader.raster.geometry.id);
     rlUnloadShaderProgram(R3D.shader.raster.skybox.id);
     rlUnloadShaderProgram(R3D.shader.screen.lighting.id);
-    rlUnloadShaderProgram(R3D.shader.screen.post.id);
+    rlUnloadShaderProgram(R3D.shader.screen.bloom.id);
+    rlUnloadShaderProgram(R3D.shader.screen.fog.id);
+    rlUnloadShaderProgram(R3D.shader.screen.tonemap.id);
+    rlUnloadShaderProgram(R3D.shader.screen.adjustment.id);
 
     rlUnloadTexture(R3D.texture.white);
     rlUnloadTexture(R3D.texture.black);
@@ -390,39 +396,101 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 5] - TODO
+    // [PART 5] - Post proccesses using ping-pong buffer
     {
+        int texIndex = 2;
+        unsigned int textures[3] = {
+            R3D.framebuffer.post.textures[0],
+            R3D.framebuffer.post.textures[1],
+            R3D.framebuffer.lit.color
+        };
+
         rlEnableFramebuffer(R3D.framebuffer.post.id);
         {
-            r3d_shader_enable(screen.post);
-            {
-                r3d_texture_bind_2D(0, R3D.framebuffer.lit.color);
-                r3d_texture_bind_2D(1, R3D.framebuffer.gBuffer.depth);
-                //r3d_texture_bind_2D(2, BLOOM_BLUR_TEX);
+            // Post process: Bloom
+            if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                    GL_TEXTURE_2D, textures[!texIndex], 0
+                );
+                r3d_shader_enable(screen.bloom);
+                {
+                    r3d_texture_bind_2D(0, textures[texIndex]);
+                    //r3d_texture_bind_2D(1, BLOOM_BLUR_TEX);
+                    texIndex = !texIndex;
 
-                r3d_shader_set_float(screen.post, uNear, rlGetCullDistanceNear());
-                r3d_shader_set_float(screen.post, uFar, rlGetCullDistanceFar());
+                    r3d_shader_set_int(screen.bloom, uBloomMode, R3D.env.bloomMode);
+                    r3d_shader_set_float(screen.bloom, uBloomIntensity, R3D.env.bloomIntensity);
 
-                r3d_shader_set_int(screen.post, uBloomMode, R3D.env.bloomMode);
-                r3d_shader_set_float(screen.post, uBloomIntensity, R3D.env.bloomIntensity);
-
-                r3d_shader_set_int(screen.post, uFogMode, R3D.env.fogMode);
-                r3d_shader_set_vec3(screen.post, uFogColor, R3D.env.fogColor);
-                r3d_shader_set_float(screen.post, uFogStart, R3D.env.fogStart);
-                r3d_shader_set_float(screen.post, uFogEnd, R3D.env.fogEnd);
-                r3d_shader_set_float(screen.post, uFogDensity, R3D.env.fogDensity);
-
-                r3d_shader_set_int(screen.post, uTonemapMode, R3D.env.tonemapMode);
-                r3d_shader_set_float(screen.post, uTonemapExposure, R3D.env.tonemapExposure);
-                r3d_shader_set_float(screen.post, uTonemapWhite, R3D.env.tonemapWhite);
-
-                r3d_shader_set_float(screen.post, uBrightness, R3D.env.brightness);
-                r3d_shader_set_float(screen.post, uContrast, R3D.env.contrast);
-                r3d_shader_set_float(screen.post, uSaturation, R3D.env.saturation);
-
-                r3d_primitive_draw_quad();
+                    r3d_primitive_draw_quad();
+                }
+                r3d_shader_disable();
             }
-            r3d_shader_disable();
+
+            // Post process: Fog
+            if (R3D.env.fogMode != R3D_FOG_DISABLED) {
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                    GL_TEXTURE_2D, textures[!texIndex], 0
+                );
+                r3d_shader_enable(screen.fog);
+                {
+                    r3d_texture_bind_2D(0, textures[texIndex]);
+                    r3d_texture_bind_2D(1, R3D.framebuffer.gBuffer.depth);
+                    texIndex = !texIndex;
+
+                    r3d_shader_set_float(screen.fog, uNear, rlGetCullDistanceNear());
+                    r3d_shader_set_float(screen.fog, uFar, rlGetCullDistanceFar());
+                    r3d_shader_set_int(screen.fog, uFogMode, R3D.env.fogMode);
+                    r3d_shader_set_vec3(screen.fog, uFogColor, R3D.env.fogColor);
+                    r3d_shader_set_float(screen.fog, uFogStart, R3D.env.fogStart);
+                    r3d_shader_set_float(screen.fog, uFogEnd, R3D.env.fogEnd);
+                    r3d_shader_set_float(screen.fog, uFogDensity, R3D.env.fogDensity);
+
+                    r3d_primitive_draw_quad();
+                }
+                r3d_shader_disable();
+            }
+
+            // Post process: Tonemap
+            if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f || R3D.env.tonemapWhite != 1.0f) {
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                    GL_TEXTURE_2D, textures[!texIndex], 0
+                );
+                r3d_shader_enable(screen.tonemap);
+                {
+                    r3d_texture_bind_2D(0, textures[texIndex]);
+                    texIndex = !texIndex;
+
+                    r3d_shader_set_int(screen.tonemap, uTonemapMode, R3D.env.tonemapMode);
+                    r3d_shader_set_float(screen.tonemap, uTonemapExposure, R3D.env.tonemapExposure);
+                    r3d_shader_set_float(screen.tonemap, uTonemapWhite, R3D.env.tonemapWhite);
+
+                    r3d_primitive_draw_quad();
+                }
+                r3d_shader_disable();
+            }
+
+            // Post process: Adjustment
+            {
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                    GL_TEXTURE_2D, textures[!texIndex], 0
+                );
+                r3d_shader_enable(screen.adjustment);
+                {
+                    r3d_texture_bind_2D(0, textures[texIndex]);
+                    texIndex = !texIndex;
+
+                    r3d_shader_set_float(screen.adjustment, uBrightness, R3D.env.brightness);
+                    r3d_shader_set_float(screen.adjustment, uContrast, R3D.env.contrast);
+                    r3d_shader_set_float(screen.adjustment, uSaturation, R3D.env.saturation);
+
+                    r3d_primitive_draw_quad();
+                }
+                r3d_shader_disable();
+            }
         }
         rlDisableFramebuffer();
     }

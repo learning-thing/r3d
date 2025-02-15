@@ -124,13 +124,14 @@ void r3d_framebuffer_load_post(int width, int height)
     rlEnableFramebuffer(post->id);
 
     // Generate (color) buffers
-    post->color = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
+    post->textures[0] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
+    post->textures[1] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
 
     // Activate the draw buffers for all the attachments
     rlActiveDrawBuffers(2);
 
     // Attach the textures to the framebuffer
-    rlFramebufferAttach(post->id, post->color, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(post->id, post->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
     if (!rlFramebufferComplete(post->id)) {
@@ -170,7 +171,9 @@ void r3d_framebuffer_unload_post(void)
 {
     struct r3d_fb_post_t* post = &R3D.framebuffer.post;
 
-    rlUnloadTexture(post->color);
+    for (int i = 0; i < sizeof(post->textures) / sizeof(*post->textures); i++) {
+        rlUnloadTexture(post->textures[i]);
+    }
 
     rlUnloadFramebuffer(post->id);
 
@@ -324,35 +327,74 @@ void r3d_shader_load_screen_lighting(void)
     return shader;
 }
 
-void r3d_shader_load_screen_post(void)
+void r3d_shader_load_screen_bloom(void)
 {
-    R3D.shader.screen.post.id = rlLoadShaderCode(
-        VS_COMMON_SCREEN, FS_SCREEN_POST
+    R3D.shader.screen.bloom.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_SCREEN_BLOOM
     );
 
-    r3d_shader_get_location(screen.post, uTexSceneHDR);
-    r3d_shader_get_location(screen.post, uTexSceneDepth);
-    r3d_shader_get_location(screen.post, uTexBloomBlurHDR);
-    r3d_shader_get_location(screen.post, uNear);
-    r3d_shader_get_location(screen.post, uFar);
-    r3d_shader_get_location(screen.post, uBloomMode);
-    r3d_shader_get_location(screen.post, uBloomIntensity);
-    r3d_shader_get_location(screen.post, uFogMode);
-    r3d_shader_get_location(screen.post, uFogColor);
-    r3d_shader_get_location(screen.post, uFogStart);
-    r3d_shader_get_location(screen.post, uFogEnd);
-    r3d_shader_get_location(screen.post, uFogDensity);
-    r3d_shader_get_location(screen.post, uTonemapMode);
-    r3d_shader_get_location(screen.post, uTonemapExposure);
-    r3d_shader_get_location(screen.post, uTonemapWhite);
-    r3d_shader_get_location(screen.post, uBrightness);
-    r3d_shader_get_location(screen.post, uContrast);
-    r3d_shader_get_location(screen.post, uSaturation);
+    r3d_shader_get_location(screen.bloom, uTexSceneHDR);
+    r3d_shader_get_location(screen.bloom, uTexBloomBlurHDR);
+    r3d_shader_get_location(screen.bloom, uBloomMode);
+    r3d_shader_get_location(screen.bloom, uBloomIntensity);
 
-    r3d_shader_enable(screen.post);
-    r3d_shader_set_int(screen.post, uTexSceneHDR, 0);
-    r3d_shader_set_int(screen.post, uTexSceneDepth, 1);
-    r3d_shader_set_int(screen.post, uTexBloomBlurHDR, 2);
+    r3d_shader_enable(screen.bloom);
+    r3d_shader_set_int(screen.bloom, uTexSceneHDR, 0);
+    r3d_shader_set_int(screen.bloom, uTexBloomBlurHDR, 1);
+    r3d_shader_disable();
+}
+
+void r3d_shader_load_screen_fog(void)
+{
+    R3D.shader.screen.fog.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_SCREEN_FOG
+    );
+
+    r3d_shader_get_location(screen.fog, uTexSceneHDR);
+    r3d_shader_get_location(screen.fog, uTexSceneDepth);
+    r3d_shader_get_location(screen.fog, uNear);
+    r3d_shader_get_location(screen.fog, uFar);
+    r3d_shader_get_location(screen.fog, uFogMode);
+    r3d_shader_get_location(screen.fog, uFogColor);
+    r3d_shader_get_location(screen.fog, uFogStart);
+    r3d_shader_get_location(screen.fog, uFogEnd);
+    r3d_shader_get_location(screen.fog, uFogDensity);
+
+    r3d_shader_enable(screen.fog);
+    r3d_shader_set_int(screen.fog, uTexSceneHDR, 0);
+    r3d_shader_set_int(screen.fog, uTexSceneDepth, 1);
+    r3d_shader_disable();
+}
+
+void r3d_shader_load_screen_tonemap(void)
+{
+    R3D.shader.screen.tonemap.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_SCREEN_TONEMAP
+    );
+
+    r3d_shader_get_location(screen.tonemap, uTexSceneHDR);
+    r3d_shader_get_location(screen.tonemap, uTonemapMode);
+    r3d_shader_get_location(screen.tonemap, uTonemapExposure);
+    r3d_shader_get_location(screen.tonemap, uTonemapWhite);
+
+    r3d_shader_enable(screen.tonemap);
+    r3d_shader_set_int(screen.tonemap, uTexSceneHDR, 0);
+    r3d_shader_disable();
+}
+
+void r3d_shader_load_screen_adjustment(void)
+{
+    R3D.shader.screen.adjustment.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_SCREEN_ADJUSTMENT
+    );
+
+    r3d_shader_get_location(screen.adjustment, uTexSceneHDR);
+    r3d_shader_get_location(screen.adjustment, uBrightness);
+    r3d_shader_get_location(screen.adjustment, uContrast);
+    r3d_shader_get_location(screen.adjustment, uSaturation);
+
+    r3d_shader_enable(screen.adjustment);
+    r3d_shader_set_int(screen.adjustment, uTexSceneHDR, 0);
     r3d_shader_disable();
 }
 

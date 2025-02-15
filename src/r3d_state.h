@@ -58,7 +58,7 @@ extern struct R3D_State {
         // Post process
         struct r3d_fb_post_t {
             unsigned int id;
-            unsigned int color;
+            unsigned int textures[2];
         } post;
 
         // Final target (optional)
@@ -91,7 +91,10 @@ extern struct R3D_State {
         // Screen shaders
         struct {
             r3d_shader_screen_lighting_t lighting;
-            r3d_shader_screen_post_t post;
+            r3d_shader_screen_bloom_t bloom;
+            r3d_shader_screen_fog_t fog;
+            r3d_shader_screen_tonemap_t tonemap;
+            r3d_shader_screen_adjustment_t adjustment;
         } screen;
 
     } shader;
@@ -176,7 +179,10 @@ void r3d_shader_load_generate_prefilter(void);
 void r3d_shader_load_raster_geometry(void);
 void r3d_shader_load_raster_skybox(void);
 void r3d_shader_load_screen_lighting(void);
-void r3d_shader_load_screen_post(void);
+void r3d_shader_load_screen_bloom(void);
+void r3d_shader_load_screen_fog(void);
+void r3d_shader_load_screen_tonemap(void);
+void r3d_shader_load_screen_adjustment(void);
 
 
 /* === Texture loading functions === */
