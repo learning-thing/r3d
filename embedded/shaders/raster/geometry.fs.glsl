@@ -82,7 +82,7 @@ vec2 EncodeOctahedral(vec3 normal)
 void main()
 {
     FragAlbedo = uColAlbedo * vColor.rgb * texture(uTexAlbedo, vTexCoord).rgb;
-    FragEmission = uValEmission * (uColEmission + texture(uTexEmission, vTexCoord).rgb);
+    FragEmission = uValEmission * (uColEmission * texture(uTexEmission, vTexCoord).rgb);
     FragNormal = EncodeOctahedral(normalize(vTBN * (texture(uTexNormal, vTexCoord).rgb * 2.0 - 1.0)));
     
     FragORM.r = uValOcclusion * texture(uTexOcclusion, vTexCoord).r;
