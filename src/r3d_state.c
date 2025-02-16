@@ -99,6 +99,18 @@ void r3d_framebuffer_load_lit(int width, int height)
     lit->color = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
     lit->bright = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
 
+    // Setup color texture parameters
+    glBindTexture(GL_TEXTURE_2D, lit->color);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Setup bright texture parameters
+    glBindTexture(GL_TEXTURE_2D, lit->bright);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     // Activate the draw buffers for all the attachments
     rlActiveDrawBuffers(2);
 
@@ -128,8 +140,12 @@ void r3d_framebuffer_load_pingpong(int width, int height)
     // Generate (color) buffers
     for (int i = 0; i < 2; i++) {
         pingPong->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
-        rlTextureParameters(pingPong->textures[i], GL_TEXTURE_MIN_FILTER, RL_TEXTURE_FILTER_LINEAR);
-        rlTextureParameters(pingPong->textures[i], GL_TEXTURE_MAG_FILTER, RL_TEXTURE_FILTER_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, pingPong->textures[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
 
     // Activate the draw buffers for all the attachments
