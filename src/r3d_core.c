@@ -446,6 +446,7 @@ void R3D_End(void)
         // Génération du flou du buffer de luminance pour le bloom
         if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
             rlEnableFramebuffer(R3D.framebuffer.pingPong.id);
+            rlViewport(0, 0, R3D.state.resolutionW / 2, R3D.state.resolutionH / 2);
             {
                 bool* horizontalPass = &R3D.framebuffer.pingPong.targetTextureIdx;
                 *horizontalPass = true;
@@ -470,6 +471,7 @@ void R3D_End(void)
                 r3d_shader_disable();
             }
             rlDisableFramebuffer();
+            rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
         }
 
         // Initialisation des données pour alterner entre les textures source/destination
