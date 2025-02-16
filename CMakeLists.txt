@@ -42,6 +42,7 @@ add_library(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/src/r3d_lighting.c"
     "${R3D_ROOT_PATH}/src/r3d_frustum.c"
     "${R3D_ROOT_PATH}/src/r3d_skybox.c"
+    "${R3D_ROOT_PATH}/src/r3d_utils.c"
     "${R3D_ROOT_PATH}/src/r3d_state.c"
     "${R3D_ROOT_PATH}/src/r3d_core.c"
     "${R3D_GENERATED_SHADERS_SOURCE}"
@@ -85,3 +86,8 @@ add_executable(r3d_fog "examples/fog.c")
 target_link_libraries(r3d_fog PRIVATE raylib r3d)
 target_compile_definitions(r3d_fog PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
 target_include_directories(r3d_fog PRIVATE "external/raylib/src" "include")
+
+add_executable(r3d_bloom "examples/bloom.c")
+target_link_libraries(r3d_bloom PRIVATE raylib r3d)
+target_compile_definitions(r3d_bloom PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
+target_include_directories(r3d_bloom PRIVATE "external/raylib/src" "include")
