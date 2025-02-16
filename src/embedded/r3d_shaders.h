@@ -43,6 +43,7 @@ extern const char FS_RASTER_GEOMETRY[];
 extern const char VS_RASTER_SKYBOX[];
 extern const char FS_RASTER_SKYBOX[];
 
+extern const char FS_SCREEN_SSAO[];
 extern const char FS_SCREEN_LIGHTING[];
 extern const char FS_SCREEN_BLOOM[];
 extern const char FS_SCREEN_FOG[];
@@ -118,6 +119,23 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
+    r3d_shader_uniform_int_t uTexSceneDepth;
+    r3d_shader_uniform_int_t uTexSceneNormal;
+    r3d_shader_uniform_int_t uTexKernel;
+    r3d_shader_uniform_int_t uTexNoise;
+    r3d_shader_uniform_mat4_t uMatInvProj;
+    r3d_shader_uniform_mat4_t uMatInvView;
+    r3d_shader_uniform_mat4_t uMatProj;
+    r3d_shader_uniform_mat4_t uMatView;
+    r3d_shader_uniform_vec2_t uResolution;
+    r3d_shader_uniform_float_t uNear;
+    r3d_shader_uniform_float_t uFar;
+    r3d_shader_uniform_float_t uRadius;
+    r3d_shader_uniform_float_t uBias;
+} r3d_shader_screen_ssao_t;
+
+typedef struct {
+    unsigned int id;
     struct {
         r3d_shader_uniform_vec3_t color;
         r3d_shader_uniform_vec3_t position;
@@ -134,6 +152,7 @@ typedef struct {
     r3d_shader_uniform_int_t uTexEmission;
     r3d_shader_uniform_int_t uTexNormal;
     r3d_shader_uniform_int_t uTexDepth;
+    r3d_shader_uniform_int_t uTexSSAO;
     r3d_shader_uniform_int_t uTexORM;
     r3d_shader_uniform_int_t uTexID;
     r3d_shader_uniform_vec3_t uColAmbient;

@@ -17,6 +17,8 @@
  *   3. This notice may not be removed or altered from any source distribution.
  */
 
+// TODO: Load some shaders/textures when needed (like ssao/lut/etc)
+
 #include "r3d.h"
 
 #include <raylib.h>
@@ -40,8 +42,9 @@ void R3D_Init(int resWidth, int resHeight)
 {
     // Load framebuffers
     r3d_framebuffer_load_gbuffer(resWidth, resHeight);
+    r3d_framebuffer_load_pingpong_ssao(resWidth, resHeight);
     r3d_framebuffer_load_lit(resWidth, resHeight);
-    r3d_framebuffer_load_pingpong(resWidth, resHeight);
+    r3d_framebuffer_load_pingpong_bloom(resWidth, resHeight);
     r3d_framebuffer_load_post(resWidth, resHeight);
 
     // Load containers
@@ -59,6 +62,7 @@ void R3D_Init(int resWidth, int resHeight)
     r3d_shader_load_raster_skybox();
 
     // Load screen shaders
+    r3d_shader_load_screen_ssao();
     r3d_shader_load_screen_lighting();
     r3d_shader_load_screen_bloom();
     r3d_shader_load_screen_fog();
@@ -70,6 +74,9 @@ void R3D_Init(int resWidth, int resHeight)
     R3D.env.ambientColor = (Vector3) { 0.2f, 0.2f, 0.2f };
     R3D.env.quatSky = QuaternionIdentity();
     R3D.env.useSky = false;
+    R3D.env.ssaoEnabled = false;
+    R3D.env.ssaoRadius = 0.5f;
+    R3D.env.ssaoBias = 0.025f;
     R3D.env.bloomMode = R3D_BLOOM_DISABLED;
     R3D.env.bloomIntensity = 1.0f;
     R3D.env.bloomHdrThreshold = 1.0f;
@@ -94,6 +101,8 @@ void R3D_Init(int resWidth, int resHeight)
     r3d_texture_load_white();
     r3d_texture_load_black();
     r3d_texture_load_normal();
+    r3d_texture_load_ssao_noise();
+    r3d_texture_load_ssao_kernel();
     r3d_texture_load_ibl_brdf_lut();
 
     // Load primitive shapes
@@ -112,8 +121,9 @@ void R3D_Init(int resWidth, int resHeight)
 void R3D_Close(void)
 {
     r3d_framebuffer_unload_gbuffer();
+    r3d_framebuffer_unload_pingpong_ssao();
     r3d_framebuffer_unload_lit();
-    r3d_framebuffer_unload_pingpong();
+    r3d_framebuffer_unload_pingpong_bloom();
     r3d_framebuffer_unload_post();
 
     r3d_array_destroy(&R3D.container.drawCallArray);
@@ -125,6 +135,7 @@ void R3D_Close(void)
     rlUnloadShaderProgram(R3D.shader.generate.prefilter.id);
     rlUnloadShaderProgram(R3D.shader.raster.geometry.id);
     rlUnloadShaderProgram(R3D.shader.raster.skybox.id);
+    rlUnloadShaderProgram(R3D.shader.screen.ssao.id);
     rlUnloadShaderProgram(R3D.shader.screen.lighting.id);
     rlUnloadShaderProgram(R3D.shader.screen.bloom.id);
     rlUnloadShaderProgram(R3D.shader.screen.fog.id);
@@ -134,6 +145,8 @@ void R3D_Close(void)
     rlUnloadTexture(R3D.texture.white);
     rlUnloadTexture(R3D.texture.black);
     rlUnloadTexture(R3D.texture.normal);
+    rlUnloadTexture(R3D.texture.ssaoNoise);
+    rlUnloadTexture(R3D.texture.ssaoKernel);
     rlUnloadTexture(R3D.texture.iblBrdfLut);
 
     r3d_primitive_unload(&R3D.primitive.quad);
@@ -211,6 +224,10 @@ void R3D_Begin(Camera3D camera)
         camera.target,
         camera.up
     );
+
+    // Store inverse matrices
+    R3D.state.matInvProj = MatrixInvert(R3D.state.matProj);
+    R3D.state.matInvView = MatrixInvert(R3D.state.matView);
 }
 
 void R3D_End(void)
@@ -345,7 +362,73 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 4] - Determine what light should lit the visible scene
+    // [PART 4] - Process SSAO
+    if (R3D.env.ssaoEnabled) {
+        rlEnableFramebuffer(R3D.framebuffer.pingPongSSAO.id);
+        rlViewport(0, 0, R3D.state.resolutionW / 2, R3D.state.resolutionH / 2);
+        {
+            // Bind first SSAO output texture
+            glFramebufferTexture2D(
+                GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                R3D.framebuffer.pingPongSSAO.textures[0], 0
+            );
+
+            // Render SSAO
+            r3d_shader_enable(screen.ssao);
+            {
+                r3d_shader_set_mat4(screen.ssao, uMatInvProj, R3D.state.matInvProj);
+                r3d_shader_set_mat4(screen.ssao, uMatInvView, R3D.state.matInvView);
+                r3d_shader_set_mat4(screen.ssao, uMatProj, R3D.state.matProj);
+                r3d_shader_set_mat4(screen.ssao, uMatView, R3D.state.matView);
+
+                r3d_shader_set_vec2(screen.ssao, uResolution, ((Vector2) {
+                    R3D.state.resolutionW / 2, R3D.state.resolutionH / 2
+                }));
+
+                r3d_shader_set_float(screen.ssao, uNear, rlGetCullDistanceNear());
+                r3d_shader_set_float(screen.ssao, uFar, rlGetCullDistanceFar());
+
+                r3d_shader_set_float(screen.ssao, uRadius, R3D.env.ssaoRadius);
+                r3d_shader_set_float(screen.ssao, uBias, R3D.env.ssaoBias);
+
+                r3d_texture_bind_2D(0, R3D.framebuffer.gBuffer.depth);
+                r3d_texture_bind_2D(1, R3D.framebuffer.gBuffer.normal);
+                r3d_texture_bind_1D(2, R3D.texture.ssaoKernel);
+                r3d_texture_bind_2D(3, R3D.texture.ssaoNoise);
+
+                r3d_primitive_draw_quad();
+            }
+            r3d_shader_disable();
+
+            // Blur SSAO
+            {
+                bool* horizontalPass = &R3D.framebuffer.pingPongSSAO.targetTextureIdx;
+                *horizontalPass = true;
+
+                r3d_shader_enable(generate.gaussianBlurDualPass)
+                {
+                    for (int i = 0; i < R3D.env.bloomIterations; i++, (*horizontalPass) = !(*horizontalPass)) {
+                        glFramebufferTexture2D(
+                            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                            R3D.framebuffer.pingPongSSAO.textures[(*horizontalPass)], 0
+                        );
+                        r3d_shader_set_vec2(generate.gaussianBlurDualPass, uDirection,
+                            ((*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 })
+                        );
+                        r3d_texture_bind_2D(0,
+                            R3D.framebuffer.pingPongSSAO.textures[!(*horizontalPass)]
+                        );
+                        r3d_primitive_draw_quad();
+                    }
+                }
+                r3d_shader_disable();
+            }
+        }
+        rlDisableFramebuffer();
+        rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
+    }
+
+    // [PART 5] - Determine what light should lit the visible scene
     r3d_light_t* lights[8] = { 0 };
     int lightCount = 0;
     {
@@ -357,7 +440,7 @@ void R3D_End(void)
         }
     }
 
-    // [PART 5] - Lighting computation from G-buffer data into the final render target
+    // [PART 6] - Lighting computation from G-buffer data into the final render target
     {
         rlEnableFramebuffer(R3D.framebuffer.lit.id);
         {
@@ -396,9 +479,9 @@ void R3D_End(void)
                 }
 
                 if (R3D.env.useSky) {
-                    r3d_texture_bind_cubemap(6, R3D.env.sky.irradiance.id);
-                    r3d_texture_bind_cubemap(7, R3D.env.sky.prefilter.id);
-                    r3d_texture_bind_2D(8, R3D.texture.iblBrdfLut);
+                    r3d_texture_bind_cubemap(7, R3D.env.sky.irradiance.id);
+                    r3d_texture_bind_cubemap(8, R3D.env.sky.prefilter.id);
+                    r3d_texture_bind_2D(9, R3D.texture.iblBrdfLut);
 
                     r3d_shader_set_vec4(screen.lighting, uQuatSkybox, R3D.env.quatSky);
                     r3d_shader_set_int(screen.lighting, uHasSkybox, true);
@@ -408,8 +491,8 @@ void R3D_End(void)
                     r3d_shader_set_int(screen.lighting, uHasSkybox, false);
                 }
 
-                r3d_shader_set_mat4(screen.lighting, uMatInvProj, MatrixInvert(R3D.state.matProj));
-                r3d_shader_set_mat4(screen.lighting, uMatInvView, MatrixInvert(R3D.state.matView));
+                r3d_shader_set_mat4(screen.lighting, uMatInvProj, R3D.state.matInvProj);
+                r3d_shader_set_mat4(screen.lighting, uMatInvView, R3D.state.matInvView);
                 r3d_shader_set_vec3(screen.lighting, uViewPosition, R3D.state.posView);
 
                 r3d_shader_set_float(screen.lighting, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
@@ -418,8 +501,16 @@ void R3D_End(void)
                 r3d_texture_bind_2D(1, R3D.framebuffer.gBuffer.emission);
                 r3d_texture_bind_2D(2, R3D.framebuffer.gBuffer.normal);
                 r3d_texture_bind_2D(3, R3D.framebuffer.gBuffer.depth);
-                r3d_texture_bind_2D(4, R3D.framebuffer.gBuffer.orm);
-                r3d_texture_bind_2D(5, R3D.framebuffer.gBuffer.matId);
+                if (R3D.env.ssaoEnabled) {
+                    r3d_texture_bind_2D(4, R3D.framebuffer.pingPongSSAO.textures[
+                        !R3D.framebuffer.pingPongSSAO.targetTextureIdx
+                    ]);
+                }
+                else {
+                    r3d_texture_bind_2D(4, R3D.texture.white);
+                }
+                r3d_texture_bind_2D(5, R3D.framebuffer.gBuffer.orm);
+                r3d_texture_bind_2D(6, R3D.framebuffer.gBuffer.matId);
 
                 r3d_primitive_draw_quad();
 
@@ -429,11 +520,12 @@ void R3D_End(void)
                 r3d_texture_unbind_2D(3);
                 r3d_texture_unbind_2D(4);
                 r3d_texture_unbind_2D(5);
+                r3d_texture_unbind_2D(6);
 
                 if (R3D.env.useSky) {
-                    r3d_texture_unbind_cubemap(6);
                     r3d_texture_unbind_cubemap(7);
-                    r3d_texture_unbind_2D(8);
+                    r3d_texture_unbind_cubemap(8);
+                    r3d_texture_unbind_2D(9);
                 }
             }
             r3d_shader_disable();
@@ -441,14 +533,14 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 6] - Post proccesses using ping-pong buffer
+    // [PART 7] - Post proccesses using ping-pong buffer
     {
-        // Génération du flou du buffer de luminance pour le bloom
+        // Generating the blur for the brightness buffer to create the bloom effect.
         if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
-            rlEnableFramebuffer(R3D.framebuffer.pingPong.id);
+            rlEnableFramebuffer(R3D.framebuffer.pingPongBloom.id);
             rlViewport(0, 0, R3D.state.resolutionW / 2, R3D.state.resolutionH / 2);
             {
-                bool* horizontalPass = &R3D.framebuffer.pingPong.targetTextureIdx;
+                bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTextureIdx;
                 *horizontalPass = true;
 
                 r3d_shader_enable(generate.gaussianBlurDualPass)
@@ -456,13 +548,13 @@ void R3D_End(void)
                     for (int i = 0; i < R3D.env.bloomIterations; i++, (*horizontalPass) = !(*horizontalPass)) {
                         glFramebufferTexture2D(
                             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                            R3D.framebuffer.pingPong.textures[(*horizontalPass)], 0
+                            R3D.framebuffer.pingPongBloom.textures[(*horizontalPass)], 0
                         );
                         r3d_shader_set_vec2(generate.gaussianBlurDualPass, uDirection,
                             ((*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 })
                         );
                         r3d_texture_bind_2D(0, i > 0
-                            ? R3D.framebuffer.pingPong.textures[!(*horizontalPass)]
+                            ? R3D.framebuffer.pingPongBloom.textures[!(*horizontalPass)]
                             : R3D.framebuffer.lit.bright
                         );
                         r3d_primitive_draw_quad();
@@ -474,8 +566,8 @@ void R3D_End(void)
             rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
         }
 
-        // Initialisation des données pour alterner entre les textures source/destination
-        // du framebuffer des post effects
+        // Initializing data to alternate between the
+        // source/destination textures of the post-effects framebuffer.
         int texIndex = 2;
         unsigned int textures[3] = {
             R3D.framebuffer.post.textures[0],
@@ -483,7 +575,7 @@ void R3D_End(void)
             R3D.framebuffer.lit.color
         };
 
-        // Rendu des post effects
+        // Post effect rendering
         rlEnableFramebuffer(R3D.framebuffer.post.id);
         {
             // Post process: Bloom
@@ -496,8 +588,8 @@ void R3D_End(void)
                 {
                     r3d_texture_bind_2D(0, textures[texIndex]);
                     r3d_texture_bind_2D(1,
-                        R3D.framebuffer.pingPong.textures[
-                            !R3D.framebuffer.pingPong.targetTextureIdx
+                        R3D.framebuffer.pingPongBloom.textures[
+                            !R3D.framebuffer.pingPongBloom.targetTextureIdx
                         ]
                     );
                     texIndex = !texIndex;
@@ -578,7 +670,7 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 7] - Blit the final result to the main framebuffer
+    // [PART 8] - Blit the final result to the main framebuffer
     {
         unsigned int dstId = 0;
         int dstX = 0, dstY = 0;
@@ -628,7 +720,7 @@ void R3D_End(void)
         );
     }
 
-    // [PART 8] - Reset global state
+    // [PART 9] - Reset global state
     {
         rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
         rlEnableColorBlend();

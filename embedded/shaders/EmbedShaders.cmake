@@ -24,6 +24,7 @@ function(EmbedShaders generated_shaders_source shaders_source shaders_header)
     ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/raster/skybox.vs.glsl" VS_RASTER_SKYBOX)
     ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/raster/skybox.fs.glsl" FS_RASTER_SKYBOX)
     # Minify and store screen shaders
+    ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/ssao.fs.glsl" FS_SCREEN_SSAO)
     ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/lighting.fs.glsl" FS_SCREEN_LIGHTING)
     ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/bloom.fs.glsl" FS_SCREEN_BLOOM)
     ProcessShader("${R3D_ROOT_PATH}/embedded/shaders/screen/fog.fs.glsl" FS_SCREEN_FOG)

@@ -52,6 +52,51 @@ void R3D_SetSkyboxRotation(float pitch, float yaw, float roll)
 	R3D.env.quatSky = QuaternionFromEuler(pitch, yaw, roll);
 }
 
+Vector3 R3D_GetSkyboxRotation(void)
+{
+	return QuaternionToEuler(R3D.env.quatSky);
+}
+
+void R3D_SetSSAO(bool enabled)
+{
+	R3D.env.ssaoEnabled = enabled;
+}
+
+bool R3D_GetSSAO(void)
+{
+	return R3D.env.ssaoEnabled;
+}
+
+void R3D_SetSSAORadius(float value)
+{
+	R3D.env.ssaoRadius = value;
+}
+
+float R3D_GetSSAORadius(void)
+{
+	return R3D.env.ssaoRadius;
+}
+
+void R3D_SetSSAOBias(float value)
+{
+	R3D.env.ssaoBias = value;
+}
+
+float R3D_GetSSAOBias(void)
+{
+	return R3D.env.ssaoBias;
+}
+
+void R3D_SetSSAOIterations(int value)
+{
+	R3D.env.ssaoIterations = value;
+}
+
+int R3D_GetSSAOIterations(void)
+{
+	return R3D.env.ssaoIterations;
+}
+
 void R3D_SetBloomMode(R3D_Bloom mode)
 {
 	R3D.env.bloomMode = mode;
@@ -82,12 +127,12 @@ float R3D_GetBloomHdrThreshold(void)
 	return R3D.env.bloomHdrThreshold;
 }
 
-void R3D_SetBloomIterations(float value)
+void R3D_SetBloomIterations(int value)
 {
 	R3D.env.bloomIterations = value;
 }
 
-float R3D_GetBloomIterations(void)
+int R3D_GetBloomIterations(void)
 {
 	return R3D.env.bloomIterations;
 }

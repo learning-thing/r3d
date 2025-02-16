@@ -154,6 +154,21 @@ void R3D_SetAmbientColor(Color color);
 void R3D_EnableSkybox(R3D_Skybox skybox);
 void R3D_DisableSkybox(void);
 
+void R3D_SetSkyboxRotation(float pitch, float yaw, float roll);
+Vector3 R3D_GetSkyboxRotation(void);
+
+void R3D_SetSSAO(bool enabled);
+bool R3D_GetSSAO(void);
+
+void R3D_SetSSAORadius(float value);
+float R3D_GetSSAORadius(void);
+
+void R3D_SetSSAOBias(float value);
+float R3D_GetSSAOBias(void);
+
+void R3D_SetSSAOIterations(int value);
+int R3D_GetSSAOIterations(void);
+
 void R3D_SetBloomMode(R3D_Bloom mode);
 R3D_Bloom R3D_GetBloomMode(void);
 
@@ -163,8 +178,8 @@ float R3D_GetBloomIntensity(void);
 void R3D_SetBloomHdrThreshold(float value);
 float R3D_GetBloomHdrThreshold(void);
 
-void R3D_SetBloomIterations(float value);
-float R3D_GetBloomIterations(void);
+void R3D_SetBloomIterations(int value);
+int R3D_GetBloomIterations(void);
 
 void R3D_SetFogMode(R3D_Fog mode);
 R3D_Fog R3D_GetFogMode(void);
@@ -223,6 +238,7 @@ void R3D_DrawBufferAlbedo(float x, float y, float w, float h);
 void R3D_DrawBufferEmission(float x, float y, float w, float h);
 void R3D_DrawBufferNormal(float x, float y, float w, float h);
 void R3D_DrawBufferORM(float x, float y, float w, float h);
+void R3D_DrawBufferSSAO(float x, float y, float w, float h);
 void R3D_DrawBufferBrightColors(float x, float y, float w, float h);
 void R3D_DrawBufferBloom(float x, float y, float w, float h);
 

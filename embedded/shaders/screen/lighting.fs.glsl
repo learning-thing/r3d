@@ -54,6 +54,7 @@ uniform sampler2D uTexAlbedo;
 uniform sampler2D uTexEmission;
 uniform sampler2D uTexNormal;
 uniform sampler2D uTexDepth;
+uniform sampler2D uTexSSAO;
 uniform sampler2D uTexORM;
 uniform sampler2D uTexID;
 
@@ -73,8 +74,8 @@ uniform mat4 uMatInvView;
 
 /* === Fragments === */
 
-out vec4 FragColor;
-out vec4 FragBrightness;
+layout(location = 0) out vec4 FragColor;
+layout(location = 1) out vec4 FragBrightness;
 
 /* === PBR functions === */
 
@@ -111,7 +112,6 @@ vec3 ComputeF0(float metallic, float specular, vec3 albedo)
     // SEE: https://google.github.io/filament/Filament.md.html
     return mix(vec3(dielectric), albedo, vec3(metallic));
 }
-
 
 /* === Misc functions === */
 
@@ -152,7 +152,6 @@ float GetBrightness(vec3 color)
 {
     return length(color);
 }
-
 
 /* === Main === */
 
@@ -323,9 +322,10 @@ void main()
         ambient = kD * texture(uCubeIrradiance, Nr).rgb;
     }
 
-    /* Compute ambient occlusion - (from ORM) */
+    /* Compute ambient occlusion - (from ORM / SSAO) */
 
-    ambient *= occlusion;
+    float ssao = texture(uTexSSAO, vTexCoord).r;
+    ambient *= occlusion * ssao;
 
     // Light affect should be material-specific
     //float lightAffect = mix(1.0, ao, uValAOLightAffect);

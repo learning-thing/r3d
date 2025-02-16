@@ -19,6 +19,8 @@
 
 #include "./r3d_state.h"
 
+#include <raylib.h>
+#include <raymath.h>
 #include <rlgl.h>
 #include <glad.h>
 
@@ -84,6 +86,45 @@ void r3d_framebuffer_load_gbuffer(int width, int height)
     }
 }
 
+void r3d_framebuffer_load_pingpong_ssao(int width, int height)
+{
+    struct r3d_fb_pingpong_ssao_t* ssao = &R3D.framebuffer.pingPongSSAO;
+
+    width /= 2, height /= 2;
+
+    ssao->id = rlLoadFramebuffer();
+    if (ssao->id == 0) {
+        TraceLog(LOG_WARNING, "Failed to create framebuffer");
+    }
+
+    rlEnableFramebuffer(ssao->id);
+
+    // Generate (ssao) buffers
+    for (int i = 0; i < 2; i++) {
+        ssao->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE, 1);
+        glBindTexture(GL_TEXTURE_2D, ssao->textures[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    // Activate the draw buffers for all the attachments
+    rlActiveDrawBuffers(1);
+
+    // Attach the textures to the framebuffer
+    rlFramebufferAttach(ssao->id, ssao->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+
+    // Check if the framebuffer is complete
+    if (!rlFramebufferComplete(ssao->id)) {
+        TraceLog(LOG_WARNING, "Framebuffer is not complete");
+    }
+
+    // Internal data setup
+    ssao->targetTextureIdx = 0;
+}
+
 void r3d_framebuffer_load_lit(int width, int height)
 {
     struct r3d_fb_lit_t* lit = &R3D.framebuffer.lit;
@@ -124,23 +165,23 @@ void r3d_framebuffer_load_lit(int width, int height)
     }
 }
 
-void r3d_framebuffer_load_pingpong(int width, int height)
+void r3d_framebuffer_load_pingpong_bloom(int width, int height)
 {
-    struct r3d_fb_pingpong_t* pingPong = &R3D.framebuffer.pingPong;
+    struct r3d_fb_pingpong_bloom_t* bloom = &R3D.framebuffer.pingPongBloom;
 
     width /= 2, height /= 2;
 
-    pingPong->id = rlLoadFramebuffer();
-    if (pingPong->id == 0) {
+    bloom->id = rlLoadFramebuffer();
+    if (bloom->id == 0) {
         TraceLog(LOG_WARNING, "Failed to create framebuffer");
     }
 
-    rlEnableFramebuffer(pingPong->id);
+    rlEnableFramebuffer(bloom->id);
 
     // Generate (color) buffers
     for (int i = 0; i < 2; i++) {
-        pingPong->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
-        glBindTexture(GL_TEXTURE_2D, pingPong->textures[i]);
+        bloom->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+        glBindTexture(GL_TEXTURE_2D, bloom->textures[i]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -152,15 +193,15 @@ void r3d_framebuffer_load_pingpong(int width, int height)
     rlActiveDrawBuffers(1);
 
     // Attach the textures to the framebuffer
-    rlFramebufferAttach(pingPong->id, pingPong->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(bloom->id, bloom->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
-    if (!rlFramebufferComplete(pingPong->id)) {
+    if (!rlFramebufferComplete(bloom->id)) {
         TraceLog(LOG_WARNING, "Framebuffer is not complete");
     }
 
     // Internal data setup
-    pingPong->targetTextureIdx = 0;
+    bloom->targetTextureIdx = 0;
 }
 
 void r3d_framebuffer_load_post(int width, int height)
@@ -206,6 +247,19 @@ void r3d_framebuffer_unload_gbuffer(void)
     memset(gBuffer, 0, sizeof(struct r3d_fb_gbuffer_t));
 }
 
+void r3d_framebuffer_unload_pingpong_ssao(void)
+{
+    struct r3d_fb_pingpong_ssao_t* ssao = &R3D.framebuffer.pingPongSSAO;
+
+    for (int i = 0; i < sizeof(ssao->textures) / sizeof(*ssao->textures); i++) {
+        rlUnloadTexture(ssao->textures[i]);
+    }
+
+    rlUnloadFramebuffer(ssao->id);
+
+    memset(ssao, 0, sizeof(struct r3d_fb_pingpong_ssao_t));
+}
+
 void r3d_framebuffer_unload_lit(void)
 {
     struct r3d_fb_lit_t* lit = &R3D.framebuffer.lit;
@@ -215,20 +269,20 @@ void r3d_framebuffer_unload_lit(void)
 
     rlUnloadFramebuffer(lit->id);
 
-    memset(lit, 0, sizeof(struct r3d_fb_gbuffer_t));
+    memset(lit, 0, sizeof(struct r3d_fb_lit_t));
 }
 
-void r3d_framebuffer_unload_pingpong(void)
+void r3d_framebuffer_unload_pingpong_bloom(void)
 {
-    struct r3d_fb_pingpong_t* pingPong = &R3D.framebuffer.pingPong;
+    struct r3d_fb_pingpong_bloom_t* bloom = &R3D.framebuffer.pingPongBloom;
 
-    for (int i = 0; i < sizeof(pingPong->textures) / sizeof(*pingPong->textures); i++) {
-        rlUnloadTexture(pingPong->textures[i]);
+    for (int i = 0; i < sizeof(bloom->textures) / sizeof(*bloom->textures); i++) {
+        rlUnloadTexture(bloom->textures[i]);
     }
 
-    rlUnloadFramebuffer(pingPong->id);
+    rlUnloadFramebuffer(bloom->id);
 
-    memset(pingPong, 0, sizeof(struct r3d_fb_gbuffer_t));
+    memset(bloom, 0, sizeof(struct r3d_fb_pingpong_bloom_t));
 }
 
 void r3d_framebuffer_unload_post(void)
@@ -241,7 +295,7 @@ void r3d_framebuffer_unload_post(void)
 
     rlUnloadFramebuffer(post->id);
 
-    memset(post, 0, sizeof(struct r3d_fb_gbuffer_t));
+    memset(post, 0, sizeof(struct r3d_fb_post_t));
 }
 
 
@@ -355,6 +409,34 @@ void r3d_shader_load_raster_skybox(void)
     r3d_shader_disable();
 }
 
+void r3d_shader_load_screen_ssao(void)
+{
+    R3D.shader.screen.ssao.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_SCREEN_SSAO
+    );
+
+    r3d_shader_get_location(screen.ssao, uTexSceneDepth);
+    r3d_shader_get_location(screen.ssao, uTexSceneNormal);
+    r3d_shader_get_location(screen.ssao, uTexKernel);
+    r3d_shader_get_location(screen.ssao, uTexNoise);
+    r3d_shader_get_location(screen.ssao, uMatInvProj);
+    r3d_shader_get_location(screen.ssao, uMatInvView);
+    r3d_shader_get_location(screen.ssao, uMatProj);
+    r3d_shader_get_location(screen.ssao, uMatView);
+    r3d_shader_get_location(screen.ssao, uResolution);
+    r3d_shader_get_location(screen.ssao, uNear);
+    r3d_shader_get_location(screen.ssao, uFar);
+    r3d_shader_get_location(screen.ssao, uRadius);
+    r3d_shader_get_location(screen.ssao, uBias);
+
+    r3d_shader_enable(screen.ssao);
+    r3d_shader_set_int(screen.ssao, uTexSceneDepth, 0);
+    r3d_shader_set_int(screen.ssao, uTexSceneNormal, 1);
+    r3d_shader_set_int(screen.ssao, uTexKernel, 2);
+    r3d_shader_set_int(screen.ssao, uTexNoise, 3);
+    r3d_shader_disable();
+}
+
 void r3d_shader_load_screen_lighting(void)
 {
     R3D.shader.screen.lighting.id = rlLoadShaderCode(VS_COMMON_SCREEN, FS_SCREEN_LIGHTING);
@@ -377,6 +459,7 @@ void r3d_shader_load_screen_lighting(void)
     r3d_shader_get_location(screen.lighting, uTexEmission);
     r3d_shader_get_location(screen.lighting, uTexNormal);
     r3d_shader_get_location(screen.lighting, uTexDepth);
+    r3d_shader_get_location(screen.lighting, uTexSSAO);
     r3d_shader_get_location(screen.lighting, uTexORM);
     r3d_shader_get_location(screen.lighting, uTexID);
     r3d_shader_get_location(screen.lighting, uColAmbient);
@@ -395,11 +478,12 @@ void r3d_shader_load_screen_lighting(void)
     r3d_shader_set_int(screen.lighting, uTexEmission, 1);
     r3d_shader_set_int(screen.lighting, uTexNormal, 2);
     r3d_shader_set_int(screen.lighting, uTexDepth, 3);
-    r3d_shader_set_int(screen.lighting, uTexORM, 4);
-    r3d_shader_set_int(screen.lighting, uTexID, 5);
-    r3d_shader_set_int(screen.lighting, uCubeIrradiance, 6);
-    r3d_shader_set_int(screen.lighting, uCubePrefilter, 7);
-    r3d_shader_set_int(screen.lighting, uTexBrdfLut, 8);
+    r3d_shader_set_int(screen.lighting, uTexSSAO, 4);
+    r3d_shader_set_int(screen.lighting, uTexORM, 5);
+    r3d_shader_set_int(screen.lighting, uTexID, 6);
+    r3d_shader_set_int(screen.lighting, uCubeIrradiance, 7);
+    r3d_shader_set_int(screen.lighting, uCubePrefilter, 8);
+    r3d_shader_set_int(screen.lighting, uTexBrdfLut, 9);
     r3d_shader_disable();
 
     return shader;
@@ -495,6 +579,45 @@ void r3d_texture_load_normal(void)
 {
     static const Vector3 DATA = { 0.5f, 0.5f, 1.0f };
     R3D.texture.normal = rlLoadTexture(&DATA, 1, 1, PIXELFORMAT_UNCOMPRESSED_R32G32B32, 1);
+}
+
+void r3d_texture_load_ssao_noise(void)
+{
+    Vector3 noise[4 * 4] = { 0 };
+    for (int i = 0; i < sizeof(noise) / sizeof(*noise); i++) {
+        noise[i].x = ((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f;
+        noise[i].y = ((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f;
+        noise[i].z = (float)GetRandomValue(0, INT16_MAX) / INT16_MAX;
+    }
+    R3D.texture.ssaoNoise = rlLoadTexture(noise, 4, 4, PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
+}
+
+void r3d_texture_load_ssao_kernel(void)
+{
+    Vector3 kernel[64] = { 0 };
+    for (int i = 0; i < 64; i++)
+    {
+        Vector3 sample = { 0 };
+
+        sample.x = ((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f;
+        sample.y = ((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f;
+        sample.z = (float)GetRandomValue(0, INT16_MAX) / INT16_MAX;
+
+        sample = Vector3Normalize(sample);
+        sample = Vector3Scale(sample, (float)GetRandomValue(0, INT16_MAX) / INT16_MAX);
+
+        float scale = (float)i / 64;
+        scale = Lerp(0.1f, 1.0f, scale * scale);
+
+        sample = Vector3Scale(sample, scale);
+        kernel[i] = sample;
+    }
+    glGenTextures(1, &R3D.texture.ssaoKernel);
+    glBindTexture(GL_TEXTURE_1D, R3D.texture.ssaoKernel);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, 64, 0, GL_RGB, GL_FLOAT, kernel);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 }
 
 void r3d_texture_load_ibl_brdf_lut(void)

@@ -48,6 +48,13 @@ extern struct R3D_State {
             unsigned int depth;
         } gBuffer;
 
+        // Ping-pong buffer for SSAO blur processing (half internal resolution)
+        struct r3d_fb_pingpong_ssao_t {
+            unsigned int id;
+            unsigned int textures[2];
+            bool targetTextureIdx;
+        } pingPongSSAO;
+
         // Lit scene
         struct r3d_fb_lit_t {
             unsigned int id;
@@ -56,11 +63,11 @@ extern struct R3D_State {
         } lit;
 
         // Ping-pong buffer for bloom blur processing (half internal resolution)
-        struct r3d_fb_pingpong_t {
+        struct r3d_fb_pingpong_bloom_t {
             unsigned int id;
             unsigned int textures[2];
             bool targetTextureIdx;
-        } pingPong;
+        } pingPongBloom;
 
         // Post-processing buffer (similar to ping-pong but with a different setup)  
         struct r3d_fb_post_t {
@@ -98,6 +105,7 @@ extern struct R3D_State {
 
         // Screen shaders
         struct {
+            r3d_shader_screen_ssao_t ssao;
             r3d_shader_screen_lighting_t lighting;
             r3d_shader_screen_bloom_t bloom;
             r3d_shader_screen_fog_t fog;
@@ -116,6 +124,11 @@ extern struct R3D_State {
         Quaternion quatSky;         // Rotation of the skybox (raster / light passes)
         R3D_Skybox sky;             // Skybox textures (raster / light passes)
         bool useSky;                // Flag to indicate if skybox is enabled (light pass)
+
+        bool ssaoEnabled;           // (pre-light pass)
+        float ssaoRadius;           // (pre-light pass)
+        float ssaoBias;             // (pre-light pass)
+        int ssaoIterations;         // (pre-light pass)
 
         R3D_Bloom bloomMode;        // (post pass)
         float bloomIntensity;       // (post pass)
@@ -143,6 +156,8 @@ extern struct R3D_State {
         unsigned int white;
         unsigned int black;
         unsigned int normal;
+        unsigned int ssaoNoise;
+        unsigned int ssaoKernel;
         unsigned int iblBrdfLut;
     } texture;
 
@@ -157,6 +172,8 @@ extern struct R3D_State {
         Vector3 posView;
         Matrix matView;
         Matrix matProj;
+        Matrix matInvView;
+        Matrix matInvProj;
         int resolutionW;
         int resolutionH;
         unsigned int flags;
@@ -173,13 +190,15 @@ extern struct R3D_State {
 /* === Framebuffer loading functions === */
 
 void r3d_framebuffer_load_gbuffer(int width, int height);
+void r3d_framebuffer_load_pingpong_ssao(int width, int height);
 void r3d_framebuffer_load_lit(int width, int height);
-void r3d_framebuffer_load_pingpong(int width, int height);
+void r3d_framebuffer_load_pingpong_bloom(int width, int height);
 void r3d_framebuffer_load_post(int width, int height);
 
 void r3d_framebuffer_unload_gbuffer(void);
+void r3d_framebuffer_unload_pingpong_ssao(void);
 void r3d_framebuffer_unload_lit(void);
-void r3d_framebuffer_unload_pingpong(void);
+void r3d_framebuffer_unload_pingpong_bloom(void);
 void r3d_framebuffer_unload_post(void);
 
 
@@ -191,6 +210,7 @@ void r3d_shader_load_generate_irradiance_convolution(void);
 void r3d_shader_load_generate_prefilter(void);
 void r3d_shader_load_raster_geometry(void);
 void r3d_shader_load_raster_skybox(void);
+void r3d_shader_load_screen_ssao(void);
 void r3d_shader_load_screen_lighting(void);
 void r3d_shader_load_screen_bloom(void);
 void r3d_shader_load_screen_fog(void);
@@ -203,6 +223,8 @@ void r3d_shader_load_screen_adjustment(void);
 void r3d_texture_load_white(void);
 void r3d_texture_load_black(void);
 void r3d_texture_load_normal(void);
+void r3d_texture_load_ssao_noise(void);
+void r3d_texture_load_ssao_kernel(void);
 void r3d_texture_load_ibl_brdf_lut(void);
 
 
@@ -319,6 +341,12 @@ void r3d_texture_load_ibl_brdf_lut(void);
 
 /* === Texture helper macros === */
 
+#define r3d_texture_bind_1D(slot, texId)                    \
+{                                                           \
+    glActiveTexture(GL_TEXTURE0 + (slot));                  \
+    glBindTexture(GL_TEXTURE_1D, (texId));                  \
+}
+
 #define r3d_texture_bind_2D(slot, texId)                    \
 {                                                           \
     rlActiveTextureSlot(slot);                              \
@@ -330,6 +358,12 @@ void r3d_texture_load_ibl_brdf_lut(void);
     rlActiveTextureSlot(slot);                              \
     if (texId != 0) rlEnableTexture(texId);                 \
     else rlEnableTexture(R3D.texture.altTex);               \
+}
+
+#define r3d_texture_unbind_1D(slot)                         \
+{                                                           \
+    glActiveTexture(GL_TEXTURE0 + (slot));                  \
+    glBindTexture(GL_TEXTURE_1D, 0);                        \
 }
 
 #define r3d_texture_unbind_2D(slot)                         \
