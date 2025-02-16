@@ -163,6 +163,9 @@ float R3D_GetBloomIntensity(void);
 void R3D_SetBloomHdrThreshold(float value);
 float R3D_GetBloomHdrThreshold(void);
 
+void R3D_SetBloomIterations(float value);
+float R3D_GetBloomIterations(void);
+
 void R3D_SetFogMode(R3D_Fog mode);
 R3D_Fog R3D_GetFogMode(void);
 
@@ -214,10 +217,13 @@ bool R3D_IsSphereInFrustum(const R3D_Frustum* frustum, Vector3 position, float r
 bool R3D_IsBoundingBoxInFrustum(const R3D_Frustum* frustum, BoundingBox aabb);
 
 
-/* === Debug functions === */
+/* === Utils functions === */
 
 void R3D_DrawBufferAlbedo(float x, float y, float w, float h);
+void R3D_DrawBufferEmission(float x, float y, float w, float h);
 void R3D_DrawBufferNormal(float x, float y, float w, float h);
 void R3D_DrawBufferORM(float x, float y, float w, float h);
+void R3D_DrawBufferBloom(float x, float y, float w, float h);
+
 
 #endif // R3D_H

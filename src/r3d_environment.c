@@ -82,6 +82,16 @@ float R3D_GetBloomHdrThreshold(void)
 	return R3D.env.bloomHdrThreshold;
 }
 
+void R3D_SetBloomIterations(float value)
+{
+	R3D.env.bloomIterations = value;
+}
+
+float R3D_GetBloomIterations(void)
+{
+	return R3D.env.bloomIterations;
+}
+
 void R3D_SetFogMode(R3D_Fog mode)
 {
 	R3D.env.fogMode = mode;
