@@ -36,21 +36,6 @@
 
 /* === Public functions === */
 
-bool R3D_HasState(unsigned int flag)
-{
-    return R3D.state.flags & flag;
-}
-
-void R3D_SetState(unsigned int flags)
-{
-    R3D.state.flags |= flags;
-}
-
-void R3D_ClearState(unsigned int flags)
-{
-    R3D.state.flags &= ~flags;
-}
-
 void R3D_Init(int resWidth, int resHeight)
 {
     // Load framebuffers
@@ -148,6 +133,21 @@ void R3D_Close(void)
 
     r3d_primitive_unload(&R3D.primitive.quad);
     r3d_primitive_unload(&R3D.primitive.cube);
+}
+
+bool R3D_HasState(unsigned int flag)
+{
+    return R3D.state.flags & flag;
+}
+
+void R3D_SetState(unsigned int flags)
+{
+    R3D.state.flags |= flags;
+}
+
+void R3D_ClearState(unsigned int flags)
+{
+    R3D.state.flags &= ~flags;
 }
 
 void R3D_EnableCustomTarget(RenderTexture target)

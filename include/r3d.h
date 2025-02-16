@@ -86,12 +86,12 @@ typedef struct {
 
 /* === Core functions === */
 
+void R3D_Init(int resWidth, int resHeight);
+void R3D_Close(void);
+
 bool R3D_HasState(unsigned int flag);
 void R3D_SetState(unsigned int flags);
 void R3D_ClearState(unsigned int flags);
-
-void R3D_Init(int resWidth, int resHeight);
-void R3D_Close(void);
 
 void R3D_EnableCustomTarget(RenderTexture target);
 void R3D_DisableCustomTarget(void);
