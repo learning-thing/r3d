@@ -21,19 +21,10 @@
 
 /* === Definitions === */
 
-#define BLOOM_DISABLED 0
-#define BLOOM_ADDITIVE 1
-#define BLOOM_SOFT_LIGHT 2
-
 #define FOG_DISABLED 0
 #define FOG_LINEAR 1
 #define FOG_EXP2 2
 #define FOG_EXP 3
-
-#define TONEMAP_LINEAR 0
-#define TONEMAP_REINHARD 1
-#define TONEMAP_FILMIC 2
-#define TONEMAP_ACES 3
 
 /* === Varyings === */
 
