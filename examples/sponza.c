@@ -4,7 +4,7 @@
 
 /* === Resources === */
 
-static Model		city = { 0 };
+static Model		sponza = { 0 };
 static R3D_Skybox	skybox = { 0 };
 static Camera3D		camera = { 0 };
 
@@ -14,15 +14,24 @@ static Camera3D		camera = { 0 };
 const char* Init(void)
 {
     R3D_Init(GetScreenWidth(), GetScreenHeight());
-   // SetTargetFPS(60);
+    SetTargetFPS(60);
 
-    city = RES_LoadModel("sponza.glb");
+    R3D_SetSSAO(true);
+    R3D_SetSSAORadius(4.0f);
 
-    for (int i = 0; i < city.materialCount; i++) {
-        city.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
-        city.materials[i].maps[MATERIAL_MAP_OCCLUSION].value = 1.0f;
-        city.materials[i].maps[MATERIAL_MAP_ROUGHNESS].value = 1.0f;
-        city.materials[i].maps[MATERIAL_MAP_METALNESS].value = 1.0f;
+    sponza = RES_LoadModel("sponza.glb");
+
+    for (int i = 0; i < sponza.materialCount; i++) {
+        sponza.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
+        sponza.materials[i].maps[MATERIAL_MAP_OCCLUSION].value = 1.0f;
+        sponza.materials[i].maps[MATERIAL_MAP_ROUGHNESS].value = 1.0f;
+        sponza.materials[i].maps[MATERIAL_MAP_METALNESS].value = 1.0f;
+
+        GenTextureMipmaps(&sponza.materials[i].maps[MATERIAL_MAP_ALBEDO].texture);
+        SetTextureFilter(sponza.materials[i].maps[MATERIAL_MAP_ALBEDO].texture, TEXTURE_FILTER_TRILINEAR);
+
+        GenTextureMipmaps(&sponza.materials[i].maps[MATERIAL_MAP_NORMAL].texture);
+        SetTextureFilter(sponza.materials[i].maps[MATERIAL_MAP_NORMAL].texture, TEXTURE_FILTER_TRILINEAR);
     }
 
     skybox = R3D_LoadSkybox(RESOURCES_PATH "sky/skybox3.png", CUBEMAP_LAYOUT_AUTO_DETECT);
@@ -39,6 +48,8 @@ const char* Init(void)
         .fovy = 60,
     };
 
+    DisableCursor();
+
     return "[r3d] - sponza example";
 }
 
@@ -50,7 +61,7 @@ void Update(float delta)
 void Draw(void)
 {
     R3D_Begin(camera);
-        R3D_DrawModel(city, (Vector3) { 0 }, 1.0f);
+        R3D_DrawModel(sponza, (Vector3) { 0 }, 1.0f);
     R3D_End();
 
     DrawFPS(10, 10);
@@ -58,7 +69,7 @@ void Draw(void)
 
 void Close(void)
 {
-    UnloadModel(city);
+    UnloadModel(sponza);
     R3D_UnloadSkybox(skybox);
     R3D_Close();
 }
