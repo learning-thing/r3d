@@ -97,14 +97,14 @@ void r3d_framebuffer_load_lit(int width, int height)
 
     // Generate (color / luminance) buffers
     lit->color = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
-    lit->lum = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+    lit->bright = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
 
     // Activate the draw buffers for all the attachments
     rlActiveDrawBuffers(2);
 
     // Attach the textures to the framebuffer
     rlFramebufferAttach(lit->id, lit->color, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
-    rlFramebufferAttach(lit->id, lit->lum, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(lit->id, lit->bright, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
     if (!rlFramebufferComplete(lit->id)) {
@@ -195,7 +195,7 @@ void r3d_framebuffer_unload_lit(void)
     struct r3d_fb_lit_t* lit = &R3D.framebuffer.lit;
 
     rlUnloadTexture(lit->color);
-    rlUnloadTexture(lit->lum);
+    rlUnloadTexture(lit->bright);
 
     rlUnloadFramebuffer(lit->id);
 

@@ -463,7 +463,7 @@ void R3D_End(void)
                         );
                         r3d_texture_bind_2D(0, i > 0
                             ? R3D.framebuffer.pingPong.textures[!(*horizontalPass)]
-                            : R3D.framebuffer.lit.lum
+                            : R3D.framebuffer.lit.bright
                         );
                         r3d_primitive_draw_quad();
                     }

@@ -223,6 +223,7 @@ void R3D_DrawBufferAlbedo(float x, float y, float w, float h);
 void R3D_DrawBufferEmission(float x, float y, float w, float h);
 void R3D_DrawBufferNormal(float x, float y, float w, float h);
 void R3D_DrawBufferORM(float x, float y, float w, float h);
+void R3D_DrawBufferBrightColors(float x, float y, float w, float h);
 void R3D_DrawBufferBloom(float x, float y, float w, float h);
 
 

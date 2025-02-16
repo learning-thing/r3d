@@ -52,7 +52,7 @@ extern struct R3D_State {
         struct r3d_fb_lit_t {
             unsigned int id;
             unsigned int color;
-            unsigned int lum;
+            unsigned int bright;
         } lit;
 
         // Ping-pong buffer for bloom blur processing (half internal resolution)

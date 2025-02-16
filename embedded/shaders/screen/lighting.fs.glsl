@@ -148,9 +148,9 @@ vec3 RotateWithQuat(vec3 v, vec4 q)
     return v + q.w * t + cross(q.xyz, t);
 }
 
-float GetLuminance(vec3 color)
+float GetBrightness(vec3 color)
 {
-    return dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+    return length(color);
 }
 
 
@@ -168,7 +168,7 @@ void main()
 
     if (matIdF == 0.0) //< If the material is null (background)
     {
-        FragBrightness = vec4(vec3(0.0), GetLuminance(albedo));
+        FragBrightness = vec4(vec3(0.0), GetBrightness(albedo));
         FragColor = vec4(albedo, 1.0);
         return;
     }
@@ -360,8 +360,8 @@ void main()
 
     /* Handle bright colors for bloom */
 
-    float lum = GetLuminance(FragColor.rgb);
-    FragBrightness = (lum > uBloomHdrThreshold)
-        ? vec4(FragColor.rgb, lum)
-        : vec4(0.0, 0.0, 0.0, lum);
+    float brightness = GetBrightness(FragColor.rgb);
+    FragBrightness = (brightness > uBloomHdrThreshold)
+        ? vec4(FragColor.rgb, brightness)
+        : vec4(0.0, 0.0, 0.0, brightness);
 }

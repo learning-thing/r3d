@@ -86,6 +86,24 @@ void R3D_DrawBufferORM(float x, float y, float w, float h)
 	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
 
+void R3D_DrawBufferBrightColors(float x, float y, float w, float h)
+{
+	Texture2D tex = {
+		.id = R3D.framebuffer.lit.bright,
+		.width = R3D.state.resolutionW,
+		.height = R3D.state.resolutionH
+	};
+
+	DrawTexturePro(
+		tex, (Rectangle) { 0, 0, tex.width, tex.height },
+		(Rectangle) {
+		x, y, w, h
+	}, (Vector2) { 0 }, 0, WHITE
+			);
+
+	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+}
+
 void R3D_DrawBufferBloom(float x, float y, float w, float h)
 {
 	Texture2D tex = {
