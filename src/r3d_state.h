@@ -150,6 +150,7 @@ extern struct R3D_State {
         Matrix matProj;
         int resolutionW;
         int resolutionH;
+        unsigned int flags;
     } state;
 
     // Misc data

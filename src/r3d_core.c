@@ -36,6 +36,21 @@
 
 /* === Public functions === */
 
+bool R3D_HasState(unsigned int flag)
+{
+    return R3D.state.flags & flag;
+}
+
+void R3D_SetState(unsigned int flags)
+{
+    R3D.state.flags |= flags;
+}
+
+void R3D_ClearState(unsigned int flags)
+{
+    R3D.state.flags &= ~flags;
+}
+
 void R3D_Init(int resWidth, int resHeight)
 {
     // Load framebuffers
@@ -156,12 +171,19 @@ void R3D_Begin(Camera3D camera)
     // Store camera position
     R3D.state.posView = camera.position;
 
+    // Compute aspect ratio
+    float aspect = 1.0f;
+    if (R3D.state.flags & R3D_FLAG_ASPECT_KEEP) {
+        aspect = (float)R3D.state.resolutionW / R3D.state.resolutionH;
+    }
+    else {
+        aspect = (float)GetScreenWidth() / GetScreenHeight();
+    }
+
     // Compute projection matrix
-    float aspect = GetRenderWidth() / (float)GetRenderHeight();
     if (camera.projection == CAMERA_PERSPECTIVE) {
         double top = rlGetCullDistanceNear() * tan(camera.fovy * 0.5 * DEG2RAD);
         double right = top * aspect;
-
         R3D.state.matProj = MatrixFrustum(
             -right, right, -top, top,
             rlGetCullDistanceNear(),
@@ -171,7 +193,6 @@ void R3D_Begin(Camera3D camera)
     else if (camera.projection == CAMERA_ORTHOGRAPHIC) {
         double top = camera.fovy / 2.0;
         double right = top * aspect;
-
         R3D.state.matProj = MatrixOrtho(
             -right, right, -top, top,
             rlGetCullDistanceNear(),
@@ -191,6 +212,7 @@ void R3D_End(void)
 {
     // [PART 1] - Init global state
     {
+        rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
         rlDisableColorBlend();
     }
 
@@ -319,7 +341,7 @@ void R3D_End(void)
     }
 
     // [PART 4] - Determine what light should lit the visible scene
-    r3d_light_t* lights[8];
+    r3d_light_t* lights[8] = { 0 };
     int lightCount = 0;
     {
         for (int id = 1; id <= r3d_registry_get_allocated_count(&R3D.container.lightRegistry); id++) {
@@ -409,7 +431,7 @@ void R3D_End(void)
                     r3d_texture_unbind_2D(8);
                 }
             }
-            rlDisableShader();
+            r3d_shader_disable();
         }
         rlDisableFramebuffer();
     }
@@ -516,36 +538,56 @@ void R3D_End(void)
     // [PART 7] - Blit the final result to the main framebuffer
     {
         unsigned int dstId = 0;
-        int w = GetScreenWidth();
-        int h = GetScreenHeight();
+        int dstX = 0, dstY = 0;
+        int dstW = GetScreenWidth();
+        int dstH = GetScreenHeight();
 
         // If a custom final framebuffer is set, use its ID and dimensions
         if (R3D.framebuffer.customTarget.id != 0) {
             dstId = R3D.framebuffer.customTarget.id;
-            w = R3D.framebuffer.customTarget.texture.width;
-            h = R3D.framebuffer.customTarget.texture.height;
+            dstW = R3D.framebuffer.customTarget.texture.width;
+            dstH = R3D.framebuffer.customTarget.texture.height;
+        }
+
+        // Maintain aspect ratio if the corresponding flag is set
+        if (R3D.state.flags & R3D_FLAG_ASPECT_KEEP) {
+            float srcRatio = (float)R3D.state.resolutionW / R3D.state.resolutionH;
+            float dstRatio = (float)dstW / dstH;
+            if (srcRatio > dstRatio) {
+                int prevH = dstH;
+                dstH = dstW * srcRatio;
+                dstY = (prevH - dstH) / 2;
+            }
+            else {
+                int prevW = dstW;
+                dstW = dstH * srcRatio;
+                dstX = (prevW - dstW) / 2;
+            }
         }
 
         // Bind the destination framebuffer for drawing
-        glBindFramebuffer(RL_DRAW_FRAMEBUFFER, dstId);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstId);
 
         // Blit only the color data from the post-processing framebuffer to the main framebuffer
-        glBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
         glBlitFramebuffer(
             0, 0, R3D.state.resolutionW, R3D.state.resolutionH,
-            0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST
+            dstX, dstY, dstX + dstW, dstY + dstH, GL_COLOR_BUFFER_BIT,
+            (R3D.state.flags & R3D_FLAG_BLIT_LINEAR) ? GL_LINEAR : GL_NEAREST
         );
 
         // Blit the depth data from the gbuffer framebuffer to the main framebuffer
-        glBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.gBuffer.id);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.gBuffer.id);
         glBlitFramebuffer(
             0, 0, R3D.state.resolutionW, R3D.state.resolutionH,
-            0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+            dstX, dstY, dstX + dstW, dstY + dstH,
+            GL_DEPTH_BUFFER_BIT, GL_NEAREST
         );
     }
 
     // [PART 8] - Reset global state
     {
+        rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
         rlEnableColorBlend();
     }
 }

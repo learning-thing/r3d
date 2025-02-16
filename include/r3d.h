@@ -27,6 +27,12 @@
 /* === Enums === */
 
 typedef enum {
+    R3D_FLAG_NONE = 0,
+    R3D_FLAG_BLIT_LINEAR = 1 << 0,
+    R3D_FLAG_ASPECT_KEEP = 1 << 1
+} R3D_Flags;
+
+typedef enum {
     R3D_BLOOM_DISABLED,         ///< Bloom effect is disabled.
     R3D_BLOOM_ADDITIVE,         ///< Additive bloom effect, where bright areas are enhanced by adding light to them.
     R3D_BLOOM_SOFT_LIGHT        ///< Soft light bloom effect, which creates a softer, more diffused glow around bright areas.
@@ -79,6 +85,10 @@ typedef struct {
 
 
 /* === Core functions === */
+
+bool R3D_HasState(unsigned int flag);
+void R3D_SetState(unsigned int flags);
+void R3D_ClearState(unsigned int flags);
 
 void R3D_Init(int resWidth, int resHeight);
 void R3D_Close(void);
