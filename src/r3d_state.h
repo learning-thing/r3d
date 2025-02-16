@@ -61,8 +61,8 @@ extern struct R3D_State {
             unsigned int textures[2];
         } post;
 
-        // Final target (optional)
-        RenderTexture final;
+        // Custom target (optional)
+        RenderTexture customTarget;
 
     } framebuffer;
 

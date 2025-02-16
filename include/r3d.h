@@ -83,6 +83,9 @@ typedef struct {
 void R3D_Init(int resWidth, int resHeight);
 void R3D_Close(void);
 
+void R3D_EnableCustomTarget(RenderTexture target);
+void R3D_DisableCustomTarget(void);
+
 void R3D_Begin(Camera3D camera);
 void R3D_End(void);
 

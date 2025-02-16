@@ -135,6 +135,16 @@ void R3D_Close(void)
     r3d_primitive_unload(&R3D.primitive.cube);
 }
 
+void R3D_EnableCustomTarget(RenderTexture target)
+{
+    R3D.framebuffer.customTarget = target;
+}
+
+void R3D_DisableCustomTarget(void)
+{
+    memset(&R3D.framebuffer.customTarget, 0, sizeof(RenderTexture));
+}
+
 void R3D_Begin(Camera3D camera)
 {
     // Render the batch before proceeding
@@ -505,13 +515,32 @@ void R3D_End(void)
 
     // [PART 7] - Blit the final result to the main framebuffer
     {
-        rlBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
-        rlBindFramebuffer(RL_DRAW_FRAMEBUFFER, 0);
+        unsigned int dstId = 0;
+        int w = GetScreenWidth();
+        int h = GetScreenHeight();
 
-        rlBlitFramebuffer(
+        // If a custom final framebuffer is set, use its ID and dimensions
+        if (R3D.framebuffer.customTarget.id != 0) {
+            dstId = R3D.framebuffer.customTarget.id;
+            w = R3D.framebuffer.customTarget.texture.width;
+            h = R3D.framebuffer.customTarget.texture.height;
+        }
+
+        // Bind the destination framebuffer for drawing
+        glBindFramebuffer(RL_DRAW_FRAMEBUFFER, dstId);
+
+        // Blit only the color data from the post-processing framebuffer to the main framebuffer
+        glBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
+        glBlitFramebuffer(
             0, 0, R3D.state.resolutionW, R3D.state.resolutionH,
-            0, 0, GetScreenWidth(), GetScreenHeight(),
-            GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT
+            0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST
+        );
+
+        // Blit the depth data from the gbuffer framebuffer to the main framebuffer
+        glBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.gBuffer.id);
+        glBlitFramebuffer(
+            0, 0, R3D.state.resolutionW, R3D.state.resolutionH,
+            0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST
         );
     }
 
