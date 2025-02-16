@@ -52,12 +52,12 @@ void R3D_SetSkyboxRotation(float pitch, float yaw, float roll)
 	R3D.env.quatSky = QuaternionFromEuler(pitch, yaw, roll);
 }
 
-void R3D_SetBloom(R3D_Bloom mode)
+void R3D_SetBloomMode(R3D_Bloom mode)
 {
 	R3D.env.bloomMode = mode;
 }
 
-R3D_Bloom R3D_GetBloom(void)
+R3D_Bloom R3D_GetBloomMode(void)
 {
 	return R3D.env.bloomMode;
 }

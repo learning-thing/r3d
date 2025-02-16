@@ -41,6 +41,7 @@ void R3D_Init(int resWidth, int resHeight)
     // Load framebuffers
     r3d_framebuffer_load_gbuffer(resWidth, resHeight);
     r3d_framebuffer_load_lit(resWidth, resHeight);
+    r3d_framebuffer_load_pingpong(resWidth, resHeight);
     r3d_framebuffer_load_post(resWidth, resHeight);
 
     // Load containers
@@ -48,6 +49,7 @@ void R3D_Init(int resWidth, int resHeight)
     R3D.container.lightRegistry = r3d_registry_create(8, sizeof(r3d_light_t));
 
     // Load generation shaders
+    r3d_shader_load_generate_gaussian_blur_dual_pass();
     r3d_shader_load_generate_cubemap_from_equirectangular();
     r3d_shader_load_generate_irradiance_convolution();
     r3d_shader_load_generate_prefilter();
@@ -71,6 +73,7 @@ void R3D_Init(int resWidth, int resHeight)
     R3D.env.bloomMode = R3D_BLOOM_DISABLED;
     R3D.env.bloomIntensity = 1.0f;
     R3D.env.bloomHdrThreshold = 1.0f;
+    R3D.env.bloomIterations = 10;
     R3D.env.fogMode = R3D_FOG_DISABLED;
     R3D.env.fogColor = (Vector3) { 1.0f, 1.0f, 1.0f };
     R3D.env.fogStart = 1.0f;
@@ -110,11 +113,13 @@ void R3D_Close(void)
 {
     r3d_framebuffer_unload_gbuffer();
     r3d_framebuffer_unload_lit();
+    r3d_framebuffer_unload_pingpong();
     r3d_framebuffer_unload_post();
 
     r3d_array_destroy(&R3D.container.drawCallArray);
     r3d_registry_destroy(&R3D.container.lightRegistry);
 
+    rlUnloadShaderProgram(R3D.shader.generate.gaussianBlurDualPass.id);
     rlUnloadShaderProgram(R3D.shader.generate.cubemapFromEquirectangular.id);
     rlUnloadShaderProgram(R3D.shader.generate.irradianceConvolution.id);
     rlUnloadShaderProgram(R3D.shader.generate.prefilter.id);
@@ -438,6 +443,37 @@ void R3D_End(void)
 
     // [PART 6] - Post proccesses using ping-pong buffer
     {
+        // Génération du flou du buffer de luminance pour le bloom
+        if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
+            rlEnableFramebuffer(R3D.framebuffer.pingPong.id);
+            {
+                bool* horizontalPass = &R3D.framebuffer.pingPong.targetTextureIdx;
+                *horizontalPass = true;
+
+                r3d_shader_enable(generate.gaussianBlurDualPass)
+                {
+                    for (int i = 0; i < R3D.env.bloomIterations; i++, (*horizontalPass) = !(*horizontalPass)) {
+                        glFramebufferTexture2D(
+                            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                            R3D.framebuffer.pingPong.textures[(*horizontalPass)], 0
+                        );
+                        r3d_shader_set_vec2(generate.gaussianBlurDualPass, uDirection,
+                            ((*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 })
+                        );
+                        r3d_texture_bind_2D(0, i > 0
+                            ? R3D.framebuffer.pingPong.textures[!(*horizontalPass)]
+                            : R3D.framebuffer.lit.lum
+                        );
+                        r3d_primitive_draw_quad();
+                    }
+                }
+                r3d_shader_disable();
+            }
+            rlDisableFramebuffer();
+        }
+
+        // Initialisation des données pour alterner entre les textures source/destination
+        // du framebuffer des post effects
         int texIndex = 2;
         unsigned int textures[3] = {
             R3D.framebuffer.post.textures[0],
@@ -445,6 +481,7 @@ void R3D_End(void)
             R3D.framebuffer.lit.color
         };
 
+        // Rendu des post effects
         rlEnableFramebuffer(R3D.framebuffer.post.id);
         {
             // Post process: Bloom
@@ -456,7 +493,11 @@ void R3D_End(void)
                 r3d_shader_enable(screen.bloom);
                 {
                     r3d_texture_bind_2D(0, textures[texIndex]);
-                    //r3d_texture_bind_2D(1, BLOOM_BLUR_TEX);
+                    r3d_texture_bind_2D(1,
+                        R3D.framebuffer.pingPong.textures[
+                            !R3D.framebuffer.pingPong.targetTextureIdx
+                        ]
+                    );
                     texIndex = !texIndex;
 
                     r3d_shader_set_int(screen.bloom, uBloomMode, R3D.env.bloomMode);

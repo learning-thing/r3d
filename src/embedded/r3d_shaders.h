@@ -33,6 +33,7 @@
 extern const char VS_COMMON_SCREEN[];
 extern const char VS_COMMON_CUBEMAP[];
 
+extern const char FS_GENERATE_GAUSSIAN_BLUR_DUAL_PASS[];
 extern const char FS_GENERATE_CUBEMAP_FROM_EQUIRECTANGULAR[];
 extern const char FS_GENERATE_IRRADIANCE_CONVOLUTION[];
 extern const char FS_GENERATE_PREFILTER[];
@@ -59,6 +60,12 @@ typedef struct { int loc; } r3d_shader_uniform_mat4_t;
 
 
 /* === Shader struct definitions === */
+
+typedef struct {
+    unsigned int id;
+    r3d_shader_uniform_int_t uTexture;
+    r3d_shader_uniform_vec2_t uDirection;
+} r3d_shader_generate_gaussian_blur_dual_pass_t;
 
 typedef struct {
     unsigned int id;

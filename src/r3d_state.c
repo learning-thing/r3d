@@ -112,6 +112,41 @@ void r3d_framebuffer_load_lit(int width, int height)
     }
 }
 
+void r3d_framebuffer_load_pingpong(int width, int height)
+{
+    struct r3d_fb_pingpong_t* pingPong = &R3D.framebuffer.pingPong;
+
+    width /= 2, height /= 2;
+
+    pingPong->id = rlLoadFramebuffer();
+    if (pingPong->id == 0) {
+        TraceLog(LOG_WARNING, "Failed to create framebuffer");
+    }
+
+    rlEnableFramebuffer(pingPong->id);
+
+    // Generate (color) buffers
+    for (int i = 0; i < 2; i++) {
+        pingPong->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+        rlTextureParameters(pingPong->textures[i], GL_TEXTURE_MIN_FILTER, RL_TEXTURE_FILTER_LINEAR);
+        rlTextureParameters(pingPong->textures[i], GL_TEXTURE_MAG_FILTER, RL_TEXTURE_FILTER_LINEAR);
+    }
+
+    // Activate the draw buffers for all the attachments
+    rlActiveDrawBuffers(1);
+
+    // Attach the textures to the framebuffer
+    rlFramebufferAttach(pingPong->id, pingPong->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+
+    // Check if the framebuffer is complete
+    if (!rlFramebufferComplete(pingPong->id)) {
+        TraceLog(LOG_WARNING, "Framebuffer is not complete");
+    }
+
+    // Internal data setup
+    pingPong->targetTextureIdx = 0;
+}
+
 void r3d_framebuffer_load_post(int width, int height)
 {
     struct r3d_fb_post_t* post = &R3D.framebuffer.post;
@@ -128,7 +163,7 @@ void r3d_framebuffer_load_post(int width, int height)
     post->textures[1] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
 
     // Activate the draw buffers for all the attachments
-    rlActiveDrawBuffers(2);
+    rlActiveDrawBuffers(1);
 
     // Attach the textures to the framebuffer
     rlFramebufferAttach(post->id, post->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
@@ -167,6 +202,19 @@ void r3d_framebuffer_unload_lit(void)
     memset(lit, 0, sizeof(struct r3d_fb_gbuffer_t));
 }
 
+void r3d_framebuffer_unload_pingpong(void)
+{
+    struct r3d_fb_pingpong_t* pingPong = &R3D.framebuffer.pingPong;
+
+    for (int i = 0; i < sizeof(pingPong->textures) / sizeof(*pingPong->textures); i++) {
+        rlUnloadTexture(pingPong->textures[i]);
+    }
+
+    rlUnloadFramebuffer(pingPong->id);
+
+    memset(pingPong, 0, sizeof(struct r3d_fb_gbuffer_t));
+}
+
 void r3d_framebuffer_unload_post(void)
 {
     struct r3d_fb_post_t* post = &R3D.framebuffer.post;
@@ -182,6 +230,20 @@ void r3d_framebuffer_unload_post(void)
 
 
 /* === Shader loading functions === */
+
+void r3d_shader_load_generate_gaussian_blur_dual_pass(void)
+{
+    R3D.shader.generate.gaussianBlurDualPass.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_GENERATE_GAUSSIAN_BLUR_DUAL_PASS
+    );
+
+    r3d_shader_get_location(generate.gaussianBlurDualPass, uTexture);
+    r3d_shader_get_location(generate.gaussianBlurDualPass, uDirection);
+
+    r3d_shader_enable(generate.gaussianBlurDualPass);
+    r3d_shader_set_int(generate.gaussianBlurDualPass, uTexture, 0);
+    r3d_shader_disable();
+}
 
 void r3d_shader_load_generate_cubemap_from_equirectangular(void)
 {

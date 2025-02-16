@@ -154,8 +154,8 @@ void R3D_SetAmbientColor(Color color);
 void R3D_EnableSkybox(R3D_Skybox skybox);
 void R3D_DisableSkybox(void);
 
-void R3D_SetBloom(R3D_Bloom mode);
-R3D_Bloom R3D_GetBloom(void);
+void R3D_SetBloomMode(R3D_Bloom mode);
+R3D_Bloom R3D_GetBloomMode(void);
 
 void R3D_SetBloomIntensity(float value);
 float R3D_GetBloomIntensity(void);

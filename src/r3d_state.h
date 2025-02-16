@@ -55,7 +55,14 @@ extern struct R3D_State {
             unsigned int lum;
         } lit;
 
-        // Post process
+        // Ping-pong buffer for bloom blur processing (half internal resolution)
+        struct r3d_fb_pingpong_t {
+            unsigned int id;
+            unsigned int textures[2];
+            bool targetTextureIdx;
+        } pingPong;
+
+        // Post-processing buffer (similar to ping-pong but with a different setup)  
         struct r3d_fb_post_t {
             unsigned int id;
             unsigned int textures[2];
@@ -77,6 +84,7 @@ extern struct R3D_State {
 
         // Generation shaders
         struct {
+            r3d_shader_generate_gaussian_blur_dual_pass_t gaussianBlurDualPass;
             r3d_shader_generate_cubemap_from_equirectangular_t cubemapFromEquirectangular;
             r3d_shader_generate_irradiance_convolution_t irradianceConvolution;
             r3d_shader_generate_prefilter_t prefilter;
@@ -112,6 +120,7 @@ extern struct R3D_State {
         R3D_Bloom bloomMode;        // (post pass)
         float bloomIntensity;       // (post pass)
         float bloomHdrThreshold;    // (light pass)
+        int bloomIterations;        // Number of iteration during the generation of the vagueness (post pass)
 
         R3D_Fog fogMode;            // (post pass)
         Vector3 fogColor;           // (post pass)
@@ -165,15 +174,18 @@ extern struct R3D_State {
 
 void r3d_framebuffer_load_gbuffer(int width, int height);
 void r3d_framebuffer_load_lit(int width, int height);
+void r3d_framebuffer_load_pingpong(int width, int height);
 void r3d_framebuffer_load_post(int width, int height);
 
 void r3d_framebuffer_unload_gbuffer(void);
 void r3d_framebuffer_unload_lit(void);
+void r3d_framebuffer_unload_pingpong(void);
 void r3d_framebuffer_unload_post(void);
 
 
 /* === Shader loading functions === */
 
+void r3d_shader_load_generate_gaussian_blur_dual_pass(void);
 void r3d_shader_load_generate_cubemap_from_equirectangular(void);
 void r3d_shader_load_generate_irradiance_convolution(void);
 void r3d_shader_load_generate_prefilter(void);
