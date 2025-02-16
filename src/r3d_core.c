@@ -407,7 +407,7 @@ void R3D_End(void)
 
                 r3d_shader_enable(generate.gaussianBlurDualPass)
                 {
-                    for (int i = 0; i < R3D.env.bloomIterations; i++, (*horizontalPass) = !(*horizontalPass)) {
+                    for (int i = 0; i < R3D.env.ssaoIterations; i++, (*horizontalPass) = !(*horizontalPass)) {
                         glFramebufferTexture2D(
                             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                             R3D.framebuffer.pingPongSSAO.textures[(*horizontalPass)], 0
