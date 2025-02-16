@@ -20,8 +20,33 @@
 #include "./r3d_drawcall.h"
 #include "../r3d_state.h"
 
+#include <stdlib.h>
 #include <raylib.h>
 #include <raymath.h>
+
+/* === Internal functions === */
+
+static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
+{
+    r3d_drawcall_t* drawCallA = a;
+    r3d_drawcall_t* drawCallB = b;
+
+    Vector3 posA = { 0 };
+    Vector3 posB = { 0 };
+
+    posA.x = drawCallA->transform.m12;
+    posA.y = drawCallA->transform.m13;
+    posA.z = drawCallA->transform.m14;
+
+    posB.x = drawCallB->transform.m12;
+    posB.y = drawCallB->transform.m13;
+    posB.z = drawCallB->transform.m14;
+
+    float distA = Vector3DistanceSqr(R3D.state.posView, posA);
+    float distB = Vector3DistanceSqr(R3D.state.posView, posB);
+
+    return (distA > distB) - (distA < distB);
+}
 
 /* === Function definitions === */
 
@@ -154,4 +179,9 @@ void r3d_drawcall_raster_geometry(const r3d_drawcall_t* call)
     // Restore rlgl internal modelview and projection matrices
     rlSetMatrixModelview(matView);
     rlSetMatrixProjection(matProjection);
+}
+
+void r3d_drawcall_sort_front_to_back(r3d_drawcall_t* calls, size_t count)
+{
+    qsort(calls, count, sizeof(r3d_drawcall_t), r3d_drawcall_compare_front_to_back);
 }

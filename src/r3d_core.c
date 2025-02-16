@@ -184,7 +184,15 @@ void R3D_End(void)
         rlDisableColorBlend();
     }
 
-    // [PART 2] - Raster geometries to the geometry buffers
+    // [PART 2] - Sort draw calls from front to back based on the camera position
+    {
+        r3d_drawcall_sort_front_to_back(
+            R3D.container.drawCallArray.data,
+            R3D.container.drawCallArray.count
+        );
+    }
+
+    // [PART 3] - Raster geometries to the geometry buffers
     {
         rlEnableFramebuffer(R3D.framebuffer.gBuffer.id);
         {
@@ -300,7 +308,7 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 3] - Determine what light should lit the visible scene
+    // [PART 4] - Determine what light should lit the visible scene
     r3d_light_t* lights[8];
     int lightCount = 0;
     {
@@ -312,7 +320,7 @@ void R3D_End(void)
         }
     }
 
-    // [PART 4] - Lighting computation from G-buffer data into the final render target
+    // [PART 5] - Lighting computation from G-buffer data into the final render target
     {
         rlEnableFramebuffer(R3D.framebuffer.lit.id);
         {
@@ -396,7 +404,7 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 5] - Post proccesses using ping-pong buffer
+    // [PART 6] - Post proccesses using ping-pong buffer
     {
         int texIndex = 2;
         unsigned int textures[3] = {
@@ -495,7 +503,7 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 6] - Blit the final result to the main framebuffer
+    // [PART 7] - Blit the final result to the main framebuffer
     {
         rlBindFramebuffer(RL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
         rlBindFramebuffer(RL_DRAW_FRAMEBUFFER, 0);
@@ -507,7 +515,7 @@ void R3D_End(void)
         );
     }
 
-    // [PART 7] - Reset global state
+    // [PART 8] - Reset global state
     {
         rlEnableColorBlend();
     }
