@@ -157,12 +157,24 @@ static TextureCubemap r3d_skybox_generate_irradiance(TextureCubemap sky)
 static TextureCubemap r3d_skybox_generate_prefilter(TextureCubemap sky)
 {
     static const int PREFILTER_SIZE = 128;
-    static const int MAX_MIP_LEVELS = 5;
+    static const int MAX_MIP_LEVELS = 8;
 
     // Create prefilter cubemap texture
-    unsigned int prefilterId = rlLoadTextureCubemap(NULL, PREFILTER_SIZE, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
-    rlCubemapParameters(prefilterId, RL_TEXTURE_MIN_FILTER, RL_TEXTURE_FILTER_NEAREST);
-    rlCubemapParameters(prefilterId, RL_TEXTURE_MAG_FILTER, RL_TEXTURE_FILTER_NEAREST);
+    unsigned int prefilterId = 0;
+    glGenTextures(1, &prefilterId);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterId);
+    for (int i = 0; i < 6; i++) {
+        glTexImage2D(
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+            128, 128, 0, GL_RGB, GL_FLOAT, NULL
+        );
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
     // Generate mipmaps
     rlEnableTextureCubemap(prefilterId);

@@ -338,7 +338,7 @@ void main()
     {
         vec3 R = RotateWithQuat(reflect(-V, N), uQuatSkybox);
 
-        const float MAX_REFLECTION_LOD = 4.0;
+        const float MAX_REFLECTION_LOD = 7.0;
         vec3 prefilteredColor = textureLod(uCubePrefilter, R, roughness * MAX_REFLECTION_LOD).rgb;
 
         float fresnelTerm = SchlickFresnel(cNdotV);

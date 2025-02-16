@@ -589,7 +589,7 @@ void r3d_texture_load_ssao_noise(void)
         noise[i].y = ((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f;
         noise[i].z = (float)GetRandomValue(0, INT16_MAX) / INT16_MAX;
     }
-    R3D.texture.ssaoNoise = rlLoadTexture(noise, 4, 4, PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
+    R3D.texture.ssaoNoise = rlLoadTexture(noise, 4, 4, PIXELFORMAT_UNCOMPRESSED_R32G32B32, 1);
 }
 
 void r3d_texture_load_ssao_kernel(void)
