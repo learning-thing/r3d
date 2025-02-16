@@ -77,6 +77,7 @@ void R3D_Init(int resWidth, int resHeight)
     R3D.env.ssaoEnabled = false;
     R3D.env.ssaoRadius = 0.5f;
     R3D.env.ssaoBias = 0.025f;
+    R3D.env.ssaoIterations = 10;
     R3D.env.bloomMode = R3D_BLOOM_DISABLED;
     R3D.env.bloomIntensity = 1.0f;
     R3D.env.bloomHdrThreshold = 1.0f;
