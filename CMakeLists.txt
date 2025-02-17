@@ -1,12 +1,13 @@
 ﻿cmake_minimum_required(VERSION 3.8)
 project("r3d")
 
+# This section configures MSVC (Visual Studio) to enable "Edit and Continue" debugging
 if(POLICY CMP0141)
-	cmake_policy(SET CMP0141 NEW)
-	set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
+    cmake_policy(SET CMP0141 NEW)
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
-# Main project check
+# Determine the project's root directory and check if it's the main project
 
 set(R3D_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -16,11 +17,27 @@ else()
     set(R3D_IS_MAIN OFF)
 endif()
 
-# Configure external dependencies
+# Project configuration options
 
-add_subdirectory("${R3D_ROOT_PATH}/external/raylib")
+option(R3D_BUILD_EXAMPLES "Build the examples" ${R3D_IS_MAIN})
 
-# Configure r3d library
+# Submodule check for raylib
+
+set(RAYLIB_PATH "${R3D_ROOT_PATH}/external/raylib")
+
+if(EXISTS ${RAYLIB_PATH})
+    message(STATUS "Submodule raylib found.")
+    add_subdirectory("${RAYLIB_PATH}")
+else()
+    find_package(raylib QUIET)
+    if(TARGET raylib)
+        message(STATUS "Raylib found via find_package.")
+    else()
+        message(FATAL_ERROR "The 'raylib' submodule is missing, and 'find_package(raylib)' failed. Please make sure the submodule is initialized.")
+    endif()
+endif()
+
+# Configure r3d library: Include external resources for shaders and textures
 
 include("${R3D_ROOT_PATH}/embedded/shaders/EmbedShaders.cmake")
 include("${R3D_ROOT_PATH}/embedded/textures/EmbedTextures.cmake")
@@ -29,11 +46,12 @@ EmbedShaders(R3D_GENERATED_SHADERS_SOURCE
     "${R3D_ROOT_PATH}/src/embedded/r3d_shaders.c.in"
     "${R3D_ROOT_PATH}/src/embedded/r3d_shaders.h"
 )
-
 EmbedTextures(R3D_GENERATED_TEXTURES_SOURCE
     "${R3D_ROOT_PATH}/src/embedded/r3d_textures.c.in"
     "${R3D_ROOT_PATH}/src/embedded/r3d_textures.h"
 )
+
+# Create the r3d library by adding all the source files
 
 add_library(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/src/details/r3d_primitives.c"
@@ -53,43 +71,22 @@ add_library(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} PUBLIC raylib)
 
+# Specify the include directories needed for the project
+
 target_include_directories(${PROJECT_NAME} PUBLIC
-    "${R3D_ROOT_PATH}/include"
-    "${R3D_ROOT_PATH}/external/glad"
-    "${R3D_ROOT_PATH}/external/raylib/src"
+    "${R3D_ROOT_PATH}/include"  # Include the main project headers
+    "${R3D_ROOT_PATH}/external/glad"  # Include the glad headers
+    "${R3D_ROOT_PATH}/external/raylib/src"  # Include the raylib headers
 )
 
+# Ensure the C standard is set for MSVC if using CMake version greater than 3.12
+
 if(CMAKE_VERSION VERSION_GREATER 3.12)
-	set_property(TARGET r3d PROPERTY C_STANDARD 99)
+    set_property(TARGET r3d PROPERTY C_STANDARD 99)
 endif()
 
-# Examples
+# Example configuration
 
-add_executable(r3d_basic "examples/basic.c")
-target_link_libraries(r3d_basic PRIVATE raylib r3d)
-target_include_directories(r3d_basic PRIVATE "external/raylib/src" "include")
-
-add_executable(r3d_pbr "examples/pbr.c")
-target_link_libraries(r3d_pbr PRIVATE raylib r3d)
-target_compile_definitions(r3d_pbr PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
-target_include_directories(r3d_pbr PRIVATE "external/raylib/src" "include")
-
-add_executable(r3d_skybox "examples/skybox.c")
-target_link_libraries(r3d_skybox PRIVATE raylib r3d)
-target_compile_definitions(r3d_skybox PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
-target_include_directories(r3d_skybox PRIVATE "external/raylib/src" "include")
-
-add_executable(r3d_sponza "examples/sponza.c")
-target_link_libraries(r3d_sponza PRIVATE raylib r3d)
-target_compile_definitions(r3d_sponza PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
-target_include_directories(r3d_sponza PRIVATE "external/raylib/src" "include")
-
-add_executable(r3d_fog "examples/fog.c")
-target_link_libraries(r3d_fog PRIVATE raylib r3d)
-target_compile_definitions(r3d_fog PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
-target_include_directories(r3d_fog PRIVATE "external/raylib/src" "include")
-
-add_executable(r3d_bloom "examples/bloom.c")
-target_link_libraries(r3d_bloom PRIVATE raylib r3d)
-target_compile_definitions(r3d_bloom PRIVATE RESOURCES_PATH="${R3D_ROOT_PATH}/examples/resources/")
-target_include_directories(r3d_bloom PRIVATE "external/raylib/src" "include")
+if(R3D_BUILD_EXAMPLES)
+    include("${R3D_ROOT_PATH}/examples/CMakeLists.txt")
+endif()

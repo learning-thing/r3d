@@ -1,0 +1,16 @@
+set(RESOURCES_PATH "${R3D_ROOT_PATH}/examples/resources/")
+set(INCLUDE_PATH "${R3D_ROOT_PATH}/include")
+
+function(add_example example_name source_file)
+    add_executable(${example_name} ${source_file})
+    target_link_libraries(${example_name} PRIVATE raylib r3d)
+    target_compile_definitions(${example_name} PRIVATE RESOURCES_PATH="${RESOURCES_PATH}")
+    target_include_directories(${example_name} PRIVATE ${RAYLIB_PATH} ${INCLUDE_PATH})
+endfunction()
+
+add_example(r3d_basic "examples/basic.c")
+add_example(r3d_pbr "examples/pbr.c")
+add_example(r3d_skybox "examples/skybox.c")
+add_example(r3d_sponza "examples/sponza.c")
+add_example(r3d_fog "examples/fog.c")
+add_example(r3d_bloom "examples/bloom.c")
