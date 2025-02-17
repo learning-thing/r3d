@@ -14,7 +14,7 @@ static Camera3D		camera = { 0 };
 
 const char* Init(void)
 {
-    R3D_Init(GetScreenWidth(), GetScreenHeight());
+    R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
     SetTargetFPS(60);
 
     plane = LoadModelFromMesh(GenMeshPlane(1000, 1000, 1, 1));

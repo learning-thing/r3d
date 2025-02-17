@@ -114,6 +114,7 @@ extern struct R3D_State {
             r3d_shader_screen_fog_t fog;
             r3d_shader_screen_tonemap_t tonemap;
             r3d_shader_screen_adjustment_t adjustment;
+            r3d_shader_screen_fxaa_t fxaa;
         } screen;
 
     } shader;
@@ -172,16 +173,38 @@ extern struct R3D_State {
 
     // State data
     struct {
-        r3d_frustum_t frustum;
-        BoundingBox frustumAabb;
-        Matrix matView;
-        Matrix matProj;
-        Matrix matInvView;
-        Matrix matInvProj;
-        Vector3 posView;
-        int resolutionW;
-        int resolutionH;
+
+        // Camera transformations
+        struct {
+            Matrix view, invView;
+            Matrix proj, invProj;
+            Vector3 position;
+        } transform;
+
+        // Frustum data
+        struct {
+            r3d_frustum_t shape;
+            BoundingBox aabb;
+        } frustum;
+
+        // Resolution
+        struct {
+            int width;
+            int height;
+            float texelX;
+            float texelY;
+        } resolution;
+
+        // FXAA state
+        struct {
+            float qualityLevel;
+            float edgeSensitivity;
+            float subpixelQuality;
+        } fxaa;
+
+        // Miscellaneous flags
         unsigned int flags;
+
     } state;
 
     // Misc data
@@ -223,6 +246,7 @@ void r3d_shader_load_screen_bloom(void);
 void r3d_shader_load_screen_fog(void);
 void r3d_shader_load_screen_tonemap(void);
 void r3d_shader_load_screen_adjustment(void);
+void r3d_shader_load_screen_fxaa(void);
 
 
 /* === Texture loading functions === */

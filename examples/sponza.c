@@ -16,7 +16,7 @@ static bool sky = false;
 
 const char* Init(void)
 {
-    R3D_Init(GetScreenWidth(), GetScreenHeight());
+    R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
     SetTargetFPS(60);
 
     R3D_SetSSAO(true);
@@ -71,6 +71,12 @@ void Update(float delta)
         if (sky) R3D_DisableSkybox();
         else R3D_EnableSkybox(skybox);
         sky = !sky;
+    }
+
+    if (IsKeyPressed(KEY_F)) {
+        bool fxaa = R3D_HasState(R3D_FLAG_FXAA);
+        if (fxaa) R3D_ClearState(R3D_FLAG_FXAA);
+        else R3D_SetState(R3D_FLAG_FXAA);
     }
 }
 

@@ -15,7 +15,7 @@ static Material materials[5 * 5] = { 0 };
 
 const char* Init(void)
 {
-    R3D_Init(GetScreenWidth(), GetScreenHeight());
+    R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
     SetTargetFPS(60);
 
     R3D_SetBloomMode(R3D_BLOOM_ADDITIVE);

@@ -46,8 +46,8 @@ static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
     posB.y = drawCallB->transform.m13;
     posB.z = drawCallB->transform.m14;
 
-    float distA = Vector3DistanceSqr(R3D.state.posView, posA);
-    float distB = Vector3DistanceSqr(R3D.state.posView, posB);
+    float distA = Vector3DistanceSqr(R3D.state.transform.position, posA);
+    float distB = Vector3DistanceSqr(R3D.state.transform.position, posB);
 
     return (distA > distB) - (distA < distB);
 }

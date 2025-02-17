@@ -38,7 +38,7 @@
 
 /* === Public functions === */
 
-void R3D_Init(int resWidth, int resHeight)
+void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 {
     // Load framebuffers
     r3d_framebuffer_load_gbuffer(resWidth, resHeight);
@@ -70,6 +70,7 @@ void R3D_Init(int resWidth, int resHeight)
     r3d_shader_load_screen_fog();
     r3d_shader_load_screen_tonemap();
     r3d_shader_load_screen_adjustment();
+    r3d_shader_load_screen_fxaa();
 
     // Environment data
     R3D.env.backgroundColor = (Vector3) { 0.2f, 0.2f, 0.2f };
@@ -96,9 +97,19 @@ void R3D_Init(int resWidth, int resHeight)
     R3D.env.contrast = 1.0f;
     R3D.env.saturation = 1.0f;
 
-    // Init state data
-    R3D.state.resolutionW = resWidth;
-    R3D.state.resolutionH = resHeight;
+    // Init resolution state
+    R3D.state.resolution.width = resWidth;
+    R3D.state.resolution.height = resHeight;
+    R3D.state.resolution.texelX = 1.0f / resWidth;
+    R3D.state.resolution.texelY = 1.0f / resHeight;
+
+    // Init FXAA default state
+    R3D.state.fxaa.qualityLevel = 0.5f;
+    R3D.state.fxaa.edgeSensitivity = 0.75f;
+    R3D.state.fxaa.subpixelQuality = 0.5f;
+
+    // Set parameter flags
+    R3D.state.flags = flags;
 
     // Load default textures
     r3d_texture_load_white();
@@ -146,6 +157,7 @@ void R3D_Close(void)
     rlUnloadShaderProgram(R3D.shader.screen.fog.id);
     rlUnloadShaderProgram(R3D.shader.screen.tonemap.id);
     rlUnloadShaderProgram(R3D.shader.screen.adjustment.id);
+    rlUnloadShaderProgram(R3D.shader.screen.fxaa.id);
 
     rlUnloadTexture(R3D.texture.white);
     rlUnloadTexture(R3D.texture.black);
@@ -173,6 +185,19 @@ void R3D_ClearState(unsigned int flags)
     R3D.state.flags &= ~flags;
 }
 
+void R3D_GetFXAAParameters(float* qualityLevel, float* edgeSensitivity, float* subpixelQuality)
+{
+    if (qualityLevel) *qualityLevel = R3D.state.fxaa.qualityLevel;
+    if (edgeSensitivity) *edgeSensitivity = R3D.state.fxaa.edgeSensitivity;
+    if (subpixelQuality) *subpixelQuality = R3D.state.fxaa.subpixelQuality;
+}
+void R3D_SetFXAAParameters(float qualityLevel, float edgeSensitivity, float subpixelQuality)
+{
+    R3D.state.fxaa.qualityLevel = qualityLevel;
+    R3D.state.fxaa.edgeSensitivity = edgeSensitivity;
+    R3D.state.fxaa.subpixelQuality = subpixelQuality;
+}
+
 void R3D_EnableCustomTarget(RenderTexture target)
 {
     R3D.framebuffer.customTarget = target;
@@ -192,12 +217,12 @@ void R3D_Begin(Camera3D camera)
     r3d_array_clear(&R3D.container.drawCallArray);
 
     // Store camera position
-    R3D.state.posView = camera.position;
+    R3D.state.transform.position = camera.position;
 
     // Compute aspect ratio
     float aspect = 1.0f;
     if (R3D.state.flags & R3D_FLAG_ASPECT_KEEP) {
-        aspect = (float)R3D.state.resolutionW / R3D.state.resolutionH;
+        aspect = (float)R3D.state.resolution.width / R3D.state.resolution.height;
     }
     else {
         aspect = (float)GetScreenWidth() / GetScreenHeight();
@@ -207,7 +232,7 @@ void R3D_Begin(Camera3D camera)
     if (camera.projection == CAMERA_PERSPECTIVE) {
         double top = rlGetCullDistanceNear() * tan(camera.fovy * 0.5 * DEG2RAD);
         double right = top * aspect;
-        R3D.state.matProj = MatrixFrustum(
+        R3D.state.transform.proj = MatrixFrustum(
             -right, right, -top, top,
             rlGetCullDistanceNear(),
             rlGetCullDistanceFar()
@@ -216,7 +241,7 @@ void R3D_Begin(Camera3D camera)
     else if (camera.projection == CAMERA_ORTHOGRAPHIC) {
         double top = camera.fovy / 2.0;
         double right = top * aspect;
-        R3D.state.matProj = MatrixOrtho(
+        R3D.state.transform.proj = MatrixOrtho(
             -right, right, -top, top,
             rlGetCullDistanceNear(),
             rlGetCullDistanceFar()
@@ -224,27 +249,27 @@ void R3D_Begin(Camera3D camera)
     }
 
     // Compute view matrix
-    R3D.state.matView = MatrixLookAt(
+    R3D.state.transform.view = MatrixLookAt(
         camera.position,
         camera.target,
         camera.up
     );
 
     // Store inverse matrices
-    R3D.state.matInvProj = MatrixInvert(R3D.state.matProj);
-    R3D.state.matInvView = MatrixInvert(R3D.state.matView);
+    R3D.state.transform.invProj = MatrixInvert(R3D.state.transform.proj);
+    R3D.state.transform.invView = MatrixInvert(R3D.state.transform.view);
 
     // Compute frustum
-    Matrix matMV = MatrixMultiply(R3D.state.matView, R3D.state.matProj);
-    R3D.state.frustumAabb = r3d_frustum_get_bounding_box(matMV);
-    R3D.state.frustum = r3d_frustum_create(matMV);
+    Matrix matMV = MatrixMultiply(R3D.state.transform.view, R3D.state.transform.proj);
+    R3D.state.frustum.aabb = r3d_frustum_get_bounding_box(matMV);
+    R3D.state.frustum.shape = r3d_frustum_create(matMV);
 }
 
 void R3D_End(void)
 {
     // [PART 1] - Init global state
     {
-        rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         rlDisableColorBlend();
     }
 
@@ -283,12 +308,12 @@ void R3D_End(void)
             // Setup projection matrix
             rlMatrixMode(RL_PROJECTION);
             rlPushMatrix();
-            rlSetMatrixProjection(R3D.state.matProj);
+            rlSetMatrixProjection(R3D.state.transform.proj);
 
             // Setup view matrix
             rlMatrixMode(RL_MODELVIEW);
             rlLoadIdentity();
-            rlMultMatrixf(MatrixToFloat(R3D.state.matView));
+            rlMultMatrixf(MatrixToFloat(R3D.state.transform.view));
 
             // Render skybox - (albedo buffer only)
             if (R3D.env.useSky)
@@ -375,7 +400,7 @@ void R3D_End(void)
     // [PART 4] - Process SSAO
     if (R3D.env.ssaoEnabled) {
         rlEnableFramebuffer(R3D.framebuffer.pingPongSSAO.id);
-        rlViewport(0, 0, R3D.state.resolutionW / 2, R3D.state.resolutionH / 2);
+        rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
         {
             // Bind first SSAO output texture
             glFramebufferTexture2D(
@@ -386,13 +411,13 @@ void R3D_End(void)
             // Render SSAO
             r3d_shader_enable(screen.ssao);
             {
-                r3d_shader_set_mat4(screen.ssao, uMatInvProj, R3D.state.matInvProj);
-                r3d_shader_set_mat4(screen.ssao, uMatInvView, R3D.state.matInvView);
-                r3d_shader_set_mat4(screen.ssao, uMatProj, R3D.state.matProj);
-                r3d_shader_set_mat4(screen.ssao, uMatView, R3D.state.matView);
+                r3d_shader_set_mat4(screen.ssao, uMatInvProj, R3D.state.transform.invProj);
+                r3d_shader_set_mat4(screen.ssao, uMatInvView, R3D.state.transform.invView);
+                r3d_shader_set_mat4(screen.ssao, uMatProj, R3D.state.transform.proj);
+                r3d_shader_set_mat4(screen.ssao, uMatView, R3D.state.transform.view);
 
                 r3d_shader_set_vec2(screen.ssao, uResolution, ((Vector2) {
-                    R3D.state.resolutionW / 2, R3D.state.resolutionH / 2
+                    R3D.state.resolution.width / 2, R3D.state.resolution.height / 2
                 }));
 
                 r3d_shader_set_float(screen.ssao, uNear, rlGetCullDistanceNear());
@@ -440,7 +465,7 @@ void R3D_End(void)
             }
         }
         rlDisableFramebuffer();
-        rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
     }
 
     // [PART 5] - Determine what light should lit the visible scene
@@ -539,7 +564,7 @@ void R3D_End(void)
             }
 
             rlDisableFramebuffer();
-            rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
+            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         }
 
         rlDisableDepthTest();
@@ -613,9 +638,9 @@ void R3D_End(void)
                     r3d_shader_set_int(screen.lighting, uHasSkybox, false);
                 }
 
-                r3d_shader_set_mat4(screen.lighting, uMatInvProj, R3D.state.matInvProj);
-                r3d_shader_set_mat4(screen.lighting, uMatInvView, R3D.state.matInvView);
-                r3d_shader_set_vec3(screen.lighting, uViewPosition, R3D.state.posView);
+                r3d_shader_set_mat4(screen.lighting, uMatInvProj, R3D.state.transform.invProj);
+                r3d_shader_set_mat4(screen.lighting, uMatInvView, R3D.state.transform.invView);
+                r3d_shader_set_vec3(screen.lighting, uViewPosition, R3D.state.transform.position);
 
                 r3d_shader_set_float(screen.lighting, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
 
@@ -672,7 +697,7 @@ void R3D_End(void)
         // Generating the blur for the brightness buffer to create the bloom effect.
         if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
             rlEnableFramebuffer(R3D.framebuffer.pingPongBloom.id);
-            rlViewport(0, 0, R3D.state.resolutionW / 2, R3D.state.resolutionH / 2);
+            rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
             {
                 bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTextureIdx;
                 *horizontalPass = true;
@@ -697,7 +722,7 @@ void R3D_End(void)
                 r3d_shader_disable();
             }
             rlDisableFramebuffer();
-            rlViewport(0, 0, R3D.state.resolutionW, R3D.state.resolutionH);
+            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         }
 
         // Initializing data to alternate between the
@@ -789,12 +814,35 @@ void R3D_End(void)
                 );
                 r3d_shader_enable(screen.adjustment);
                 {
-                    r3d_shader_bind_sampler2D(screen.tonemap, uTexSceneHDR, textures[texIndex]);
+                    r3d_shader_bind_sampler2D(screen.adjustment, uTexSceneHDR, textures[texIndex]);
                     texIndex = !texIndex;
 
                     r3d_shader_set_float(screen.adjustment, uBrightness, R3D.env.brightness);
                     r3d_shader_set_float(screen.adjustment, uContrast, R3D.env.contrast);
                     r3d_shader_set_float(screen.adjustment, uSaturation, R3D.env.saturation);
+
+                    r3d_primitive_draw_quad();
+                }
+                r3d_shader_disable();
+            }
+
+            // Post process: Anti aliasing
+            if (R3D.state.flags & R3D_FLAG_FXAA) {
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                    GL_TEXTURE_2D, textures[!texIndex], 0
+                );
+                r3d_shader_enable(screen.fxaa);
+                {
+                    r3d_shader_bind_sampler2D(screen.fxaa, uTexture, textures[texIndex]);
+                    texIndex = !texIndex;
+
+                    Vector2 texelSize = { R3D.state.resolution.texelX, R3D.state.resolution.texelY };
+                    r3d_shader_set_vec2(screen.fxaa, uTexelSize, texelSize);
+
+                    r3d_shader_set_float(screen.fxaa, uQualityLevel, 1.0);
+                    r3d_shader_set_float(screen.fxaa, uEdgeSensitivity, 1.0);
+                    r3d_shader_set_float(screen.fxaa, uSubpixelQuality, 1.0);
 
                     r3d_primitive_draw_quad();
                 }
@@ -820,7 +868,7 @@ void R3D_End(void)
 
         // Maintain aspect ratio if the corresponding flag is set
         if (R3D.state.flags & R3D_FLAG_ASPECT_KEEP) {
-            float srcRatio = (float)R3D.state.resolutionW / R3D.state.resolutionH;
+            float srcRatio = (float)R3D.state.resolution.width / R3D.state.resolution.height;
             float dstRatio = (float)dstW / dstH;
             if (srcRatio > dstRatio) {
                 int prevH = dstH;
@@ -840,7 +888,7 @@ void R3D_End(void)
         // Blit only the color data from the post-processing framebuffer to the main framebuffer
         glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
         glBlitFramebuffer(
-            0, 0, R3D.state.resolutionW, R3D.state.resolutionH,
+            0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
             dstX, dstY, dstX + dstW, dstY + dstH, GL_COLOR_BUFFER_BIT,
             (R3D.state.flags & R3D_FLAG_BLIT_LINEAR) ? GL_LINEAR : GL_NEAREST
         );
@@ -848,7 +896,7 @@ void R3D_End(void)
         // Blit the depth data from the gbuffer framebuffer to the main framebuffer
         glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.gBuffer.id);
         glBlitFramebuffer(
-            0, 0, R3D.state.resolutionW, R3D.state.resolutionH,
+            0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
             dstX, dstY, dstX + dstW, dstY + dstH,
             GL_DEPTH_BUFFER_BIT, GL_NEAREST
         );

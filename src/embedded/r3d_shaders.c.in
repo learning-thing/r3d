@@ -44,3 +44,4 @@ const char FS_SCREEN_BLOOM[] = "@FS_SCREEN_BLOOM@";
 const char FS_SCREEN_FOG[] = "@FS_SCREEN_FOG@";
 const char FS_SCREEN_TONEMAP[] = "@FS_SCREEN_TONEMAP@";
 const char FS_SCREEN_ADJUSTMENT[] = "@FS_SCREEN_ADJUSTMENT@";
+const char FS_SCREEN_FXAA[] = "@FS_SCREEN_FXAA@";

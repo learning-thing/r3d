@@ -16,7 +16,7 @@ static float modelScale = 1.0f;
 
 const char* Init(void)
 {
-	R3D_Init(GetScreenWidth(), GetScreenHeight());
+	R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
 	SetTargetFPS(60);
 
 	model = RES_LoadModel("pbr/musket.glb");

@@ -15,7 +15,7 @@ static Material materials[5 * 5] = { 0 };
 
 const char* Init(void)
 {
-    R3D_Init(GetScreenWidth(), GetScreenHeight());
+    R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
     SetTargetFPS(60);
 
     sphere = LoadModelFromMesh(GenMeshSphere(0.5f, 64, 64));

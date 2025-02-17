@@ -27,9 +27,10 @@
 /* === Enums === */
 
 typedef enum {
-    R3D_FLAG_NONE = 0,
-    R3D_FLAG_BLIT_LINEAR = 1 << 0,
-    R3D_FLAG_ASPECT_KEEP = 1 << 1
+    R3D_FLAG_NONE           = 0,
+    R3D_FLAG_FXAA           = 1 << 0,
+    R3D_FLAG_BLIT_LINEAR    = 1 << 1,
+    R3D_FLAG_ASPECT_KEEP    = 1 << 2,
 } R3D_Flags;
 
 typedef enum {
@@ -72,12 +73,15 @@ typedef enum {
 
 /* === Core functions === */
 
-void R3D_Init(int resWidth, int resHeight);
+void R3D_Init(int resWidth, int resHeight, unsigned int flags);
 void R3D_Close(void);
 
 bool R3D_HasState(unsigned int flag);
 void R3D_SetState(unsigned int flags);
 void R3D_ClearState(unsigned int flags);
+
+void R3D_GetFXAAParameters(float* qualityLevel, float* edgeSensitivity, float* subpixelQuality);
+void R3D_SetFXAAParameters(float qualityLevel, float edgeSensitivity, float subpixelQuality);
 
 void R3D_EnableCustomTarget(RenderTexture target);
 void R3D_DisableCustomTarget(void);
@@ -138,6 +142,7 @@ bool R3D_HasLightShadowMap(R3D_Light id);
 
 float R3D_GetLightShadowBias(R3D_Light id);
 void R3D_SetLightShadowBias(R3D_Light id, float value);
+
 
 /* === Environment functions === */
 
