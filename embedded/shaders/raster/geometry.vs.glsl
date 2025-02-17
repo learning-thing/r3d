@@ -35,9 +35,7 @@ uniform mat4 uMatMVP;
 
 /* === Varyings === */
 
-out vec3 vPosition;
 out vec2 vTexCoord;
-out vec3 vNormal;
 out vec4 vColor;
 out mat3 vTBN;
 
@@ -45,17 +43,15 @@ out mat3 vTBN;
 
 void main()
 {
-    vPosition = aPosition;
     vTexCoord = aTexCoord;
     vColor = aColor;
-
-    vNormal = normalize(vec3(uMatNormal * vec4(aNormal, 1.0)));
 
     // The TBN matrix is used to transform vectors from tangent space to world space
     // It is currently used to transform normals from a normal map to world space normals
     vec3 T = normalize(vec3(uMatModel * vec4(aTangent.xyz, 0.0)));
-    vec3 B = cross(vNormal, T) * aTangent.w;
-    vTBN = mat3(T, B, vNormal);
+    vec3 N = normalize(vec3(uMatNormal * vec4(aNormal, 1.0)));
+    vec3 B = cross(N, T) * aTangent.w;
+    vTBN = mat3(T, B, N);
 
     gl_Position = uMatMVP * vec4(aPosition, 1.0);
 }

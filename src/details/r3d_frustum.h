@@ -17,23 +17,34 @@
  *   3. This notice may not be removed or altered from any source distribution.
  */
 
-#version 330 core
+#ifndef R3D_DETAILS_FRUSTUM_H
+#define R3D_DETAILS_FRUSTUM_H
 
-in vec3 vPosition;
+#include <raylib.h>
 
-uniform samplerCube uCubeSky;
+/* === Types ===  */
 
-layout(location = 0) out vec3 FragAlbedo;
-layout(location = 1) out vec3 FragEmission;
-layout(location = 2) out vec2 FragNormal;
-layout(location = 3) out vec3 FragORM;
-layout(location = 4) out float FragID;
+typedef enum {
+    R3D_PLANE_BACK = 0,
+    R3D_PLANE_FRONT,
+    R3D_PLANE_BOTTOM,
+    R3D_PLANE_TOP,
+    R3D_PLANE_RIGHT,
+    R3D_PLANE_LEFT,
+    R3D_PLANE_COUNT
+} r3d_plane_e;
 
-void main()
-{
-    FragAlbedo = texture(uCubeSky, vPosition).rgb;
-    FragEmission = vec3(0.0);
-    FragNormal = vec2(0.0);
-    FragORM = vec3(0.0);
-    FragID = 0.0;
-}
+typedef struct {
+    Vector4 planes[R3D_PLANE_COUNT];
+} r3d_frustum_t;
+
+/* === Functions === */
+
+r3d_frustum_t r3d_frustum_create(Matrix matrixViewProjection);
+BoundingBox r3d_frustum_get_bounding_box(Matrix matViewProjection);
+bool r3d_frustum_is_point_in(const r3d_frustum_t* frustum, Vector3 position);
+bool r3d_frustum_is_point_in_xyz(const r3d_frustum_t* frustum, float x, float y, float z);
+bool r3d_frustum_is_sphere_in(const r3d_frustum_t* frustum, Vector3 position, float radius);
+bool r3d_frustum_is_bounding_box_in(const r3d_frustum_t* frustum, BoundingBox aabb);
+
+#endif // R3D_DETAILS_FRUSTUM_H

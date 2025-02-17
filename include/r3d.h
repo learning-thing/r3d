@@ -52,16 +52,6 @@ typedef enum {
     R3D_TONEMAP_ACES,           ///< ACES (Academy Color Encoding System) tone mapping, a high-quality algorithm used for cinematic rendering.
 } R3D_Tonemap;
 
-typedef enum {
-    R3D_PLANE_BACK = 0,
-    R3D_PLANE_FRONT,
-    R3D_PLANE_BOTTOM,
-    R3D_PLANE_TOP,
-    R3D_PLANE_RIGHT,
-    R3D_PLANE_LEFT,
-    R3D_PLANE_COUNT
-} R3D_Plane;
-
 
 /* === Types === */
 
@@ -78,10 +68,6 @@ typedef enum {
     R3D_LIGHT_SPOT,
     R3D_LIGHT_OMNI,
 } R3D_LightType;
-
-typedef struct {
-    Vector4 planes[R3D_PLANE_COUNT];
-} R3D_Frustum;
 
 
 /* === Core functions === */
@@ -107,9 +93,11 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
 
 /* === Lighting functions === */
 
-R3D_Light R3D_CreateLight(void);
+R3D_Light R3D_CreateLight(R3D_LightType type);
 void R3D_DestroyLight(R3D_Light id);
 bool R3D_IsLightExist(R3D_Light id);
+
+R3D_LightType R3D_GetLightType(R3D_Light id);
 
 bool R3D_IsLightActive(R3D_Light id);
 void R3D_ToggleLight(R3D_Light id);
@@ -142,9 +130,14 @@ void R3D_SetLightInnerCutOff(R3D_Light id, float degrees);
 float R3D_GetLightOuterCutOff(R3D_Light id);
 void R3D_SetLightOuterCutOff(R3D_Light id, float degrees);
 
-R3D_LightType R3D_GetLightType(R3D_Light id);
-void R3D_SetLightType(R3D_Light id, R3D_LightType type);
+void R3D_EnableLightShadow(R3D_Light id, int resolution);
+void R3D_DisableLightShadow(R3D_Light id, bool destroyMap);
 
+bool R3D_IsLightShadowEnabled(R3D_Light id);
+bool R3D_HasLightShadowMap(R3D_Light id);
+
+float R3D_GetLightShadowBias(R3D_Light id);
+void R3D_SetLightShadowBias(R3D_Light id, float value);
 
 /* === Environment functions === */
 
@@ -222,14 +215,12 @@ R3D_Skybox R3D_LoadSkyboxHDR(const char* fileName, int size);
 void R3D_UnloadSkybox(R3D_Skybox sky);
 
 
-/* === Frustum functions === */
+/* === Culling functions === */
 
-R3D_Frustum R3D_GetFrustum(void);
-R3D_Frustum R3D_CreateFrustum(Matrix matrixViewProjection);
-bool R3D_IsPointInFrustum(const R3D_Frustum* frustum, Vector3 position);
-bool R3D_IsPointInFrustumXYZ(const R3D_Frustum* frustum, float x, float y, float z);
-bool R3D_IsSphereInFrustum(const R3D_Frustum* frustum, Vector3 position, float radius);
-bool R3D_IsBoundingBoxInFrustum(const R3D_Frustum* frustum, BoundingBox aabb);
+bool R3D_IsPointInFrustum(Vector3 position);
+bool R3D_IsPointInFrustumXYZ(float x, float y, float z);
+bool R3D_IsSphereInFrustum(Vector3 position, float radius);
+bool R3D_IsBoundingBoxInFrustum(BoundingBox aabb);
 
 
 /* === Utils functions === */

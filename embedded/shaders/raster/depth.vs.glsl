@@ -19,21 +19,17 @@
 
 #version 330 core
 
-in vec3 vPosition;
+/* === Attributes === */
 
-uniform samplerCube uCubeSky;
+layout(location = 0) in vec3 aPosition;
 
-layout(location = 0) out vec3 FragAlbedo;
-layout(location = 1) out vec3 FragEmission;
-layout(location = 2) out vec2 FragNormal;
-layout(location = 3) out vec3 FragORM;
-layout(location = 4) out float FragID;
+/* === Uniforms === */
+
+uniform mat4 uMatMVP;
+
+/* === Main function === */
 
 void main()
 {
-    FragAlbedo = texture(uCubeSky, vPosition).rgb;
-    FragEmission = vec3(0.0);
-    FragNormal = vec2(0.0);
-    FragORM = vec3(0.0);
-    FragID = 0.0;
+    gl_Position = uMatMVP * vec4(aPosition, 1.0);
 }

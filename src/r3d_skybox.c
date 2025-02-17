@@ -60,7 +60,7 @@ r3d_skybox_load_from_panorama_hdr(const char* fileName, int size)
     rlDisableBackfaceCulling();
 
     // Bind panorama texture for drawing
-    r3d_texture_bind_2D(0, panorama.id);
+    r3d_shader_bind_sampler2D(generate.cubemapFromEquirectangular, uTexEquirectangular, panorama.id);
 
     // Loop through and render each cubemap face
     for (int i = 0; i < 6; i++) {
@@ -73,7 +73,7 @@ r3d_skybox_load_from_panorama_hdr(const char* fileName, int size)
     }
 
     // Clean up: unbind texture and framebuffer
-    r3d_texture_unbind_2D(0);
+    r3d_shader_unbind_sampler2D(generate.cubemapFromEquirectangular, uTexEquirectangular);
     rlDisableShader();
     rlDisableTexture();
     rlDisableFramebuffer();
@@ -119,7 +119,7 @@ static TextureCubemap r3d_skybox_generate_irradiance(TextureCubemap sky)
     r3d_shader_set_mat4(generate.irradianceConvolution, uMatProj,
         MatrixPerspective(90.0 * DEG2RAD, 1.0, 0.1, 10.0)
     );
-    r3d_texture_bind_cubemap(0, sky.id);
+    r3d_shader_bind_samplerCube(generate.irradianceConvolution, uCubemap, sky.id);
 
     // Render irradiance to cubemap faces
     for (int i = 0; i < 6; i++) {
@@ -131,7 +131,7 @@ static TextureCubemap r3d_skybox_generate_irradiance(TextureCubemap sky)
     }
 
     // Disable shader
-    r3d_texture_unbind_cubemap(0);
+    r3d_shader_unbind_samplerCube(generate.irradianceConvolution, uCubemap);
     r3d_shader_disable();
 
     // Clean up
@@ -190,7 +190,7 @@ static TextureCubemap r3d_skybox_generate_prefilter(TextureCubemap sky)
     // Enable shader for prefiltering
     r3d_shader_enable(generate.prefilter);
     r3d_shader_set_mat4(generate.prefilter, uMatProj, MatrixPerspective(90.0 * DEG2RAD, 1.0, 0.1, 10.0));
-    r3d_texture_bind_cubemap(0, sky.id);
+    r3d_shader_bind_samplerCube(generate.prefilter, uCubemap, sky.id);
 
     // Configure framebuffer and rendering parameters
     rlEnableFramebuffer(fbo);
@@ -218,7 +218,7 @@ static TextureCubemap r3d_skybox_generate_prefilter(TextureCubemap sky)
     }
 
     // Disable shader
-    r3d_texture_unbind_cubemap(0);
+    r3d_shader_unbind_samplerCube(generate.prefilter, uCubemap);
     r3d_shader_disable();
 
     // Clean up

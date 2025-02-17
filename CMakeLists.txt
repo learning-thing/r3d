@@ -38,9 +38,11 @@ EmbedTextures(R3D_GENERATED_TEXTURES_SOURCE
 add_library(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/src/details/r3d_primitives.c"
     "${R3D_ROOT_PATH}/src/details/r3d_drawcall.c"
+    "${R3D_ROOT_PATH}/src/details/r3d_frustum.c"
+    "${R3D_ROOT_PATH}/src/details/r3d_light.c"
     "${R3D_ROOT_PATH}/src/r3d_environment.c"
     "${R3D_ROOT_PATH}/src/r3d_lighting.c"
-    "${R3D_ROOT_PATH}/src/r3d_frustum.c"
+    "${R3D_ROOT_PATH}/src/r3d_culling.c"
     "${R3D_ROOT_PATH}/src/r3d_skybox.c"
     "${R3D_ROOT_PATH}/src/r3d_utils.c"
     "${R3D_ROOT_PATH}/src/r3d_state.c"

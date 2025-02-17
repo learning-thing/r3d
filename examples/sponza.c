@@ -7,6 +7,9 @@
 static Model		sponza = { 0 };
 static R3D_Skybox	skybox = { 0 };
 static Camera3D		camera = { 0 };
+static R3D_Light    lights[2] = { 0 };
+
+static bool sky = false;
 
 
 /* === Examples === */
@@ -32,14 +35,21 @@ const char* Init(void)
 
         GenTextureMipmaps(&sponza.materials[i].maps[MATERIAL_MAP_NORMAL].texture);
         SetTextureFilter(sponza.materials[i].maps[MATERIAL_MAP_NORMAL].texture, TEXTURE_FILTER_TRILINEAR);
+
+        // REVIEW: Issue with the model textures
+        sponza.materials[i].maps[MATERIAL_MAP_ROUGHNESS].texture = (Texture2D){ .id = rlGetTextureIdDefault() };
     }
 
+    // NOTE: Toggle sky with 'T' key
     skybox = R3D_LoadSkybox(RESOURCES_PATH "sky/skybox3.png", CUBEMAP_LAYOUT_AUTO_DETECT);
-    R3D_EnableSkybox(skybox);
 
-    R3D_Light light = R3D_CreateLight();
-    R3D_SetLightDirection(light, (Vector3) { 0, -1, 0 });
-    R3D_SetLightActive(light, true);
+    for (int i = 0; i < 2; i++) {
+        lights[i] = R3D_CreateLight(R3D_LIGHT_SPOT);
+        R3D_SetLightPosition(lights[i], (Vector3) { i ? -10 : 10, 20, 0 });
+        R3D_SetLightTarget(lights[i], (Vector3) { 0, 0, 0 });
+        R3D_EnableLightShadow(lights[i], 4096);
+        R3D_SetLightActive(lights[i], true);
+    }
 
     camera = (Camera3D){
         .position = (Vector3) { 0, 0, 0 },
@@ -56,6 +66,12 @@ const char* Init(void)
 void Update(float delta)
 {
     UpdateCamera(&camera, CAMERA_FREE);
+
+    if (IsKeyPressed(KEY_T)) {
+        if (sky) R3D_DisableSkybox();
+        else R3D_EnableSkybox(skybox);
+        sky = !sky;
+    }
 }
 
 void Draw(void)
@@ -63,6 +79,11 @@ void Draw(void)
     R3D_Begin(camera);
         R3D_DrawModel(sponza, (Vector3) { 0 }, 1.0f);
     R3D_End();
+
+    BeginMode3D(camera);
+        DrawSphere(R3D_GetLightPosition(lights[0]), 0.5f, WHITE);
+        DrawSphere(R3D_GetLightPosition(lights[1]), 0.5f, WHITE);
+    EndMode3D();
 
     DrawFPS(10, 10);
 }

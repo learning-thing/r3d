@@ -20,9 +20,28 @@
 #ifndef R3D_LIGHT_H
 #define R3D_LIGHT_H
 
+#include "r3d.h"
 #include <raylib.h>
 
+/* === Types === */
+
 typedef struct {
+    unsigned int id;
+    unsigned int depth;
+    unsigned int color;     ///< Used for shadow cubemaps to store distances directly instead of view depth.
+    float texelSize;
+    int resolution;
+} r3d_shadow_map_t;
+
+typedef struct {
+    r3d_shadow_map_t map;
+    Matrix matViewProj;
+    float bias;
+    bool enabled;
+} r3d_shadow_t;
+
+typedef struct {
+    r3d_shadow_t shadow;
     Vector3 color;
     Vector3 position;
     Vector3 direction;
@@ -35,18 +54,13 @@ typedef struct {
     bool enabled;
 } r3d_light_t;
 
-static inline void r3d_light_init(r3d_light_t* light)
-{
-    light->color = (Vector3) { 1, 1, 1 };
-	light->position = (Vector3) { 0 };
-    light->direction = (Vector3) { 0, 0, -1 };
-    light->energy = 1.0f;
-    light->range = 100.0f;
-    light->attenuation = 1.0f;
-    light->innerCutOff = -1.0f;
-    light->outerCutOff = -1.0f;
-    light->type = R3D_LIGHT_DIR;
-	light->enabled = false;
-}
+/* === Functions === */
+
+void r3d_light_init(r3d_light_t* light);
+
+void r3d_light_create_shadow_map(r3d_light_t* light, int resolution);
+void r3d_light_destroy_shadow_map(r3d_light_t* light);
+
+Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face);
 
 #endif // R3D_LIGHT_H

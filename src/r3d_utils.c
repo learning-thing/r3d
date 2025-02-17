@@ -24,116 +24,112 @@
 
 void R3D_DrawBufferAlbedo(float x, float y, float w, float h)
 {
-	Texture2D tex = {
-		.id = R3D.framebuffer.gBuffer.albedo,
-		.width = R3D.state.resolutionW,
-		.height = R3D.state.resolutionH
-	};
+    Texture2D tex = {
+        .id = R3D.framebuffer.gBuffer.albedo,
+        .width = R3D.state.resolutionW,
+        .height = R3D.state.resolutionH
+    };
 
-	DrawTexturePro(
-		tex, (Rectangle) { 0, 0, tex.width, tex.height },
-		(Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
-	);
+    DrawTexturePro(
+        tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
+        (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
+    );
 
-	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
 
 void R3D_DrawBufferEmission(float x, float y, float w, float h)
 {
-	Texture2D tex = {
-		.id = R3D.framebuffer.gBuffer.emission,
-		.width = R3D.state.resolutionW,
-		.height = R3D.state.resolutionH
-	};
+    Texture2D tex = {
+        .id = R3D.framebuffer.gBuffer.emission,
+        .width = R3D.state.resolutionW,
+        .height = R3D.state.resolutionH
+    };
 
-	DrawTexturePro(
-		tex, (Rectangle) { 0, 0, tex.width, tex.height },
-		(Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
-	);
+    DrawTexturePro(
+        tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
+        (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
+    );
 
-	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
 
 void R3D_DrawBufferNormal(float x, float y, float w, float h)
 {
-	Texture2D tex = {
-		.id = R3D.framebuffer.gBuffer.normal,
-		.width = R3D.state.resolutionW,
-		.height = R3D.state.resolutionH
-	};
+    Texture2D tex = {
+        .id = R3D.framebuffer.gBuffer.normal,
+        .width = R3D.state.resolutionW,
+        .height = R3D.state.resolutionH
+    };
 
-	DrawTexturePro(
-		tex, (Rectangle) { 0, 0, tex.width, tex.height },
-		(Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
-	);
+    DrawTexturePro(
+        tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
+        (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
+    );
 
-	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
 
 void R3D_DrawBufferORM(float x, float y, float w, float h)
 {
-	Texture2D tex = {
-		.id = R3D.framebuffer.gBuffer.orm,
-		.width = R3D.state.resolutionW,
-		.height = R3D.state.resolutionH
-	};
+    Texture2D tex = {
+        .id = R3D.framebuffer.gBuffer.orm,
+        .width = R3D.state.resolutionW,
+        .height = R3D.state.resolutionH
+    };
 
-	DrawTexturePro(
-		tex, (Rectangle) { 0, 0, tex.width, tex.height },
-		(Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
-	);
+    DrawTexturePro(
+        tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
+        (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
+    );
 
-	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
 
 void R3D_DrawBufferSSAO(float x, float y, float w, float h)
 {
-	Texture2D tex = {
-		.id = R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTextureIdx],
-		.width = R3D.state.resolutionW / 2,
-		.height = R3D.state.resolutionH / 2
-	};
+    Texture2D tex = {
+        .id = R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTextureIdx],
+        .width = R3D.state.resolutionW / 2,
+        .height = R3D.state.resolutionH / 2
+    };
 
-	DrawTexturePro(
-		tex, (Rectangle) { 0, 0, tex.width, tex.height },
-		(Rectangle) {
-		x, y, w, h
-	}, (Vector2) { 0 }, 0, WHITE
-			);
+    DrawTexturePro(
+        tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
+        (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
+            );
 
-	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
 
 void R3D_DrawBufferBrightColors(float x, float y, float w, float h)
 {
-	Texture2D tex = {
-		.id = R3D.framebuffer.lit.bright,
-		.width = R3D.state.resolutionW,
-		.height = R3D.state.resolutionH
-	};
+    Texture2D tex = {
+        .id = R3D.framebuffer.lit.bright,
+        .width = R3D.state.resolutionW,
+        .height = R3D.state.resolutionH
+    };
 
-	DrawTexturePro(
-		tex, (Rectangle) { 0, 0, tex.width, tex.height },
-		(Rectangle) {
-		x, y, w, h
-	}, (Vector2) { 0 }, 0, WHITE
-			);
+    DrawTexturePro(
+        tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
+        (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
+    );
 
-	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
 
 void R3D_DrawBufferBloom(float x, float y, float w, float h)
 {
-	Texture2D tex = {
-		.id = R3D.framebuffer.pingPongBloom.textures[!R3D.framebuffer.pingPongBloom.targetTextureIdx],
-		.width = R3D.state.resolutionW / 2,
-		.height = R3D.state.resolutionH / 2
-	};
+    Texture2D tex = {
+        .id = R3D.framebuffer.pingPongBloom.textures[!R3D.framebuffer.pingPongBloom.targetTextureIdx],
+        .width = R3D.state.resolutionW / 2,
+        .height = R3D.state.resolutionH / 2
+    };
 
-	DrawTexturePro(
-		tex, (Rectangle) { 0, 0, tex.width, tex.height },
-		(Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
-	);
+    DrawTexturePro(
+        tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
+        (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
+    );
 
-	DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }

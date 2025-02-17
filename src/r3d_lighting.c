@@ -41,15 +41,35 @@
 
 /* === Public functions === */
 
-R3D_Light R3D_CreateLight(void)
+R3D_Light R3D_CreateLight(R3D_LightType type)
 {
     R3D_Light id = r3d_registry_add(&R3D.container.lightRegistry, NULL);
-    r3d_light_init(r3d_registry_get(&R3D.container.lightRegistry, id));
+    r3d_light_t* light = r3d_registry_get(&R3D.container.lightRegistry, id);
+
+    r3d_light_init(light);
+    light->type = type;
+
+    switch (type) {
+    case R3D_LIGHT_DIR:
+    case R3D_LIGHT_SPOT:
+        light->shadow.bias = 0.0002f;
+        break;
+    case R3D_LIGHT_OMNI:
+        light->shadow.bias = 0.05f;
+        break;
+    }
+
     return id;
 }
 
 void R3D_DestroyLight(R3D_Light id)
 {
+    r3d_get_and_check_light(light, id);
+
+    if (light->shadow.map.id != 0) {
+        r3d_light_destroy_shadow_map(light);
+    }
+
     r3d_registry_remove(&R3D.container.lightRegistry, id);
 }
 
@@ -57,6 +77,12 @@ bool R3D_IsLightExist(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, false);
     return true;
+}
+
+R3D_LightType R3D_GetLightType(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->type;
 }
 
 bool R3D_IsLightActive(R3D_Light id)
@@ -129,7 +155,7 @@ Vector3 R3D_GetLightDirection(R3D_Light id)
 void R3D_SetLightDirection(R3D_Light id, Vector3 direction)
 {
     r3d_get_and_check_light(light, id);
-    light->direction = direction;
+    light->direction = Vector3Normalize(direction);
 }
 
 void R3D_SetLightTarget(R3D_Light id, Vector3 target)
@@ -177,7 +203,7 @@ void R3D_SetLightAttenuation(R3D_Light id, float attenuation)
 float R3D_GetLightInnerCutOff(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
-    return acosf(light->innerCutOff * RAD2DEG);
+    return acosf(light->innerCutOff) * RAD2DEG;
 }
 
 void R3D_SetLightInnerCutOff(R3D_Light id, float degrees)
@@ -189,7 +215,7 @@ void R3D_SetLightInnerCutOff(R3D_Light id, float degrees)
 float R3D_GetLightOuterCutOff(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
-    return acosf(light->outerCutOff * RAD2DEG);
+    return acosf(light->outerCutOff) * RAD2DEG;
 }
 
 void R3D_SetLightOuterCutOff(R3D_Light id, float degrees)
@@ -198,14 +224,56 @@ void R3D_SetLightOuterCutOff(R3D_Light id, float degrees)
     light->outerCutOff = cosf(degrees * DEG2RAD);
 }
 
-R3D_LightType R3D_GetLightType(R3D_Light id)
-{
-    r3d_get_and_check_light(light, id, 0);
-    return light->type;
-}
-
-void R3D_SetLightType(R3D_Light id, R3D_LightType type)
+void R3D_EnableLightShadow(R3D_Light id, int resolution)
 {
     r3d_get_and_check_light(light, id);
-    light->type = type;
+
+    if (light->shadow.map.id != 0) {
+        if (resolution > 0 && light->shadow.map.resolution != resolution) {
+            r3d_light_destroy_shadow_map(light);
+            r3d_light_create_shadow_map(light, resolution);
+        }
+    }
+    else {
+        if (resolution == 0) resolution = 1024;
+        r3d_light_create_shadow_map(light, resolution);
+    }
+
+    light->shadow.enabled = true;
+}
+
+void R3D_DisableLightShadow(R3D_Light id, bool destroyMap)
+{
+    r3d_get_and_check_light(light, id);
+
+    if (destroyMap) {
+        r3d_light_destroy_shadow_map(light);
+        memset(&light->shadow.map, 0, sizeof(r3d_shadow_map_t));
+    }
+
+    light->shadow.enabled = false;
+}
+
+bool R3D_IsLightShadowEnabled(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, false);
+    return light->shadow.enabled;
+}
+
+bool R3D_HasLightShadowMap(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, false);
+    return light->shadow.map.id != 0;
+}
+
+float R3D_GetLightShadowBias(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->shadow.bias;
+}
+
+void R3D_SetLightShadowBias(R3D_Light id, float value)
+{
+    r3d_get_and_check_light(light, id);
+    light->shadow.bias = value;
 }
