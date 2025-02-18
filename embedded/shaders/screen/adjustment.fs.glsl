@@ -25,7 +25,7 @@ in vec2 vTexCoord;
 
 /* === Uniforms === */
 
-uniform sampler2D uTexSceneHDR;
+uniform sampler2D uTexColor;
 uniform float uBrightness;
 uniform float uContrast;
 uniform float uSaturation;
@@ -39,7 +39,7 @@ out vec4 FragColor;
 void main()
 {
     // Sampling scene color texture
-    vec3 result = texture(uTexSceneHDR, vTexCoord).rgb;
+    vec3 result = texture(uTexColor, vTexCoord).rgb;
 
     // Apply gamma correction
     result = pow(result, vec3(1.0/2.2));

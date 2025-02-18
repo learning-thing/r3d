@@ -32,8 +32,8 @@ in vec2 vTexCoord;
 
 /* === Uniforms === */
 
-uniform sampler2D uTexSceneHDR;
-uniform sampler2D uTexSceneDepth;
+uniform sampler2D uTexColor;
+uniform sampler2D uTexDepth;
 
 uniform float uNear;
 uniform float uFar;
@@ -85,10 +85,10 @@ float FogFactor(float dist, int mode, float density, float start, float end)
 void main()
 {
     // Sampling scene color texture
-    vec3 result = texture(uTexSceneHDR, vTexCoord).rgb;
+    vec3 result = texture(uTexColor, vTexCoord).rgb;
 
     // Depth retrieval and distance calculation
-    float depth = texture(uTexSceneDepth, vTexCoord).r;
+    float depth = texture(uTexDepth, vTexCoord).r;
     depth = LinearizeDepth(depth, uNear, uFar);
 
     // Applying the fog factor to the resulting color

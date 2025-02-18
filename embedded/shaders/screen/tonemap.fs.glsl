@@ -32,7 +32,7 @@ in vec2 vTexCoord;
 
 /* === Uniforms === */
 
-uniform sampler2D uTexSceneHDR;
+uniform sampler2D uTexColor;
 uniform lowp int uTonemapMode;
 uniform float uTonemapExposure;
 uniform float uTonemapWhite;
@@ -121,7 +121,7 @@ vec3 Tonemapping(vec3 color, float pWhite) // inputs are LINEAR
 void main()
 {
     // Sampling scene color texture
-    vec3 result = texture(uTexSceneHDR, vTexCoord).rgb;
+    vec3 result = texture(uTexColor, vTexCoord).rgb;
 
     // Appply tonemapping
     result *= uTonemapExposure;

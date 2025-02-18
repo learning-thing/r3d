@@ -31,8 +31,8 @@ in vec2 vTexCoord;
 
 /* === Uniforms === */
 
-uniform sampler2D uTexSceneHDR;
-uniform sampler2D uTexBloomBlurHDR;
+uniform sampler2D uTexColor;
+uniform sampler2D uTexBloomBlur;
 
 uniform lowp int uBloomMode;
 uniform float uBloomIntensity;
@@ -46,10 +46,10 @@ out vec4 FragColor;
 void main()
 {
     // Sampling scene color texture
-    vec3 result = texture(uTexSceneHDR, vTexCoord).rgb;
+    vec3 result = texture(uTexColor, vTexCoord).rgb;
 
     // Apply bloom
-    vec3 bloom = texture(uTexBloomBlurHDR, vTexCoord).rgb;
+    vec3 bloom = texture(uTexBloomBlur, vTexCoord).rgb;
     bloom *= uBloomIntensity;
 
     if (uBloomMode == BLOOM_SOFT_LIGHT) {

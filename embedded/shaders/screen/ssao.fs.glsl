@@ -25,8 +25,8 @@ in vec2 vTexCoord;
 
 /* === Uniforms === */
 
-uniform sampler2D uTexSceneDepth;
-uniform sampler2D uTexSceneNormal;
+uniform sampler2D uTexDepth;
+uniform sampler2D uTexNormal;
 uniform sampler1D uTexKernel;
 uniform sampler2D uTexNoise;
 
@@ -92,11 +92,11 @@ vec3 SampleKernel(int index, int kernelSize)
 void main()
 {
     // Get current depth and view-space position
-    float depth = texture(uTexSceneDepth, vTexCoord).r;
+    float depth = texture(uTexDepth, vTexCoord).r;
     vec3 position = GetPositionFromDepth(depth);
     
     // Get and decode current normal (now in view space)
-    vec3 normal = DecodeOctahedral(texture(uTexSceneNormal, vTexCoord).rg);
+    vec3 normal = DecodeOctahedral(texture(uTexNormal, vTexCoord).rg);
     
     // Calculate screen-space noise scale
     vec2 noiseScale = uResolution / 4.0;
@@ -130,7 +130,7 @@ void main()
             offset.y >= 0.0 && offset.y <= 1.0) {
             
             // Get sample depth and position
-            float sampleDepth = texture(uTexSceneDepth, offset.xy).r;
+            float sampleDepth = texture(uTexDepth, offset.xy).r;
             vec3 sampleViewPos = GetPositionFromDepth(sampleDepth);
             
             // Range and depth checks

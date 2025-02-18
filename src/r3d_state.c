@@ -435,8 +435,8 @@ void r3d_shader_load_screen_ssao(void)
         VS_COMMON_SCREEN, FS_SCREEN_SSAO
     );
 
-    r3d_shader_get_location(screen.ssao, uTexSceneDepth);
-    r3d_shader_get_location(screen.ssao, uTexSceneNormal);
+    r3d_shader_get_location(screen.ssao, uTexDepth);
+    r3d_shader_get_location(screen.ssao, uTexNormal);
     r3d_shader_get_location(screen.ssao, uTexKernel);
     r3d_shader_get_location(screen.ssao, uTexNoise);
     r3d_shader_get_location(screen.ssao, uMatInvProj);
@@ -450,8 +450,8 @@ void r3d_shader_load_screen_ssao(void)
     r3d_shader_get_location(screen.ssao, uBias);
 
     r3d_shader_enable(screen.ssao);
-    r3d_shader_set_sampler2D_slot(screen.ssao, uTexSceneDepth, 0);
-    r3d_shader_set_sampler2D_slot(screen.ssao, uTexSceneNormal, 1);
+    r3d_shader_set_sampler2D_slot(screen.ssao, uTexDepth, 0);
+    r3d_shader_set_sampler2D_slot(screen.ssao, uTexNormal, 1);
     r3d_shader_set_sampler1D_slot(screen.ssao, uTexKernel, 2);
     r3d_shader_set_sampler2D_slot(screen.ssao, uTexNoise, 3);
     r3d_shader_disable();
@@ -527,14 +527,14 @@ void r3d_shader_load_screen_bloom(void)
         VS_COMMON_SCREEN, FS_SCREEN_BLOOM
     );
 
-    r3d_shader_get_location(screen.bloom, uTexSceneHDR);
-    r3d_shader_get_location(screen.bloom, uTexBloomBlurHDR);
+    r3d_shader_get_location(screen.bloom, uTexColor);
+    r3d_shader_get_location(screen.bloom, uTexBloomBlur);
     r3d_shader_get_location(screen.bloom, uBloomMode);
     r3d_shader_get_location(screen.bloom, uBloomIntensity);
 
     r3d_shader_enable(screen.bloom);
-    r3d_shader_set_sampler2D_slot(screen.bloom, uTexSceneHDR, 0);
-    r3d_shader_set_sampler2D_slot(screen.bloom, uTexBloomBlurHDR, 1);
+    r3d_shader_set_sampler2D_slot(screen.bloom, uTexColor, 0);
+    r3d_shader_set_sampler2D_slot(screen.bloom, uTexBloomBlur, 1);
     r3d_shader_disable();
 }
 
@@ -544,8 +544,8 @@ void r3d_shader_load_screen_fog(void)
         VS_COMMON_SCREEN, FS_SCREEN_FOG
     );
 
-    r3d_shader_get_location(screen.fog, uTexSceneHDR);
-    r3d_shader_get_location(screen.fog, uTexSceneDepth);
+    r3d_shader_get_location(screen.fog, uTexColor);
+    r3d_shader_get_location(screen.fog, uTexDepth);
     r3d_shader_get_location(screen.fog, uNear);
     r3d_shader_get_location(screen.fog, uFar);
     r3d_shader_get_location(screen.fog, uFogMode);
@@ -555,8 +555,8 @@ void r3d_shader_load_screen_fog(void)
     r3d_shader_get_location(screen.fog, uFogDensity);
 
     r3d_shader_enable(screen.fog);
-    r3d_shader_set_sampler2D_slot(screen.fog, uTexSceneHDR, 0);
-    r3d_shader_set_sampler2D_slot(screen.fog, uTexSceneDepth, 1);
+    r3d_shader_set_sampler2D_slot(screen.fog, uTexColor, 0);
+    r3d_shader_set_sampler2D_slot(screen.fog, uTexDepth, 1);
     r3d_shader_disable();
 }
 
@@ -566,13 +566,13 @@ void r3d_shader_load_screen_tonemap(void)
         VS_COMMON_SCREEN, FS_SCREEN_TONEMAP
     );
 
-    r3d_shader_get_location(screen.tonemap, uTexSceneHDR);
+    r3d_shader_get_location(screen.tonemap, uTexColor);
     r3d_shader_get_location(screen.tonemap, uTonemapMode);
     r3d_shader_get_location(screen.tonemap, uTonemapExposure);
     r3d_shader_get_location(screen.tonemap, uTonemapWhite);
 
     r3d_shader_enable(screen.tonemap);
-    r3d_shader_set_sampler2D_slot(screen.tonemap, uTexSceneHDR, 0);
+    r3d_shader_set_sampler2D_slot(screen.tonemap, uTexColor, 0);
     r3d_shader_disable();
 }
 
@@ -582,13 +582,13 @@ void r3d_shader_load_screen_adjustment(void)
         VS_COMMON_SCREEN, FS_SCREEN_ADJUSTMENT
     );
 
-    r3d_shader_get_location(screen.adjustment, uTexSceneHDR);
+    r3d_shader_get_location(screen.adjustment, uTexColor);
     r3d_shader_get_location(screen.adjustment, uBrightness);
     r3d_shader_get_location(screen.adjustment, uContrast);
     r3d_shader_get_location(screen.adjustment, uSaturation);
 
     r3d_shader_enable(screen.adjustment);
-    r3d_shader_set_sampler2D_slot(screen.adjustment, uTexSceneHDR, 0);
+    r3d_shader_set_sampler2D_slot(screen.adjustment, uTexColor, 0);
     r3d_shader_disable();
 }
 

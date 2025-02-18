@@ -141,8 +141,8 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
-    r3d_shader_uniform_sampler2D_t uTexSceneDepth;
-    r3d_shader_uniform_sampler2D_t uTexSceneNormal;
+    r3d_shader_uniform_sampler2D_t uTexDepth;
+    r3d_shader_uniform_sampler2D_t uTexNormal;
     r3d_shader_uniform_sampler1D_t uTexKernel;
     r3d_shader_uniform_sampler2D_t uTexNoise;
     r3d_shader_uniform_mat4_t uMatInvProj;
@@ -197,16 +197,16 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
-    r3d_shader_uniform_sampler2D_t uTexSceneHDR;
-    r3d_shader_uniform_sampler2D_t uTexBloomBlurHDR;
+    r3d_shader_uniform_sampler2D_t uTexColor;
+    r3d_shader_uniform_sampler2D_t uTexBloomBlur;
     r3d_shader_uniform_int_t uBloomMode;
     r3d_shader_uniform_float_t uBloomIntensity;
 } r3d_shader_screen_bloom_t;
 
 typedef struct {
     unsigned int id;
-    r3d_shader_uniform_sampler2D_t uTexSceneHDR;
-    r3d_shader_uniform_sampler2D_t uTexSceneDepth;
+    r3d_shader_uniform_sampler2D_t uTexColor;
+    r3d_shader_uniform_sampler2D_t uTexDepth;
     r3d_shader_uniform_float_t uNear;
     r3d_shader_uniform_float_t uFar;
     r3d_shader_uniform_int_t uFogMode;
@@ -218,7 +218,7 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
-    r3d_shader_uniform_sampler2D_t uTexSceneHDR;
+    r3d_shader_uniform_sampler2D_t uTexColor;
     r3d_shader_uniform_int_t uTonemapMode;
     r3d_shader_uniform_float_t uTonemapExposure;
     r3d_shader_uniform_float_t uTonemapWhite;
@@ -226,7 +226,7 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
-    r3d_shader_uniform_sampler2D_t uTexSceneHDR;
+    r3d_shader_uniform_sampler2D_t uTexColor;
     r3d_shader_uniform_float_t uBrightness;
     r3d_shader_uniform_float_t uContrast;
     r3d_shader_uniform_float_t uSaturation;

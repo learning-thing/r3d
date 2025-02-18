@@ -426,15 +426,15 @@ void R3D_End(void)
                 r3d_shader_set_float(screen.ssao, uRadius, R3D.env.ssaoRadius);
                 r3d_shader_set_float(screen.ssao, uBias, R3D.env.ssaoBias);
 
-                r3d_shader_bind_sampler2D(screen.ssao, uTexSceneDepth, R3D.framebuffer.gBuffer.depth);
-                r3d_shader_bind_sampler2D(screen.ssao, uTexSceneNormal, R3D.framebuffer.gBuffer.normal);
+                r3d_shader_bind_sampler2D(screen.ssao, uTexDepth, R3D.framebuffer.gBuffer.depth);
+                r3d_shader_bind_sampler2D(screen.ssao, uTexNormal, R3D.framebuffer.gBuffer.normal);
                 r3d_shader_bind_sampler1D(screen.ssao, uTexKernel, R3D.texture.ssaoKernel);
                 r3d_shader_bind_sampler2D(screen.ssao, uTexNoise, R3D.texture.ssaoNoise);
 
                 r3d_primitive_draw_quad();
 
-                r3d_shader_unbind_sampler2D(screen.ssao, uTexSceneDepth);
-                r3d_shader_unbind_sampler2D(screen.ssao, uTexSceneNormal);
+                r3d_shader_unbind_sampler2D(screen.ssao, uTexDepth);
+                r3d_shader_unbind_sampler2D(screen.ssao, uTexNormal);
                 r3d_shader_unbind_sampler1D(screen.ssao, uTexKernel);
                 r3d_shader_unbind_sampler2D(screen.ssao, uTexNoise);
             }
@@ -743,8 +743,8 @@ void R3D_End(void)
                 );
                 r3d_shader_enable(screen.bloom);
                 {
-                    r3d_shader_bind_sampler2D(screen.bloom, uTexSceneHDR, textures[texIndex]);
-                    r3d_shader_bind_sampler2D(screen.bloom, uTexBloomBlurHDR,
+                    r3d_shader_bind_sampler2D(screen.bloom, uTexColor, textures[texIndex]);
+                    r3d_shader_bind_sampler2D(screen.bloom, uTexBloomBlur,
                         R3D.framebuffer.pingPongBloom.textures[
                             !R3D.framebuffer.pingPongBloom.targetTextureIdx
                         ]
@@ -767,8 +767,8 @@ void R3D_End(void)
                 );
                 r3d_shader_enable(screen.fog);
                 {
-                    r3d_shader_bind_sampler2D(screen.fog, uTexSceneHDR, textures[texIndex]);
-                    r3d_shader_bind_sampler2D(screen.fog, uTexSceneDepth, R3D.framebuffer.gBuffer.depth);
+                    r3d_shader_bind_sampler2D(screen.fog, uTexColor, textures[texIndex]);
+                    r3d_shader_bind_sampler2D(screen.fog, uTexDepth, R3D.framebuffer.gBuffer.depth);
                     texIndex = !texIndex;
 
                     r3d_shader_set_float(screen.fog, uNear, rlGetCullDistanceNear());
@@ -792,7 +792,7 @@ void R3D_End(void)
                 );
                 r3d_shader_enable(screen.tonemap);
                 {
-                    r3d_shader_bind_sampler2D(screen.tonemap, uTexSceneHDR, textures[texIndex]);
+                    r3d_shader_bind_sampler2D(screen.tonemap, uTexColor, textures[texIndex]);
                     texIndex = !texIndex;
 
                     r3d_shader_set_int(screen.tonemap, uTonemapMode, R3D.env.tonemapMode);
@@ -812,7 +812,7 @@ void R3D_End(void)
                 );
                 r3d_shader_enable(screen.adjustment);
                 {
-                    r3d_shader_bind_sampler2D(screen.adjustment, uTexSceneHDR, textures[texIndex]);
+                    r3d_shader_bind_sampler2D(screen.adjustment, uTexColor, textures[texIndex]);
                     texIndex = !texIndex;
 
                     r3d_shader_set_float(screen.adjustment, uBrightness, R3D.env.brightness);
