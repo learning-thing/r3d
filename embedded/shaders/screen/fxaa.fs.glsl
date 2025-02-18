@@ -38,18 +38,18 @@ out vec4 FragColor;
 
 /* === Constants === */
 
-const float EDGE_THRESHOLD_MIN = 0.0312;
-const float EDGE_THRESHOLD_MAX = 0.125;
+const float EDGE_THRESHOLD_MIN = (1.0 / 128.0);
+const float EDGE_THRESHOLD_MAX = (1.0 / 8.0);
 const float ITERATIONS_MAX = 12.0;
 
 /* === Helper functions === */
 
-float rgb2luma(vec3 rgb)
+float Luma(vec3 rgb)
 {
-    return sqrt(dot(rgb, vec3(0.299, 0.587, 0.114)));
+    return dot(rgb, vec3(0.299, 0.587, 0.114));
 }
 
-vec3 sampleOffset(sampler2D tex, vec2 uv, vec2 offset)
+vec3 SampleOffset(sampler2D tex, vec2 uv, vec2 offset)
 {
     return texture(tex, uv + offset).rgb;
 }
@@ -69,7 +69,7 @@ void main()
 
     // Sample the center pixel color and calculate its luminance
     vec3 colorCenter = texture(uTexture, vTexCoord).rgb;
-    float lumaCenter = rgb2luma(colorCenter);
+    float lumaCenter = Luma(colorCenter);
 
     // Calculate dynamic offset for sampling neighboring pixels
     // Higher quality reduces offset size for more precise sampling
@@ -78,17 +78,17 @@ void main()
 
     // Sample luminance values in cardinal directions (up, down, left, right)
     // These samples form the primary edge detection pattern
-    float lumaDown = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(0.0, -offsetSize.y)));
-    float lumaUp = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(0.0, offsetSize.y)));
-    float lumaLeft = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, 0.0)));
-    float lumaRight = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, 0.0)));
+    float lumaDown = Luma(SampleOffset(uTexture, vTexCoord, vec2(0.0, -offsetSize.y)));
+    float lumaUp = Luma(SampleOffset(uTexture, vTexCoord, vec2(0.0, offsetSize.y)));
+    float lumaLeft = Luma(SampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, 0.0)));
+    float lumaRight = Luma(SampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, 0.0)));
     
     // Sample luminance values in diagonal directions
     // Additional samples improve edge detection accuracy for diagonal edges
-    float lumaDL = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, -offsetSize.y)));
-    float lumaUR = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, offsetSize.y)));
-    float lumaUL = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, offsetSize.y)));
-    float lumaDR = rgb2luma(sampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, -offsetSize.y)));
+    float lumaDL = Luma(SampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, -offsetSize.y)));
+    float lumaUR = Luma(SampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, offsetSize.y)));
+    float lumaUL = Luma(SampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, offsetSize.y)));
+    float lumaDR = Luma(SampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, -offsetSize.y)));
 
     // Calculate local contrast by finding min/max luminance values
     // This helps identify edges and determine if anti-aliasing is needed
@@ -115,7 +115,7 @@ void main()
 
     // Normalize the gradient direction with safeguard against zero division
     // This ensures stable sampling direction even for very weak edges
-    float dirLength = max(abs(dir.x), abs(dir.y)) + 0.0001;
+    float dirLength = max(abs(dir.x), abs(dir.y)) + 1e-4;;
     dir = dir / dirLength;
 
     // Initialize accumulation variables for progressive sampling
@@ -132,8 +132,8 @@ void main()
         float offset = (i / iterations) * mix(0.5, 2.0, uQualityLevel);
         
         // Sample pixels in both directions along the edge
-        vec3 rgbN = sampleOffset(uTexture, vTexCoord, -dir * offset * offsetSize).rgb;
-        vec3 rgbP = sampleOffset(uTexture, vTexCoord, dir * offset * offsetSize).rgb;
+        vec3 rgbN = SampleOffset(uTexture, vTexCoord, -dir * offset * offsetSize).rgb;
+        vec3 rgbP = SampleOffset(uTexture, vTexCoord, dir * offset * offsetSize).rgb;
         
         // Accumulate weighted samples
         rgbAccum += (rgbN + rgbP) * weight;

@@ -838,9 +838,9 @@ void R3D_End(void)
                     Vector2 texelSize = { R3D.state.resolution.texelX, R3D.state.resolution.texelY };
                     r3d_shader_set_vec2(screen.fxaa, uTexelSize, texelSize);
 
-                    r3d_shader_set_float(screen.fxaa, uQualityLevel, 1.0);
-                    r3d_shader_set_float(screen.fxaa, uEdgeSensitivity, 1.0);
-                    r3d_shader_set_float(screen.fxaa, uSubpixelQuality, 1.0);
+                    r3d_shader_set_float(screen.fxaa, uQualityLevel, R3D.state.fxaa.qualityLevel);
+                    r3d_shader_set_float(screen.fxaa, uEdgeSensitivity, R3D.state.fxaa.edgeSensitivity);
+                    r3d_shader_set_float(screen.fxaa, uSubpixelQuality, R3D.state.fxaa.subpixelQuality);
 
                     r3d_primitive_draw_quad();
                 }
