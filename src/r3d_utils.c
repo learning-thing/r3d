@@ -22,6 +22,112 @@
 #include "./r3d_state.h"
 #include <raylib.h>
 
+void R3D_SetMaterialAlbedo(Material* material, Texture2D* texture, Color color)
+{
+    if (material == NULL) {
+        return;
+    }
+
+    MaterialMap* map = &material->maps[MATERIAL_MAP_ALBEDO];
+
+    if (texture != NULL) {
+        map->texture = *texture;
+    }
+    else if (map->texture.id == 0) {
+        map->texture = R3D_GetWhiteTexture();
+    }
+
+    map->color = color;
+}
+
+void R3D_SetMaterialRoughness(Material* material, Texture2D* texture, float value)
+{
+    if (material == NULL) {
+        return;
+    }
+
+    MaterialMap* map = &material->maps[MATERIAL_MAP_ROUGHNESS];
+
+    if (texture != NULL) {
+        map->texture = *texture;
+    }
+    else if (map->texture.id == 0) {
+        map->texture = R3D_GetWhiteTexture();
+    }
+
+    map->value = value;
+}
+
+void R3D_SetMaterialMetalness(Material* material, Texture2D* texture, float value)
+{
+    if (material == NULL) {
+        return;
+    }
+
+    MaterialMap* map = &material->maps[MATERIAL_MAP_METALNESS];
+
+    if (texture != NULL) {
+        map->texture = *texture;
+    }
+    else if (map->texture.id == 0) {
+        map->texture = R3D_GetWhiteTexture();
+    }
+
+    map->value = value;
+}
+
+void R3D_SetMaterialEmission(Material* material, Texture2D* texture, Color color, float value)
+{
+    if (material == NULL) {
+        return;
+    }
+
+    MaterialMap* map = &material->maps[MATERIAL_MAP_EMISSION];
+
+    if (texture != NULL) {
+        map->texture = *texture;
+    }
+    else if (map->texture.id == 0) {
+        map->texture = R3D_GetWhiteTexture();
+    }
+
+    map->color = color;
+    map->value = value;
+}
+
+Texture2D R3D_GetWhiteTexture(void)
+{
+    Texture2D texture = { 0 };
+    texture.id = R3D.texture.white;
+    texture.width = 1;
+    texture.height = 1;
+    texture.mipmaps = 1;
+    texture.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+    return texture;
+}
+
+Texture2D R3D_GetBlackTexture(void)
+{
+    Texture2D texture = { 0 };
+    texture.id = R3D.texture.black;
+    texture.width = 1;
+    texture.height = 1;
+    texture.mipmaps = 1;
+    texture.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+    return texture;
+}
+
+Texture2D R3D_GetNormalTexture(void)
+{
+    Texture2D texture = { 0 };
+    texture.id = R3D.texture.normal;
+    texture.width = 1;
+    texture.height = 1;
+    texture.mipmaps = 1;
+    texture.format = PIXELFORMAT_UNCOMPRESSED_R32G32B32;
+    return texture;
+}
+
 void R3D_DrawBufferAlbedo(float x, float y, float w, float h)
 {
     Texture2D tex = {

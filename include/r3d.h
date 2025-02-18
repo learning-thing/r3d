@@ -230,6 +230,15 @@ bool R3D_IsBoundingBoxInFrustum(BoundingBox aabb);
 
 /* === Utils functions === */
 
+void R3D_SetMaterialAlbedo(Material* material, Texture2D* texture, Color color);
+void R3D_SetMaterialRoughness(Material* material, Texture2D* texture, float value);
+void R3D_SetMaterialMetalness(Material* material, Texture2D* texture, float value);
+void R3D_SetMaterialEmission(Material* material, Texture2D* texture, Color color, float value);
+
+Texture2D R3D_GetWhiteTexture(void);
+Texture2D R3D_GetBlackTexture(void);
+Texture2D R3D_GetNormalTexture(void);
+
 void R3D_DrawBufferAlbedo(float x, float y, float w, float h);
 void R3D_DrawBufferEmission(float x, float y, float w, float h);
 void R3D_DrawBufferNormal(float x, float y, float w, float h);
