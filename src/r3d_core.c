@@ -494,13 +494,26 @@ void R3D_End(void)
     }
 
     // [PART 5] - Determine what light should lit the visible scene
-    r3d_light_t* lights[8] = { 0 };
+    r3d_light_t* lights[R3D_SHADER_NUM_LIGHTS] = { 0 };
     int lightCount = 0;
     {
         for (int id = 1; id <= r3d_registry_get_allocated_count(&R3D.container.lightRegistry); id++) {
+            // Check if the light in the array is still valid
             if (!r3d_registry_is_valid(&R3D.container.lightRegistry, id)) continue;
+
+            // Get the valid light and check if it is active
             r3d_light_t* light = r3d_registry_get(&R3D.container.lightRegistry, id);
             if (!light->enabled) continue;
+
+            // Check if the light is visible in the frustum (only for non-directional lights)
+            // TODO: Make it so that spot lights are tested by their cone rather than by a sphere...
+            if (light->type != R3D_LIGHT_DIR) {
+                if (!r3d_frustum_is_sphere_in(&R3D.state.frustum.shape, light->position, light->range)) {
+                    continue;
+                }
+            }
+
+            // Here the light is supposed to be visible
             lights[lightCount++] = light;
         }
     }
