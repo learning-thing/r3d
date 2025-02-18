@@ -269,7 +269,6 @@ void R3D_End(void)
 {
     // [PART 1] - Init global state
     {
-        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         rlDisableColorBlend();
     }
 
@@ -284,6 +283,7 @@ void R3D_End(void)
     // [PART 3] - Raster geometries to the geometry buffers
     {
         rlEnableFramebuffer(R3D.framebuffer.gBuffer.id);
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         {
             // Clear framebuffer
             {
@@ -465,7 +465,6 @@ void R3D_End(void)
             }
         }
         rlDisableFramebuffer();
-        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
     }
 
     // [PART 5] - Determine what light should lit the visible scene
@@ -562,9 +561,7 @@ void R3D_End(void)
 
                 r3d_shader_disable();
             }
-
             rlDisableFramebuffer();
-            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         }
 
         rlDisableDepthTest();
@@ -573,6 +570,7 @@ void R3D_End(void)
     // [PART 7] - Lighting computation from G-buffer data into the final render target
     {
         rlEnableFramebuffer(R3D.framebuffer.lit.id);
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         {
             r3d_shader_enable(screen.lighting);
             {
@@ -722,7 +720,6 @@ void R3D_End(void)
                 r3d_shader_disable();
             }
             rlDisableFramebuffer();
-            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         }
 
         // Initializing data to alternate between the
@@ -736,6 +733,7 @@ void R3D_End(void)
 
         // Post effect rendering
         rlEnableFramebuffer(R3D.framebuffer.post.id);
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         {
             // Post process: Bloom
             if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
