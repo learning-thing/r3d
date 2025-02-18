@@ -79,8 +79,8 @@ void Draw(void)
         rlPopMatrix();
     R3D_End();
 
-    DrawText(TextFormat("Resize mode: %s", keep ? "KEEP" : "EXPAND"), 10, 10, 20, LIME);
-    DrawText(TextFormat("Filter mode: %s", linear ? "LINEAR" : "NEAREST"), 10, 40, 20, LIME);
+    DrawText(TextFormat("Resize mode: %s", keep ? "KEEP" : "EXPAND"), 10, 10, 20, BLACK);
+    DrawText(TextFormat("Filter mode: %s", linear ? "LINEAR" : "NEAREST"), 10, 40, 20, BLACK);
 }
 
 void Close(void)

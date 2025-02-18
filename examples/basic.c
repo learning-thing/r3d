@@ -6,7 +6,6 @@
 
 static Model		plane = { 0 };
 static Model		sphere = { 0 };
-static R3D_Skybox	skybox = { 0 };
 static Camera3D		camera = { 0 };
 
 
@@ -63,6 +62,5 @@ void Close(void)
 {
     UnloadModel(plane);
     UnloadModel(sphere);
-    R3D_UnloadSkybox(skybox);
     R3D_Close();
 }
