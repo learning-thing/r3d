@@ -78,6 +78,10 @@ void Update(float delta)
         if (fxaa) R3D_ClearState(R3D_FLAG_FXAA);
         else R3D_SetState(R3D_FLAG_FXAA);
     }
+
+    if (IsKeyPressed(KEY_O)) {
+        R3D_SetSSAO(!R3D_GetSSAO());
+    }
 }
 
 void Draw(void)
