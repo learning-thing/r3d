@@ -30,6 +30,10 @@
 #include "./embedded/r3d_shaders.h"
 #include "./embedded/r3d_textures.h"
 
+/* === Defines === */
+
+#define R3D_GBUFFER_COUNT 5
+
 
 /* === Global r3d state === */
 

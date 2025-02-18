@@ -70,7 +70,7 @@ void r3d_framebuffer_load_gbuffer(int width, int height)
     gBuffer->depth = rlLoadTextureDepth(width, height, false);
 
     // Activate the draw buffers for all the attachments
-    rlActiveDrawBuffers(5);
+    rlActiveDrawBuffers(R3D_GBUFFER_COUNT);
 
     // Attach the textures to the framebuffer
     rlFramebufferAttach(gBuffer->id, gBuffer->albedo, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);

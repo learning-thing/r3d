@@ -342,9 +342,11 @@ void R3D_End(void)
             // Render skybox - (albedo buffer only)
             if (R3D.env.useSky)
             {
-                r3d_shader_enable(raster.skybox);
                 rlDisableBackfaceCulling();
+                rlActiveDrawBuffers(1);
                 rlDisableDepthMask();
+
+                r3d_shader_enable(raster.skybox);
 
                 Matrix matView = rlGetMatrixModelview();
                 Matrix matProj = rlGetMatrixProjection();
@@ -392,6 +394,7 @@ void R3D_End(void)
 
             // Render meshes
             {
+                rlActiveDrawBuffers(R3D_GBUFFER_COUNT);
                 rlEnableBackfaceCulling();
                 rlEnableDepthMask();
                 rlEnableDepthTest();
