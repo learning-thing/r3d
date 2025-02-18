@@ -306,8 +306,9 @@ void R3D_End(void)
     // [PART 3] - Raster geometries to the geometry buffers
     {
         rlEnableFramebuffer(R3D.framebuffer.gBuffer.id);
-        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         {
+            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+
             // Clear framebuffer
             {
                 glClearBufferfv(GL_DEPTH, 0, (float[4]) {
@@ -386,14 +387,13 @@ void R3D_End(void)
                 rlDisableVertexBufferElement();
 
                 // Disable shader program
-                rlDisableShader();
-
-                rlEnableBackfaceCulling();
-                rlEnableDepthMask();
+                r3d_shader_disable();
             }
 
             // Render meshes
             {
+                rlEnableBackfaceCulling();
+                rlEnableDepthMask();
                 rlEnableDepthTest();
 
                 r3d_shader_enable(raster.geometry);
@@ -405,8 +405,6 @@ void R3D_End(void)
                     }
                 }
                 r3d_shader_disable();
-
-                rlDisableDepthTest();
             }
 
             // Reset projection matrix
@@ -423,8 +421,10 @@ void R3D_End(void)
     // [PART 4] - Process SSAO
     if (R3D.env.ssaoEnabled) {
         rlEnableFramebuffer(R3D.framebuffer.pingPongSSAO.id);
-        rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
         {
+            rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
+            rlDisableDepthTest();
+
             // Bind first SSAO output texture
             glFramebufferTexture2D(
                 GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
@@ -512,14 +512,18 @@ void R3D_End(void)
             // Skip light if it doesn't produce shadows
             if (!light->shadow.enabled) continue;
 
+            // TODO: The lights could be sorted to avoid too frequent
+            //       state changes, just like with shaders.
+
             // Start rendering to shadow map
             rlEnableFramebuffer(light->shadow.map.id);
-            rlViewport(0, 0, light->shadow.map.resolution, light->shadow.map.resolution);
             {
-                // Set shader
-                r3d_shader_enable(raster.depthCube);
+                rlViewport(0, 0, light->shadow.map.resolution, light->shadow.map.resolution);
 
                 if (light->type == R3D_LIGHT_OMNI) {
+                    // Enable depth cube writing shader
+                    r3d_shader_enable(raster.depthCube);
+
                     // Set up projection matrix for omni-directional light
                     rlMatrixMode(RL_PROJECTION);
                     rlSetMatrixProjection(MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range));
@@ -586,15 +590,15 @@ void R3D_End(void)
             }
             rlDisableFramebuffer();
         }
-
-        rlDisableDepthTest();
     }
 
     // [PART 7] - Lighting computation from G-buffer data into the final render target
     {
         rlEnableFramebuffer(R3D.framebuffer.lit.id);
-        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         {
+            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+            rlDisableDepthTest();
+
             r3d_shader_enable(screen.lighting);
             {
                 for (int i = 0; i < lightCount; i++) {
@@ -718,8 +722,10 @@ void R3D_End(void)
         // Generating the blur for the brightness buffer to create the bloom effect.
         if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
             rlEnableFramebuffer(R3D.framebuffer.pingPongBloom.id);
-            rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
             {
+                rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
+                rlDisableDepthTest();
+
                 bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTextureIdx;
                 *horizontalPass = true;
 
@@ -756,8 +762,10 @@ void R3D_End(void)
 
         // Post effect rendering
         rlEnableFramebuffer(R3D.framebuffer.post.id);
-        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         {
+            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+            rlDisableDepthTest();
+
             // Post process: Bloom
             if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
                 glFramebufferTexture2D(
