@@ -35,17 +35,18 @@
 #include "./details/containers/r3d_array.h"
 #include "./details/containers/r3d_registry.h"
 
+/* === Internal declarations === */
+
+static void r3d_framebuffers_load(int width, int height);
+static void r3d_framebuffers_unload(void);
+
 
 /* === Public functions === */
 
 void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 {
     // Load framebuffers
-    r3d_framebuffer_load_gbuffer(resWidth, resHeight);
-    r3d_framebuffer_load_pingpong_ssao(resWidth, resHeight);
-    r3d_framebuffer_load_lit(resWidth, resHeight);
-    r3d_framebuffer_load_pingpong_bloom(resWidth, resHeight);
-    r3d_framebuffer_load_post(resWidth, resHeight);
+    r3d_framebuffers_load(resWidth, resHeight);
 
     // Load containers
     R3D.container.drawCallArray = r3d_array_create(256, sizeof(r3d_drawcall_t));
@@ -134,11 +135,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
 void R3D_Close(void)
 {
-    r3d_framebuffer_unload_gbuffer();
-    r3d_framebuffer_unload_pingpong_ssao();
-    r3d_framebuffer_unload_lit();
-    r3d_framebuffer_unload_pingpong_bloom();
-    r3d_framebuffer_unload_post();
+    r3d_framebuffers_unload();
 
     r3d_array_destroy(&R3D.container.drawCallArray);
     r3d_registry_destroy(&R3D.container.lightRegistry);
@@ -196,6 +193,32 @@ void R3D_SetFXAAParameters(float qualityLevel, float edgeSensitivity, float subp
     R3D.state.fxaa.qualityLevel = qualityLevel;
     R3D.state.fxaa.edgeSensitivity = edgeSensitivity;
     R3D.state.fxaa.subpixelQuality = subpixelQuality;
+}
+
+void R3D_GetResolution(int* width, int* height)
+{
+    if (width) *width = R3D.state.resolution.width;
+    if (height) *height = R3D.state.resolution.height;
+}
+
+void R3D_UpdateResolution(int width, int height)
+{
+    if (width <= 0 || height <= 0) {
+        TraceLog(LOG_ERROR, "Invalid resolution given to 'R3D_UpdateResolution'");
+        return;
+    }
+
+    if (width == R3D.state.resolution.width && height == R3D.state.resolution.height) {
+        return;
+    }
+
+    r3d_framebuffers_unload();
+    r3d_framebuffers_load(width, height);
+
+    R3D.state.resolution.width = width;
+    R3D.state.resolution.height = height;
+    R3D.state.resolution.texelX = 1.0f / width;
+    R3D.state.resolution.texelY = 1.0f / height;
 }
 
 void R3D_EnableCustomTarget(RenderTexture target)
@@ -940,4 +963,25 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
     for (int i = 0; i < model.meshCount; i++) {
         R3D_DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], model.transform);
     }
+}
+
+
+/* === Internal functions === */
+
+static void r3d_framebuffers_load(int width, int height)
+{
+    r3d_framebuffer_load_gbuffer(width, height);
+    r3d_framebuffer_load_pingpong_ssao(width, height);
+    r3d_framebuffer_load_lit(width, height);
+    r3d_framebuffer_load_pingpong_bloom(width, height);
+    r3d_framebuffer_load_post(width, height);
+}
+
+static void r3d_framebuffers_unload(void)
+{
+    r3d_framebuffer_unload_gbuffer();
+    r3d_framebuffer_unload_pingpong_ssao();
+    r3d_framebuffer_unload_lit();
+    r3d_framebuffer_unload_pingpong_bloom();
+    r3d_framebuffer_unload_post();
 }
