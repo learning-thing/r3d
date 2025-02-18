@@ -971,17 +971,29 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
 static void r3d_framebuffers_load(int width, int height)
 {
     r3d_framebuffer_load_gbuffer(width, height);
-    r3d_framebuffer_load_pingpong_ssao(width, height);
     r3d_framebuffer_load_lit(width, height);
-    r3d_framebuffer_load_pingpong_bloom(width, height);
     r3d_framebuffer_load_post(width, height);
+
+    if (R3D.env.ssaoEnabled) {
+        r3d_framebuffer_load_pingpong_ssao(width, height);
+    }
+
+    if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
+        r3d_framebuffer_load_pingpong_bloom(width, height);
+    }
 }
 
 static void r3d_framebuffers_unload(void)
 {
     r3d_framebuffer_unload_gbuffer();
-    r3d_framebuffer_unload_pingpong_ssao();
     r3d_framebuffer_unload_lit();
-    r3d_framebuffer_unload_pingpong_bloom();
     r3d_framebuffer_unload_post();
+
+    if (R3D.framebuffer.pingPongSSAO.id != 0) {
+        r3d_framebuffer_unload_pingpong_ssao();
+    }
+
+    if (R3D.framebuffer.pingPongBloom.id != 0) {
+        r3d_framebuffer_unload_pingpong_bloom();
+    }
 }

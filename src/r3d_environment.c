@@ -60,6 +60,13 @@ Vector3 R3D_GetSkyboxRotation(void)
 void R3D_SetSSAO(bool enabled)
 {
 	R3D.env.ssaoEnabled = enabled;
+
+	if (R3D.framebuffer.pingPongSSAO.id == 0) {
+		r3d_framebuffer_load_pingpong_ssao(
+			R3D.state.resolution.width,
+			R3D.state.resolution.height
+		);
+	}
 }
 
 bool R3D_GetSSAO(void)
@@ -100,6 +107,13 @@ int R3D_GetSSAOIterations(void)
 void R3D_SetBloomMode(R3D_Bloom mode)
 {
 	R3D.env.bloomMode = mode;
+
+	if (mode != R3D_BLOOM_DISABLED && R3D.framebuffer.pingPongBloom.id == 0) {
+		r3d_framebuffer_load_pingpong_bloom(
+			R3D.state.resolution.width,
+			R3D.state.resolution.height
+		);
+	}
 }
 
 R3D_Bloom R3D_GetBloomMode(void)

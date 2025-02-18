@@ -203,7 +203,7 @@ void R3D_DrawBufferSSAO(float x, float y, float w, float h)
     DrawTexturePro(
         tex, (Rectangle) { 0, 0, (float)tex.width, (float)tex.height },
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
-            );
+    );
 
     DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
 }
