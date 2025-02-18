@@ -504,8 +504,14 @@ void R3D_End(void)
 
     // [PART 6] - Render shadow maps for each light
     {
+        // Config context state
         rlEnableDepthTest();
 
+        // Push new projection matrix
+        rlMatrixMode(RL_PROJECTION);
+        rlPushMatrix();
+
+        // Iterate through all lights to render all geometries
         for (int i = 0; i < lightCount; i++) {
             r3d_light_t* light = lights[i];
 
@@ -571,9 +577,11 @@ void R3D_End(void)
                     // Store combined view and projection matrix for the shadow map
                     light->shadow.matViewProj = MatrixMultiply(matView, matProj);
 
-                    // Set projection and view matrices
+                    // Set up projection matrix
                     rlMatrixMode(RL_PROJECTION);
                     rlSetMatrixProjection(matProj);
+
+                    // Set up view matrix
                     rlMatrixMode(RL_MODELVIEW);
                     rlLoadIdentity();
                     rlMultMatrixf(MatrixToFloat(matView));
@@ -590,6 +598,14 @@ void R3D_End(void)
             }
             rlDisableFramebuffer();
         }
+
+        // Pop projection matrix
+        rlMatrixMode(RL_PROJECTION);
+        rlPopMatrix();
+
+        // Reset model-view matrix
+        rlMatrixMode(RL_MODELVIEW);
+        rlLoadIdentity();
     }
 
     // [PART 7] - Lighting computation from G-buffer data into the final render target
