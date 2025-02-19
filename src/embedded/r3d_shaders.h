@@ -263,9 +263,6 @@ typedef struct {
     unsigned int id;
     r3d_shader_uniform_sampler2D_t uTexture;
     r3d_shader_uniform_vec2_t uTexelSize;
-    r3d_shader_uniform_float_t uQualityLevel;
-    r3d_shader_uniform_float_t uEdgeSensitivity;
-    r3d_shader_uniform_float_t uSubpixelQuality;
 } r3d_shader_screen_fxaa_t;
 
 #endif // R3D_EMBEDDED_SHADERS_H

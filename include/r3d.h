@@ -86,9 +86,6 @@ bool R3D_HasState(unsigned int flag);
 void R3D_SetState(unsigned int flags);
 void R3D_ClearState(unsigned int flags);
 
-void R3D_GetFXAAParameters(float* qualityLevel, float* edgeSensitivity, float* subpixelQuality);
-void R3D_SetFXAAParameters(float qualityLevel, float edgeSensitivity, float subpixelQuality);
-
 void R3D_GetResolution(int* width, int* height);
 void R3D_UpdateResolution(int width, int height);
 

@@ -17,6 +17,26 @@
  *   3. This notice may not be removed or altered from any source distribution.
  */
 
+/*
+ * Portions of this code are derived from NVIDIA's FXAA technology.
+ *
+ * Copyright (c) 2011 NVIDIA Corporation. All rights reserved.
+ *
+ * TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THIS SOFTWARE IS PROVIDED
+ * "AS IS" AND NVIDIA AND ITS SUPPLIERS DISCLAIM ALL WARRANTIES, EITHER EXPRESS
+ * OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, NONINFRINGEMENT, IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
+ * NVIDIA OR ITS SUPPLIERS BE LIABLE FOR ANY DIRECT, SPECIAL, INCIDENTAL, INDIRECT,
+ * OR CONSEQUENTIAL DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR
+ * LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION,
+ * OR ANY OTHER PECUNIARY LOSS) ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE,
+ * EVEN IF NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+ */
+
+
+// TODO: Add quality preset option (need to recompile shader)
+
+
 #version 330 core
 
 /* === Varyings === */
@@ -28,130 +48,227 @@ noperspective in vec2 vTexCoord;
 uniform sampler2D uTexture;
 uniform vec2 uTexelSize;
 
-uniform float uQualityLevel;     // Between 0.0 (fast) and 1.0 (high quality)
-uniform float uEdgeSensitivity;  // Between 0.0 (less sensitive) and 1.0 (more sensitive)
-uniform float uSubpixelQuality;  // Between 0.0 (less subpixel AA) and 1.0 (more subpixel AA)
-
 /* === Fragments === */
 
 out vec4 FragColor;
 
-/* === Constants === */
+/* === FXAA presets === */
 
-const float EDGE_THRESHOLD_MIN = (1.0 / 128.0);
-const float EDGE_THRESHOLD_MAX = (1.0 / 8.0);
-const float ITERATIONS_MAX = 12.0;
+/*
+    FXAA_PRESET - Choose compile-in knob preset 0-5.
+    ------------------------------------------------------------------------------
+    FXAA_EDGE_THRESHOLD - The minimum amount of local contrast required 
+                          to apply algorithm.
+                          1.0/3.0  - too little
+                          1.0/4.0  - good start
+                          1.0/8.0  - applies to more edges
+                          1.0/16.0 - overkill
+    ------------------------------------------------------------------------------
+    FXAA_EDGE_THRESHOLD_MIN - Trims the algorithm from processing darks.
+                              Perf optimization.
+                              1.0/32.0 - visible limit (smaller isn't visible)
+                              1.0/16.0 - good compromise
+                              1.0/12.0 - upper limit (seeing artifacts)
+    ------------------------------------------------------------------------------
+    FXAA_SEARCH_STEPS - Maximum number of search steps for end of span.
+    ------------------------------------------------------------------------------
+    FXAA_SEARCH_THRESHOLD - Controls when to stop searching.
+                            1.0/4.0 - seems to be the best quality wise
+    ------------------------------------------------------------------------------
+    FXAA_SUBPIX_TRIM - Controls sub-pixel aliasing removal.
+                       1.0/2.0 - low removal
+                       1.0/3.0 - medium removal
+                       1.0/4.0 - default removal
+                       1.0/8.0 - high removal
+                       0.0 - complete removal
+    ------------------------------------------------------------------------------
+    FXAA_SUBPIX_CAP - Insures fine detail is not completely removed.
+                      This is important for the transition of sub-pixel detail,
+                      like fences and wires.
+                      3.0/4.0 - default (medium amount of filtering)
+                      7.0/8.0 - high amount of filtering
+                      1.0 - no capping of sub-pixel aliasing removal
+*/
 
-/* === Helper functions === */
+#define FXAA_PRESET 5
 
-float Luma(vec3 rgb)
+#if (FXAA_PRESET == 3)
+    #define FXAA_EDGE_THRESHOLD      (1.0/8.0)
+    #define FXAA_EDGE_THRESHOLD_MIN  (1.0/16.0)
+    #define FXAA_SEARCH_STEPS        16
+    #define FXAA_SEARCH_THRESHOLD    (1.0/4.0)
+    #define FXAA_SUBPIX_CAP          (3.0/4.0)
+    #define FXAA_SUBPIX_TRIM         (1.0/4.0)
+#endif
+#if (FXAA_PRESET == 4)
+    #define FXAA_EDGE_THRESHOLD      (1.0/8.0)
+    #define FXAA_EDGE_THRESHOLD_MIN  (1.0/24.0)
+    #define FXAA_SEARCH_STEPS        24
+    #define FXAA_SEARCH_THRESHOLD    (1.0/4.0)
+    #define FXAA_SUBPIX_CAP          (3.0/4.0)
+    #define FXAA_SUBPIX_TRIM         (1.0/4.0)
+#endif
+#if (FXAA_PRESET == 5)
+    #define FXAA_EDGE_THRESHOLD      (1.0/8.0)
+    #define FXAA_EDGE_THRESHOLD_MIN  (1.0/24.0)
+    #define FXAA_SEARCH_STEPS        32
+    #define FXAA_SEARCH_THRESHOLD    (1.0/4.0)
+    #define FXAA_SUBPIX_CAP          (3.0/4.0)
+    #define FXAA_SUBPIX_TRIM         (1.0/4.0)
+#endif
+
+#define FXAA_SUBPIX_TRIM_SCALE (1.0/(1.0 - FXAA_SUBPIX_TRIM))
+
+/* === Helper Functions === */
+
+
+float FxaaLuma(vec3 rgb)
 {
-    return dot(rgb, vec3(0.299, 0.587, 0.114));
+    // Return the luma, the estimation of luminance from rgb inputs.
+    // This approximates luma using one FMA instruction,
+    // skipping normalization and tossing out blue.
+    // FxaaLuma() will range 0.0 to 2.963210702.
+    return rgb.y * (0.587/0.299) + rgb.x;
 }
 
-vec3 SampleOffset(sampler2D tex, vec2 uv, vec2 offset)
+vec3 FxaaLerp3(vec3 a, vec3 b, float amountOfA)
 {
-    return texture(tex, uv + offset).rgb;
+    return (vec3(-amountOfA) * b) + ((a * vec3(amountOfA)) + b);
+}
+
+vec4 FxaaTexOff(sampler2D tex, vec2 pos, ivec2 off, vec2 rcpFrame)
+{
+    float x = pos.x + float(off.x) * rcpFrame.x;
+    float y = pos.y + float(off.y) * rcpFrame.y;
+    return texture(tex, vec2(x, y));
 }
 
 /* === Main function === */
 
 void main()
 {
-    // Calculate the number of sampling iterations based on quality setting
-    // Higher quality means more iterations for better edge detection and smoother results
-    float iterations = mix(4.0, ITERATIONS_MAX, uQualityLevel);
+    vec2 pos = vTexCoord;
+
+    vec3 rgbN = FxaaTexOff(uTexture, pos.xy, ivec2( 0,-1), uTexelSize).xyz;
+    vec3 rgbW = FxaaTexOff(uTexture, pos.xy, ivec2(-1, 0), uTexelSize).xyz;
+    vec3 rgbM = FxaaTexOff(uTexture, pos.xy, ivec2( 0, 0), uTexelSize).xyz;
+    vec3 rgbE = FxaaTexOff(uTexture, pos.xy, ivec2( 1, 0), uTexelSize).xyz;
+    vec3 rgbS = FxaaTexOff(uTexture, pos.xy, ivec2( 0, 1), uTexelSize).xyz;
     
-    // Adjust edge detection thresholds based on edge sensitivity
-    // Lower sensitivity means higher thresholds, reducing the number of edges detected
-    float edgeThresholdMin = EDGE_THRESHOLD_MIN * (2.0 - uEdgeSensitivity);
-    float edgeThresholdMax = EDGE_THRESHOLD_MAX * (2.0 - uEdgeSensitivity);
-
-    // Sample the center pixel color and calculate its luminance
-    vec3 colorCenter = texture(uTexture, vTexCoord).rgb;
-    float lumaCenter = Luma(colorCenter);
-
-    // Calculate dynamic offset for sampling neighboring pixels
-    // Higher quality reduces offset size for more precise sampling
-    float offsetMult = mix(1.0, 0.5, uQualityLevel);
-    vec2 offsetSize = uTexelSize * offsetMult;
-
-    // Sample luminance values in cardinal directions (up, down, left, right)
-    // These samples form the primary edge detection pattern
-    float lumaDown = Luma(SampleOffset(uTexture, vTexCoord, vec2(0.0, -offsetSize.y)));
-    float lumaUp = Luma(SampleOffset(uTexture, vTexCoord, vec2(0.0, offsetSize.y)));
-    float lumaLeft = Luma(SampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, 0.0)));
-    float lumaRight = Luma(SampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, 0.0)));
+    float lumaN = FxaaLuma(rgbN);
+    float lumaW = FxaaLuma(rgbW);
+    float lumaM = FxaaLuma(rgbM);
+    float lumaE = FxaaLuma(rgbE);
+    float lumaS = FxaaLuma(rgbS);
+    float rangeMin = min(lumaM, min(min(lumaN, lumaW), min(lumaS, lumaE)));
+    float rangeMax = max(lumaM, max(max(lumaN, lumaW), max(lumaS, lumaE)));
     
-    // Sample luminance values in diagonal directions
-    // Additional samples improve edge detection accuracy for diagonal edges
-    float lumaDL = Luma(SampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, -offsetSize.y)));
-    float lumaUR = Luma(SampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, offsetSize.y)));
-    float lumaUL = Luma(SampleOffset(uTexture, vTexCoord, vec2(-offsetSize.x, offsetSize.y)));
-    float lumaDR = Luma(SampleOffset(uTexture, vTexCoord, vec2(offsetSize.x, -offsetSize.y)));
-
-    // Calculate local contrast by finding min/max luminance values
-    // This helps identify edges and determine if anti-aliasing is needed
-    float lumaMin = min(lumaCenter, min(min(min(lumaDown, lumaUp), min(lumaLeft, lumaRight)),
-                                      min(min(lumaDL, lumaUR), min(lumaUL, lumaDR))));
-    float lumaMax = max(lumaCenter, max(max(max(lumaDown, lumaUp), max(lumaLeft, lumaRight)),
-                                      max(max(lumaDL, lumaUR), max(lumaUL, lumaDR))));
-    float lumaRange = lumaMax - lumaMin;
-
-    // Early exit if contrast is below threshold
-    // No anti-aliasing needed for low-contrast areas to preserve performance
-    if(lumaRange < max(edgeThresholdMin, lumaMax * edgeThresholdMax)) {
-        FragColor = vec4(colorCenter, 1.0);
+    float range = rangeMax - rangeMin;
+    if(range < max(FXAA_EDGE_THRESHOLD_MIN, rangeMax * FXAA_EDGE_THRESHOLD)) {
+        FragColor = vec4(rgbM, 1.0);
         return;
     }
-
-    // Calculate edge gradients using a modified Sobel operator
-    // This determines the direction of the edge for intelligent sampling
-    vec2 dir;
-    dir.x = -((lumaLeft + lumaRight) - (2.0 * lumaCenter)) +
-            2.0 * ((lumaDL + lumaDR) - (lumaUL + lumaUR));
-    dir.y = -((lumaUp + lumaDown) - (2.0 * lumaCenter)) +
-            2.0 * ((lumaUL + lumaUR) - (lumaDL + lumaDR));
-
-    // Normalize the gradient direction with safeguard against zero division
-    // This ensures stable sampling direction even for very weak edges
-    float dirLength = max(abs(dir.x), abs(dir.y)) + 1e-4;;
-    dir = dir / dirLength;
-
-    // Initialize accumulation variables for progressive sampling
-    // This will store the weighted sum of samples along the edge direction
-    vec3 rgbAccum = vec3(0.0);
-    float weightAccum = 0.0;
-
-    // Perform progressive sampling along the edge direction
-    // More iterations = better quality but lower performance
-    for(float i = 1.0; i <= iterations; i++)
-    {
-        // Calculate weight and offset for current iteration
-        float weight = 1.0 / (i + 1.0);  // Progressive weight reduction
-        float offset = (i / iterations) * mix(0.5, 2.0, uQualityLevel);
+    
+    vec3 rgbL = rgbN + rgbW + rgbM + rgbE + rgbS;
+    
+    float lumaL = (lumaN + lumaW + lumaE + lumaS) * 0.25;
+    float rangeL = abs(lumaL - lumaM);
+    float blendL = max(0.0, (rangeL / range) - FXAA_SUBPIX_TRIM) * FXAA_SUBPIX_TRIM_SCALE; 
+    blendL = min(FXAA_SUBPIX_CAP, blendL);
+    
+    vec3 rgbNW = FxaaTexOff(uTexture, pos.xy, ivec2(-1,-1), uTexelSize).xyz;
+    vec3 rgbNE = FxaaTexOff(uTexture, pos.xy, ivec2( 1,-1), uTexelSize).xyz;
+    vec3 rgbSW = FxaaTexOff(uTexture, pos.xy, ivec2(-1, 1), uTexelSize).xyz;
+    vec3 rgbSE = FxaaTexOff(uTexture, pos.xy, ivec2( 1, 1), uTexelSize).xyz;
+    rgbL += (rgbNW + rgbNE + rgbSW + rgbSE);
+    rgbL *= vec3(1.0/9.0);
+    
+    float lumaNW = FxaaLuma(rgbNW);
+    float lumaNE = FxaaLuma(rgbNE);
+    float lumaSW = FxaaLuma(rgbSW);
+    float lumaSE = FxaaLuma(rgbSE);
+    
+    float edgeVert = 
+        abs((0.25 * lumaNW) + (-0.5 * lumaN) + (0.25 * lumaNE)) +
+        abs((0.50 * lumaW ) + (-1.0 * lumaM) + (0.50 * lumaE )) +
+        abs((0.25 * lumaSW) + (-0.5 * lumaS) + (0.25 * lumaSE));
+    float edgeHorz = 
+        abs((0.25 * lumaNW) + (-0.5 * lumaW) + (0.25 * lumaSW)) +
+        abs((0.50 * lumaN ) + (-1.0 * lumaM) + (0.50 * lumaS )) +
+        abs((0.25 * lumaNE) + (-0.5 * lumaE) + (0.25 * lumaSE));
         
-        // Sample pixels in both directions along the edge
-        vec3 rgbN = SampleOffset(uTexture, vTexCoord, -dir * offset * offsetSize).rgb;
-        vec3 rgbP = SampleOffset(uTexture, vTexCoord, dir * offset * offsetSize).rgb;
-        
-        // Accumulate weighted samples
-        rgbAccum += (rgbN + rgbP) * weight;
-        weightAccum += 2.0 * weight;
+    bool horzSpan = edgeHorz >= edgeVert;
+    float lengthSign = horzSpan ? -uTexelSize.y : -uTexelSize.x;
+    
+    if(!horzSpan) {
+        lumaN = lumaW;
+        lumaS = lumaE;
     }
+    
+    float gradientN = abs(lumaN - lumaM);
+    float gradientS = abs(lumaS - lumaM);
+    lumaN = (lumaN + lumaM) * 0.5;
+    lumaS = (lumaS + lumaM) * 0.5;
+    
+    if (gradientN < gradientS) {
+        lumaN = lumaS;
+        lumaN = lumaS;
+        gradientN = gradientS;
+        lengthSign *= -1.0;
+    }
+    
+    vec2 posN;
+    posN.x = pos.x + (horzSpan ? 0.0 : lengthSign * 0.5);
+    posN.y = pos.y + (horzSpan ? lengthSign * 0.5 : 0.0);
+    
+    gradientN *= FXAA_SEARCH_THRESHOLD;
+    
+    vec2 posP = posN;
+    vec2 offNP = horzSpan ? vec2(uTexelSize.x, 0.0) : vec2(0.0, uTexelSize.y); 
+    float lumaEndN = lumaN;
+    float lumaEndP = lumaN;
+    bool doneN = false;
+    bool doneP = false;
+    posN += offNP * vec2(-1.0, -1.0);
+    posP += offNP * vec2( 1.0,  1.0);
+    
+    for(int i = 0; i < FXAA_SEARCH_STEPS; i++) {
+        if(!doneN) {
+            lumaEndN = FxaaLuma(texture(uTexture, posN.xy).xyz);
+        }
+        if(!doneP) {
+            lumaEndP = FxaaLuma(texture(uTexture, posP.xy).xyz);
+        }
+        
+        doneN = doneN || (abs(lumaEndN - lumaN) >= gradientN);
+        doneP = doneP || (abs(lumaEndP - lumaN) >= gradientN);
+        
+        if(doneN && doneP) {
+            break;
+        }
+        if(!doneN) {
+            posN -= offNP;
+        }
+        if(!doneP) {
+            posP += offNP;
+        }
+    }
+    
+    float dstN = horzSpan ? pos.x - posN.x : pos.y - posN.y;
+    float dstP = horzSpan ? posP.x - pos.x : posP.y - pos.y;
+    bool directionN = dstN < dstP;
+    lumaEndN = directionN ? lumaEndN : lumaEndP;
+    
+    if(((lumaM - lumaN) < 0.0) == ((lumaEndN - lumaN) < 0.0)) {
+        lengthSign = 0.0;
+    }
+ 
+    float spanLength = (dstP + dstN);
+    dstN = directionN ? dstN : dstP;
+    float subPixelOffset = (0.5 + (dstN * (-1.0/spanLength))) * lengthSign;
+    vec3 rgbF = texture(uTexture, vec2(
+        pos.x + (horzSpan ? 0.0 : subPixelOffset),
+        pos.y + (horzSpan ? subPixelOffset : 0.0))).xyz;
 
-    // Calculate final average color from accumulated samples
-    vec3 rgbAverage = rgbAccum / weightAccum;
-
-    // Calculate blend factor based on local contrast and subpixel quality setting
-    // Higher subpixel quality means stronger anti-aliasing effect
-    float blendFactor = clamp(
-        sqrt(lumaRange) * mix(0.5, 2.0, uSubpixelQuality),
-        0.0,
-        1.0
-    );
-
-    // Output final color with smooth transition between original and filtered result
-    // This preserves detail while reducing aliasing artifacts
-    FragColor = vec4(mix(colorCenter, rgbAverage, blendFactor), 1.0);
+    FragColor = vec4(FxaaLerp3(rgbL, rgbF, blendL), 1.0);
 }

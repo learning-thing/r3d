@@ -202,13 +202,6 @@ extern struct R3D_State {
             float texelY;
         } resolution;
 
-        // FXAA state
-        struct {
-            float qualityLevel;
-            float edgeSensitivity;
-            float subpixelQuality;
-        } fxaa;
-
         // Miscellaneous flags
         unsigned int flags;
 

@@ -107,11 +107,6 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     R3D.state.resolution.texelX = 1.0f / resWidth;
     R3D.state.resolution.texelY = 1.0f / resHeight;
 
-    // Init FXAA default state
-    R3D.state.fxaa.qualityLevel = 0.5f;
-    R3D.state.fxaa.edgeSensitivity = 0.75f;
-    R3D.state.fxaa.subpixelQuality = 0.5f;
-
     // Set parameter flags
     R3D.state.flags = flags;
 
@@ -186,19 +181,6 @@ void R3D_SetState(unsigned int flags)
 void R3D_ClearState(unsigned int flags)
 {
     R3D.state.flags &= ~flags;
-}
-
-void R3D_GetFXAAParameters(float* qualityLevel, float* edgeSensitivity, float* subpixelQuality)
-{
-    if (qualityLevel) *qualityLevel = R3D.state.fxaa.qualityLevel;
-    if (edgeSensitivity) *edgeSensitivity = R3D.state.fxaa.edgeSensitivity;
-    if (subpixelQuality) *subpixelQuality = R3D.state.fxaa.subpixelQuality;
-}
-void R3D_SetFXAAParameters(float qualityLevel, float edgeSensitivity, float subpixelQuality)
-{
-    R3D.state.fxaa.qualityLevel = qualityLevel;
-    R3D.state.fxaa.edgeSensitivity = edgeSensitivity;
-    R3D.state.fxaa.subpixelQuality = subpixelQuality;
 }
 
 void R3D_GetResolution(int* width, int* height)
@@ -960,10 +942,6 @@ void R3D_End(void)
 
                     Vector2 texelSize = { R3D.state.resolution.texelX, R3D.state.resolution.texelY };
                     r3d_shader_set_vec2(screen.fxaa, uTexelSize, texelSize);
-
-                    r3d_shader_set_float(screen.fxaa, uQualityLevel, R3D.state.fxaa.qualityLevel);
-                    r3d_shader_set_float(screen.fxaa, uEdgeSensitivity, R3D.state.fxaa.edgeSensitivity);
-                    r3d_shader_set_float(screen.fxaa, uSubpixelQuality, R3D.state.fxaa.subpixelQuality);
 
                     r3d_primitive_draw_quad();
                 }

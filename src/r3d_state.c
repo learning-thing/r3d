@@ -649,9 +649,6 @@ void r3d_shader_load_screen_fxaa(void)
 
     r3d_shader_get_location(screen.fxaa, uTexture);
     r3d_shader_get_location(screen.fxaa, uTexelSize);
-    r3d_shader_get_location(screen.fxaa, uQualityLevel);
-    r3d_shader_get_location(screen.fxaa, uEdgeSensitivity);
-    r3d_shader_get_location(screen.fxaa, uSubpixelQuality);
 
     r3d_shader_enable(screen.fxaa);
     r3d_shader_set_sampler2D_slot(screen.fxaa, uTexture, 0);
