@@ -31,7 +31,7 @@ glsl_keywords = {
     'uniform', 'attribute', 'varying', 'const', 'in', 'out', 'inout', 'layout', 
     'binding', 'location', 'centroid', 'sample', 'pixel', 'patch', 'vertex', 
     'instance', 'nonuniform', 'subroutine', 'invariant', 'precise', 'shared',
-    'lowp', 'mediump', 'highp', 'flat', 'smooth', 'noperspective'
+    'lowp', 'mediump', 'highp', 'flat', 'smooth', 'noperspective',
     
     # Programming keywords
     'for', 'while', 'if', 'else', 'return', 'main', 

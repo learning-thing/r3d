@@ -53,7 +53,7 @@ struct Light
 
 /* === Varyings === */
 
-in vec2 vTexCoord;
+noperspective in vec2 vTexCoord;
 
 /* === Uniforms === */
 
