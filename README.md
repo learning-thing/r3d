@@ -10,7 +10,7 @@ R3D is ideal for developers who want to add 3D rendering to their raylib project
 
 ## Features
 
-- **Material**: Uses raylib’s material system, just load a model and set its material maps, R3D handles the rest.  
+- **Material**: Uses raylibâ€™s material system, just load a model and set its material maps, R3D handles the rest.  
 - **Lighting**: Supports deferred lighting with directional, spot, and omni-directional lights.  
 - **Shadow Mapping**: Real-time shadows with adjustable resolution and support for multiple light types.  
 - **Skyboxes**: Loads and renders HDR/non-HDR skyboxes, with IBL support for scene lighting.  
@@ -23,12 +23,12 @@ R3D is ideal for developers who want to add 3D rendering to their raylib project
 
 ## Getting Started
 
-To use R3D, you must have [raylib](https://www.raylib.com/) installed, or if you don’t have it, clone the repository with the command:
+To use R3D, you must have [raylib](https://www.raylib.com/) installed, or if you donâ€™t have it, clone the repository with the command:
 ```
 git clone --recurse-submodules https://github.com/Bigfoot71/r3d
 ```
 
-Si vous avez déjà cloné le dépot sans cloner raylib avec vous pouvez faire:
+If you have already cloned the repository without cloning raylib with it, you can do:
 ```
 git submodule update --init --recursive
 ```
@@ -180,9 +180,9 @@ To draw a model in the scene, use the `R3D_DrawModel()` methods. There are three
 - `void R3D_DrawModelEx(const R3D_Model* model, Vector3 position, float scale)`
 - `void R3D_DrawModelPro(const R3D_Model* model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale)`
 
-These functions work like raylib’s but differ internally. The only visible difference is that they don’t take a tint. This is due to implementation details, but you can still set the color in your material’s albedo map.
+These functions work like raylibâ€™s but differ internally. The only visible difference is that they donâ€™t take a tint. This is due to implementation details, but you can still set the color in your materialâ€™s albedo map.
 
-Otherwise, the types used are the same as in raylib, so you can load them directly with raylib, here’s an example:
+Otherwise, the types used are the same as in raylib, so you can load them directly with raylib, hereâ€™s an example:
 
 ```c
 Model model = LoadModel("model.obj");
@@ -200,7 +200,7 @@ R3D_EnableLightShadow(light, 2048);     // Enable shadow mapping with a 2048x204
 R3D_DisableLightShadow(light, false);   // Disables the light; `false` keeps the allocated shadow map, while `true` destroys it
 ```
 
-- **Material System**: R3D uses raylib’s materials but provides helper functions to simplify setup, as raylib doesn’t always initialize all values and configuring a model’s material can be repetitive.  
+- **Material System**: R3D uses raylibâ€™s materials but provides helper functions to simplify setup, as raylib doesnâ€™t always initialize all values and configuring a modelâ€™s material can be repetitive.  
 
 ```c
 Material material = LoadMaterialDefault();  // Provided by raylib  
@@ -216,7 +216,7 @@ R3D_SetMaterialRoughness(&material, NULL, 1.0f);
 // By default, both are 0, similar to smooth plastic.
 R3D_SetMaterialMetalness(&material, NULL, 0.0f);
 
-// It’s recommended to set occlusion to `1` by default.
+// Itâ€™s recommended to set occlusion to `1` by default.
 // Otherwise, shadowed areas may appear completely black.
 // While it may seem logical for the value to be inverted,
 // for standard formats, like GLB, `1` should be interpreted as no occlusion.  
@@ -224,7 +224,7 @@ R3D_SetMaterialOcclusion(&material, NULL, 1.0f);
 
 // If no emission texture is assigned, R3D defaults it to black.
 // Calling this function with `NULL` changes it to white, assuming you want emission.
-// But don't panic! If the factor is `0`, the material won’t emit light.  
+// But don't panic! If the factor is `0`, the material wonâ€™t emit light.  
 R3D_SetMaterialEmission(&material, NULL, RED, 3.0f);
 ```  
 
