@@ -44,9 +44,9 @@ const char* Init(void)
             (float)GetRandomValue(-314000, 314000) / 100000
         });
         Matrix scale = MatrixScale(
-            (float)GetRandomValue(0, 2000) / 1000,
-            (float)GetRandomValue(0, 2000) / 1000,
-            (float)GetRandomValue(0, 2000) / 1000
+            (float)GetRandomValue(100, 2000) / 1000,
+            (float)GetRandomValue(100, 2000) / 1000,
+            (float)GetRandomValue(100, 2000) / 1000
         );
         transforms[i] = MatrixMultiply(MatrixMultiply(scale, rotate), translate);
         colors[i] = ColorFromHSV((float)GetRandomValue(0, 360'000) / 1000, 1.0f, 1.0f);
