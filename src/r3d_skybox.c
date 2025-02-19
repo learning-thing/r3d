@@ -17,7 +17,6 @@
  *   3. This notice may not be removed or altered from any source distribution.
  */
 
-// TODO: Include a system to save/load the generated textures, irradiance and prefilter (?)
 // TODO: Avoid to create RBO/FBO at each calls of generation functions
 
 #include "r3d.h"
