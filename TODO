@@ -1,0 +1,7 @@
+- Improve the algorithm for selecting the appropriate lights in the scene.
+- Provide an easy way to define the desired number of lights in the shader (preferably configurable at runtime).
+- Review resource allocation so that it only occurs when a feature requires it, similar to how framebuffers are handled.
+- Add support for blend modes.
+- Add support for transparency.
+- Implement CSM (Cascaded Shadow Maps) for directional shadows.
+- Implement SSR (Screen Space Reflections) with an example.
