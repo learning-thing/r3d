@@ -37,9 +37,8 @@ const char* Init(void)
     {
         R3D_SetLightPosition(light, (Vector3) { 0, 10, 5 });
         R3D_SetLightTarget(light, (Vector3) { 0 });
-        R3D_EnableLightShadow(light, 4096);
-        R3D_SetLightColor(light, WHITE);
         R3D_SetLightActive(light, true);
+        R3D_EnableShadow(light, 4096);
     }
 
     return "[r3d] - basic example";

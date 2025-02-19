@@ -162,6 +162,50 @@ void r3d_light_destroy_shadow_map(r3d_light_t* light)
     }
 }
 
+void r3d_light_init_default_shadow_update_config(r3d_light_t* light)
+{
+    light->shadow.updateConf.mode = R3D_SHADOW_UPDATE_INTERVAL;
+    light->shadow.updateConf.frequencySec = 0.016f;
+    light->shadow.updateConf.timerSec = 0.0f;
+
+    light->shadow.updateConf.shoudlUpdate = true;
+}
+
+void r3d_light_process_shadow_update(r3d_light_t* light)
+{
+    switch (light->shadow.updateConf.mode) {
+    case R3D_SHADOW_UPDATE_MANUAL:
+        break;
+    case R3D_SHADOW_UPDATE_INTERVAL:
+        if (!light->shadow.updateConf.shoudlUpdate) {
+            light->shadow.updateConf.timerSec += GetFrameTime();
+            if (light->shadow.updateConf.timerSec >= light->shadow.updateConf.frequencySec) {
+                light->shadow.updateConf.shoudlUpdate = true;
+                light->shadow.updateConf.timerSec = 0.0f;
+            }
+        }
+        break;
+    case R3D_SHADOW_UPDATE_CONTINUOUS:
+        light->shadow.updateConf.shoudlUpdate = true;
+        break;
+    }
+}
+
+void r3d_light_indicate_shadow_update(r3d_light_t* light)
+{
+    switch (light->shadow.updateConf.mode) {
+    case R3D_SHADOW_UPDATE_MANUAL:
+        light->shadow.updateConf.shoudlUpdate = false;
+        break;
+    case R3D_SHADOW_UPDATE_INTERVAL:
+        light->shadow.updateConf.shoudlUpdate = false;
+        light->shadow.updateConf.timerSec = 0.0f;
+        break;
+    case R3D_SHADOW_UPDATE_CONTINUOUS:
+        break;
+    }
+}
+
 Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face)
 {
     static const Vector3 dirs[6] = {

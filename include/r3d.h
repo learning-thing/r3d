@@ -34,23 +34,23 @@ typedef enum {
 } R3D_Flags;
 
 typedef enum {
-    R3D_BLOOM_DISABLED,         ///< Bloom effect is disabled.
-    R3D_BLOOM_ADDITIVE,         ///< Additive bloom effect, where bright areas are enhanced by adding light to them.
-    R3D_BLOOM_SOFT_LIGHT        ///< Soft light bloom effect, which creates a softer, more diffused glow around bright areas.
+    R3D_BLOOM_DISABLED,                 ///< Bloom effect is disabled.
+    R3D_BLOOM_ADDITIVE,                 ///< Additive bloom effect, where bright areas are enhanced by adding light to them.
+    R3D_BLOOM_SOFT_LIGHT                ///< Soft light bloom effect, which creates a softer, more diffused glow around bright areas.
 } R3D_Bloom;
 
 typedef enum {
-    R3D_FOG_DISABLED,           ///< Fog effect is disabled.
-    R3D_FOG_LINEAR,             ///< Linear fog, where the density increases linearly based on distance from the camera.
-    R3D_FOG_EXP2,               ///< Exponential fog (exp2), where the density increases exponentially with distance.
-    R3D_FOG_EXP,                ///< Exponential fog, where the density increases exponentially but at a different rate compared to EXP2.
+    R3D_FOG_DISABLED,                   ///< Fog effect is disabled.
+    R3D_FOG_LINEAR,                     ///< Linear fog, where the density increases linearly based on distance from the camera.
+    R3D_FOG_EXP2,                       ///< Exponential fog (exp2), where the density increases exponentially with distance.
+    R3D_FOG_EXP,                        ///< Exponential fog, where the density increases exponentially but at a different rate compared to EXP2.
 } R3D_Fog;
 
 typedef enum {
-    R3D_TONEMAP_LINEAR,         ///< Linear tone mapping, which performs a simple linear mapping of HDR values.
-    R3D_TONEMAP_REINHARD,       ///< Reinhard tone mapping, a popular algorithm for compressing HDR values.
-    R3D_TONEMAP_FILMIC,         ///< Filmic tone mapping, which simulates the response of film to light.
-    R3D_TONEMAP_ACES,           ///< ACES (Academy Color Encoding System) tone mapping, a high-quality algorithm used for cinematic rendering.
+    R3D_TONEMAP_LINEAR,                 ///< Linear tone mapping, which performs a simple linear mapping of HDR values.
+    R3D_TONEMAP_REINHARD,               ///< Reinhard tone mapping, a popular algorithm for compressing HDR values.
+    R3D_TONEMAP_FILMIC,                 ///< Filmic tone mapping, which simulates the response of film to light.
+    R3D_TONEMAP_ACES,                   ///< ACES (Academy Color Encoding System) tone mapping, a high-quality algorithm used for cinematic rendering.
 } R3D_Tonemap;
 
 
@@ -59,9 +59,9 @@ typedef enum {
 typedef unsigned int R3D_Light;
 
 typedef struct {
-    TextureCubemap cubemap;     ///< The skybox cubemap texture for the background and reflections.
-    Texture2D irradiance;       ///< The irradiance cubemap for diffuse lighting (ambient light).
-    Texture2D prefilter;        ///< The prefiltered cubemap for specular reflections with mipmaps.
+    TextureCubemap cubemap;             ///< The skybox cubemap texture for the background and reflections.
+    Texture2D irradiance;               ///< The irradiance cubemap for diffuse lighting (ambient light).
+    Texture2D prefilter;                ///< The prefiltered cubemap for specular reflections with mipmaps.
 } R3D_Skybox;
 
 typedef enum {
@@ -69,6 +69,12 @@ typedef enum {
     R3D_LIGHT_SPOT,
     R3D_LIGHT_OMNI,
 } R3D_LightType;
+
+typedef enum {
+    R3D_SHADOW_UPDATE_MANUAL,           ///< Manual shadow map update  
+    R3D_SHADOW_UPDATE_INTERVAL,         ///< Update at regular intervals  
+    R3D_SHADOW_UPDATE_CONTINUOUS        ///< Continuous update  
+} R3D_ShadowUpdateMode;
 
 
 /* === Core functions === */
@@ -140,14 +146,22 @@ void R3D_SetLightInnerCutOff(R3D_Light id, float degrees);
 float R3D_GetLightOuterCutOff(R3D_Light id);
 void R3D_SetLightOuterCutOff(R3D_Light id, float degrees);
 
-void R3D_EnableLightShadow(R3D_Light id, int resolution);
-void R3D_DisableLightShadow(R3D_Light id, bool destroyMap);
+void R3D_EnableShadow(R3D_Light id, int resolution);
+void R3D_DisableShadow(R3D_Light id, bool destroyMap);
 
-bool R3D_IsLightShadowEnabled(R3D_Light id);
-bool R3D_HasLightShadowMap(R3D_Light id);
+bool R3D_IsShadowEnabled(R3D_Light id);
+bool R3D_HasShadowMap(R3D_Light id);
 
-float R3D_GetLightShadowBias(R3D_Light id);
-void R3D_SetLightShadowBias(R3D_Light id, float value);
+R3D_ShadowUpdateMode R3D_GetShadowUpdateMode(R3D_Light id);
+void R3D_SetShadowUpdateMode(R3D_Light id, R3D_ShadowUpdateMode mode);
+
+int R3D_GetShadowUpdateFrequency(R3D_Light id);
+void R3D_SetShadowUpdateFrequency(R3D_Light id, int msec);
+
+void R3D_UpdateShadowMap(R3D_Light id);
+
+float R3D_GetShadowBias(R3D_Light id);
+void R3D_SetShadowBias(R3D_Light id, float value);
 
 
 /* === Environment functions === */

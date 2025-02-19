@@ -520,7 +520,7 @@ void R3D_End(void)
         rlDisableFramebuffer();
     }
 
-    // [PART 5] - Determine what light should lit the visible scene
+    // [PART 5] - Update lights and determine what light should lit the visible scene
     r3d_light_t* lights[R3D_SHADER_NUM_LIGHTS] = { 0 };
     int lightCount = 0;
     {
@@ -531,6 +531,14 @@ void R3D_End(void)
             // Get the valid light and check if it is active
             r3d_light_t* light = r3d_registry_get(&R3D.container.lightRegistry, id);
             if (!light->enabled) continue;
+
+            // Process shadow update mode
+            if (light->shadow.enabled) {
+                r3d_light_process_shadow_update(light);
+            }
+
+            // Stop here if we have reached the shader limit  
+            if (lightCount == R3D_SHADER_NUM_LIGHTS) continue;
 
             // Check if the light is visible in the frustum (only for non-directional lights)
             // TODO: Make it so that spot lights are tested by their cone rather than by a sphere...
@@ -560,6 +568,10 @@ void R3D_End(void)
 
             // Skip light if it doesn't produce shadows
             if (!light->shadow.enabled) continue;
+
+            // Skip if it's not time to update shadows
+            if (!light->shadow.updateConf.shoudlUpdate) continue;
+            else r3d_light_indicate_shadow_update(light);
 
             // TODO: The lights could be sorted to avoid too frequent
             //       state changes, just like with shaders.

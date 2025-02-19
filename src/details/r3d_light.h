@@ -26,6 +26,13 @@
 /* === Types === */
 
 typedef struct {
+    R3D_ShadowUpdateMode mode;
+    float frequencySec;
+    float timerSec;
+    bool shoudlUpdate;
+} r3d_shadow_update_conf_t;
+
+typedef struct {
     unsigned int id;
     unsigned int depth;
     unsigned int color;     ///< Used for shadow cubemaps to store distances directly instead of view depth.
@@ -34,6 +41,7 @@ typedef struct {
 } r3d_shadow_map_t;
 
 typedef struct {
+    r3d_shadow_update_conf_t updateConf;
     r3d_shadow_map_t map;
     Matrix matViewProj;
     float bias;
@@ -60,6 +68,10 @@ void r3d_light_init(r3d_light_t* light);
 
 void r3d_light_create_shadow_map(r3d_light_t* light, int resolution);
 void r3d_light_destroy_shadow_map(r3d_light_t* light);
+
+void r3d_light_init_default_shadow_update_config(r3d_light_t* light);
+void r3d_light_process_shadow_update(r3d_light_t* light);
+void r3d_light_indicate_shadow_update(r3d_light_t* light);
 
 Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face);
 

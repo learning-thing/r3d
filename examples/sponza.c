@@ -17,7 +17,7 @@ static bool sky = false;
 const char* Init(void)
 {
     R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
-    SetTargetFPS(60);
+   // SetTargetFPS(60);
 
     R3D_SetSSAO(true);
     R3D_SetSSAORadius(4.0f);
@@ -47,7 +47,8 @@ const char* Init(void)
         lights[i] = R3D_CreateLight(R3D_LIGHT_SPOT);
         R3D_SetLightPosition(lights[i], (Vector3) { i ? -10 : 10, 20, 0 });
         R3D_SetLightTarget(lights[i], (Vector3) { 0, 0, 0 });
-        R3D_EnableLightShadow(lights[i], 4096);
+        R3D_GetShadowUpdateMode(R3D_SHADOW_UPDATE_MANUAL);
+        R3D_EnableShadow(lights[i], 4096);
         R3D_SetLightActive(lights[i], true);
     }
 

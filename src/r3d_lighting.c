@@ -95,11 +95,24 @@ void R3D_ToggleLight(R3D_Light id)
 {
     r3d_get_and_check_light(light, id);
     light->enabled = !light->enabled;
+
+    if (light->enabled && light->shadow.enabled) {
+        light->shadow.updateConf.shoudlUpdate = true;
+    }
 }
 
 void R3D_SetLightActive(R3D_Light id, bool active)
 {
     r3d_get_and_check_light(light, id);
+
+    if (light->enabled == active) {
+        return;
+    }
+
+    if (active && light->shadow.enabled) {
+        light->shadow.updateConf.shoudlUpdate = true;
+    }
+
     light->enabled = active;
 }
 
@@ -224,7 +237,7 @@ void R3D_SetLightOuterCutOff(R3D_Light id, float degrees)
     light->outerCutOff = cosf(degrees * DEG2RAD);
 }
 
-void R3D_EnableLightShadow(R3D_Light id, int resolution)
+void R3D_EnableShadow(R3D_Light id, int resolution)
 {
     r3d_get_and_check_light(light, id);
 
@@ -237,12 +250,13 @@ void R3D_EnableLightShadow(R3D_Light id, int resolution)
     else {
         if (resolution == 0) resolution = 1024;
         r3d_light_create_shadow_map(light, resolution);
+        r3d_light_init_default_shadow_update_config(light);
     }
 
     light->shadow.enabled = true;
 }
 
-void R3D_DisableLightShadow(R3D_Light id, bool destroyMap)
+void R3D_DisableShadow(R3D_Light id, bool destroyMap)
 {
     r3d_get_and_check_light(light, id);
 
@@ -254,25 +268,56 @@ void R3D_DisableLightShadow(R3D_Light id, bool destroyMap)
     light->shadow.enabled = false;
 }
 
-bool R3D_IsLightShadowEnabled(R3D_Light id)
+bool R3D_IsShadowEnabled(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, false);
     return light->shadow.enabled;
 }
 
-bool R3D_HasLightShadowMap(R3D_Light id)
+bool R3D_HasShadowMap(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, false);
     return light->shadow.map.id != 0;
 }
 
-float R3D_GetLightShadowBias(R3D_Light id)
+R3D_ShadowUpdateMode R3D_GetShadowUpdateMode(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->shadow.updateConf.mode;
+}
+
+void R3D_SetShadowUpdateMode(R3D_Light id, R3D_ShadowUpdateMode mode)
+{
+    r3d_get_and_check_light(light, id);
+    light->shadow.updateConf.mode = mode;
+}
+
+int R3D_GetShadowUpdateFrequency(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->shadow.updateConf.frequencySec * 1000;
+}
+
+void R3D_SetShadowUpdateFrequency(R3D_Light id, int msec)
+{
+    r3d_get_and_check_light(light, id);
+    light->shadow.updateConf.frequencySec = (float)msec / 1000;
+
+}
+
+void R3D_UpdateShadowMap(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id);
+    light->shadow.updateConf.shoudlUpdate = true;
+}
+
+float R3D_GetShadowBias(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
     return light->shadow.bias;
 }
 
-void R3D_SetLightShadowBias(R3D_Light id, float value)
+void R3D_SetShadowBias(R3D_Light id, float value)
 {
     r3d_get_and_check_light(light, id);
     light->shadow.bias = value;
