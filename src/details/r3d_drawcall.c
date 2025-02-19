@@ -345,8 +345,8 @@ static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceMo
 
 static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
 {
-    r3d_drawcall_t* drawCallA = a;
-    r3d_drawcall_t* drawCallB = b;
+    const r3d_drawcall_t* drawCallA = a;
+    const r3d_drawcall_t* drawCallB = b;
 
     Vector3 posA = { 0 };
     Vector3 posB = { 0 };

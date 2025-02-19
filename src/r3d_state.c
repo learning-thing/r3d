@@ -568,8 +568,6 @@ void r3d_shader_load_screen_lighting(void)
     }
 
     r3d_shader_disable();
-
-    return shader;
 }
 
 void r3d_shader_load_screen_bloom(void)
