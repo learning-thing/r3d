@@ -2,6 +2,7 @@
 #include <r3d.h>
 
 #include <raymath.h>
+#include <stddef.h>
 
 #define INSTANCE_COUNT 1000
 
@@ -49,7 +50,7 @@ const char* Init(void)
             (float)GetRandomValue(100, 2000) / 1000
         );
         transforms[i] = MatrixMultiply(MatrixMultiply(scale, rotate), translate);
-        colors[i] = ColorFromHSV((float)GetRandomValue(0, 360'000) / 1000, 1.0f, 1.0f);
+        colors[i] = ColorFromHSV((float)GetRandomValue(0, 360000) / 1000, 1.0f, 1.0f);
     }
 
     camera = (Camera3D){

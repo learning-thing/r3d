@@ -69,7 +69,7 @@ add_library(${PROJECT_NAME}
     "${R3D_GENERATED_TEXTURES_SOURCE}"
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC raylib)
+target_link_libraries(${PROJECT_NAME} PUBLIC raylib m)
 
 # Specify the include directories needed for the project
 

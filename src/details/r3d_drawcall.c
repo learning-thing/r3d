@@ -30,8 +30,8 @@
 
 /* === Internal functions === */
 
-// Cette fonction supporte le rendu instancié quand cela est nécéssaire
-static void r3d_draw_vertex_arrays(r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor);
+// Cette fonction supporte le rendu instanciï¿½ quand cela est nï¿½cï¿½ssaire
+static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor);
 
 // Fonction de comparaison pour le trie des draw call dans les tableaux
 static int r3d_drawcall_compare_front_to_back(const void* a, const void* b);
@@ -145,7 +145,7 @@ void r3d_drawcall_raster_geometry_material(const r3d_drawcall_t* call)
         // Send combined model-view-projection matrix to shader
         r3d_shader_set_mat4(raster.geometry, uMatMVP, matModelViewProjection);
 
-        // Rasterisation du mesh en tenant compte du rendu instancié si besoin
+        // Rasterisation du mesh en tenant compte du rendu instanciï¿½ si besoin
         if (call->instanced.count == 0) {
             r3d_draw_vertex_arrays(call, -1, -1);
         }
@@ -256,7 +256,7 @@ size_t r3d_drawcall_sort_instanced(r3d_drawcall_t* calls, size_t count)
 
 /* === Internal functions === */
 
-static void r3d_draw_vertex_arrays(r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor)
+static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor)
 {
     // WARNING: Always use the same attribute locations in shaders for instance matrices and colors.
     // If attribute locations differ between shaders (e.g., between the depth shader and the geometry shader),

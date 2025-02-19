@@ -1,6 +1,7 @@
 #include "./r3d_light.h"
 
 #include <raymath.h>
+#include <stddef.h>
 #include <glad.h>
 
 /* === Internal functions === */
@@ -74,13 +75,13 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_omni(int resolution)
     glGenFramebuffers(1, &shadowMap.id);
     glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.id);
 
-    // Création du Renderbuffer 2D pour la profondeur
+    // Crï¿½ation du Renderbuffer 2D pour la profondeur
     glGenRenderbuffers(1, &shadowMap.depth);
     glBindRenderbuffer(GL_RENDERBUFFER, shadowMap.depth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, resolution, resolution);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, shadowMap.depth);
 
-    // Création de la Cubemap pour la couleur (1 canal 16-bit)
+    // Crï¿½ation de la Cubemap pour la couleur (1 canal 16-bit)
     glGenTextures(1, &shadowMap.color);
     glBindTexture(GL_TEXTURE_CUBE_MAP, shadowMap.color);
 
@@ -100,7 +101,7 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_omni(int resolution)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, shadowMap.color, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, shadowMap.color, 0);
 
-    // Définition des buffers actifs
+    // Dï¿½finition des buffers actifs
     GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
     glDrawBuffers(1, drawBuffers);
 

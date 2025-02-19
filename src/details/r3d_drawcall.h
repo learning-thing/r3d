@@ -21,7 +21,9 @@
 #define R3D_DETAILS_DRAWCALL_H
 
 #include "r3d.h"
+
 #include <raylib.h>
+#include <stddef.h>
 
 /* === Types === */
 

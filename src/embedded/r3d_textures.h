@@ -21,6 +21,6 @@
 #define R3D_EMBEDDED_TEXTURES_H
 
 extern const unsigned char TEX_IBL_BRDF_LUT[];
-extern const size_t TEX_IBL_BRDF_LUT_SIZE;
+extern const unsigned long long TEX_IBL_BRDF_LUT_SIZE;
 
 #endif // R3D_EMBEDDED_TEXTURES_H

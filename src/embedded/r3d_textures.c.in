@@ -22,4 +22,4 @@
 #include "@textures_header@"
 
 const unsigned char TEX_IBL_BRDF_LUT[] = { @TEX_IBL_BRDF_LUT@ };
-const size_t TEX_IBL_BRDF_LUT_SIZE = @TEX_IBL_BRDF_LUT_SIZE@;
+const unsigned long long TEX_IBL_BRDF_LUT_SIZE = @TEX_IBL_BRDF_LUT_SIZE@;
