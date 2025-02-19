@@ -161,7 +161,7 @@ def format_shader(input_string):
 
     Returns:
         str: Minified shader code where comments are removed, code lines are compacted,
-             and spaces after semicolons are eliminated.
+             and spaces arround some symbols are eliminated.
     """
     # Remove multiline comments (/* ... */) using regex with the DOTALL flag to match across multiple lines
     input_string = re.sub(r"/\*.*?\*/", "", input_string, flags=re.S)
@@ -172,13 +172,13 @@ def format_shader(input_string):
     # Remove empty lines resulting from comment removal or whitespace trimming
     lines = [line for line in lines if line]
 
-    # Renommer les variables avant la minification
+    # Rename variables before minification
     input_string = "\n".join(lines)
     input_string = variable_renamer(input_string)
-    
-    # Reprendre le processus de minification
+
+    # Continue the minification process
     lines = input_string.splitlines()
-    
+
     output = []
     buffer = ""
 
@@ -203,6 +203,9 @@ def format_shader(input_string):
     
     # Remove unnecessary spaces around all specified characters
     minified_code = re.sub(r"\s*(;|,|\+|-|\*|/|\(|\)|{|}|\=)\s*", r"\1", minified_code)
+
+    # QUICK FIX: Line correction #define to add a space before the opening parenthesis
+    minified_code = re.sub(r'(#define\s+\w+)(\()', r'\1 \2', minified_code)
 
     return minified_code
 
