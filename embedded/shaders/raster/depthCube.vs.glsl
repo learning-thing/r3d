@@ -9,6 +9,6 @@ out vec3 vPosition;
 
 void main()
 {
-    vPosition = vec3(uMatModel*vec4(aPosition, 1.0));
-    gl_Position = uMatMVP*vec4(aPosition, 1.0);
+    vPosition = vec3(uMatModel * vec4(aPosition, 1.0));
+    gl_Position = uMatMVP * vec4(aPosition, 1.0);
 }

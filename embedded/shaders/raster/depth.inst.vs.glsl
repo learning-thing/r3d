@@ -17,33 +17,24 @@
  *   3. This notice may not be removed or altered from any source distribution.
  */
 
-#ifndef R3D_DETAILS_DRAWCALL_H
-#define R3D_DETAILS_DRAWCALL_H
+#version 330 core
 
-#include "r3d.h"
-#include <raylib.h>
+/* === Attributes === */
 
-/* === Types === */
+layout(location = 0) in vec3 aPosition;
 
-typedef struct {
-    Mesh mesh;
-    Matrix transform;
-    Material material;
-    struct {
-        const Matrix* transforms;
-        const Color* colors;
-        size_t count;
-    } instanced;
-} r3d_drawcall_t;
+/* === Instanced attributes === */
 
-/* === Functions === */
+layout(location = 10) in mat4 aInstanceModel;
 
-void r3d_drawcall_raster_geometry_material(const r3d_drawcall_t* call);
+/* === Uniforms === */
 
-void r3d_drawcall_raster_geometry_depth(const r3d_drawcall_t* call);
-void r3d_drawcall_raster_geometry_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos);
+uniform mat4 uMatMVP;
 
-void r3d_drawcall_sort_front_to_back(r3d_drawcall_t* calls, size_t count);
-size_t r3d_drawcall_sort_instanced(r3d_drawcall_t* calls, size_t count);
+/* === Main function === */
 
-#endif // R3D_DETAILS_DRAWCALL_H
+void main()
+{
+    mat4 instanceModel = transpose(aInstanceModel);
+    gl_Position = uMatMVP * (instanceModel * vec4(aPosition, 1.0));
+}

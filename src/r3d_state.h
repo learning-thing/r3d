@@ -105,9 +105,12 @@ extern struct R3D_State {
         // Raster shaders
         struct {
             r3d_shader_raster_geometry_t geometry;
+            r3d_shader_raster_geometry_inst_t geometryInst;
             r3d_shader_raster_skybox_t skybox;
             r3d_shader_raster_depth_t depth;
+            r3d_shader_raster_depth_inst_t depthInst;
             r3d_shader_raster_depth_cube_t depthCube;
+            r3d_shader_raster_depth_cube_inst_t depthCubeInst;
         } raster;
 
         // Screen shaders
@@ -241,9 +244,12 @@ void r3d_shader_load_generate_cubemap_from_equirectangular(void);
 void r3d_shader_load_generate_irradiance_convolution(void);
 void r3d_shader_load_generate_prefilter(void);
 void r3d_shader_load_raster_geometry(void);
+void r3d_shader_load_raster_geometry_inst(void);
 void r3d_shader_load_raster_skybox(void);
 void r3d_shader_load_raster_depth(void);
+void r3d_shader_load_raster_depth_inst(void);
 void r3d_shader_load_raster_depth_cube(void);
+void r3d_shader_load_raster_depth_cube_inst(void);
 void r3d_shader_load_screen_ssao(void);
 void r3d_shader_load_screen_lighting(void);
 void r3d_shader_load_screen_bloom(void);

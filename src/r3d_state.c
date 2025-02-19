@@ -393,6 +393,37 @@ void r3d_shader_load_raster_geometry(void)
     r3d_shader_disable();
 }
 
+void r3d_shader_load_raster_geometry_inst(void)
+{
+    R3D.shader.raster.geometryInst.id = rlLoadShaderCode(
+        VS_RASTER_GEOMETRY_INST, FS_RASTER_GEOMETRY
+    );
+
+    r3d_shader_get_location(raster.geometry, uMatModel);
+    r3d_shader_get_location(raster.geometry, uMatMVP);
+    r3d_shader_get_location(raster.geometry, uTexAlbedo);
+    r3d_shader_get_location(raster.geometry, uTexNormal);
+    r3d_shader_get_location(raster.geometry, uTexEmission);
+    r3d_shader_get_location(raster.geometry, uTexOcclusion);
+    r3d_shader_get_location(raster.geometry, uTexRoughness);
+    r3d_shader_get_location(raster.geometry, uTexMetalness);
+    r3d_shader_get_location(raster.geometry, uValEmission);
+    r3d_shader_get_location(raster.geometry, uValOcclusion);
+    r3d_shader_get_location(raster.geometry, uValRoughness);
+    r3d_shader_get_location(raster.geometry, uValMetalness);
+    r3d_shader_get_location(raster.geometry, uColAlbedo);
+    r3d_shader_get_location(raster.geometry, uColEmission);
+
+    r3d_shader_enable(raster.geometry);
+    r3d_shader_set_sampler2D_slot(raster.geometry, uTexAlbedo, 0);
+    r3d_shader_set_sampler2D_slot(raster.geometry, uTexNormal, 1);
+    r3d_shader_set_sampler2D_slot(raster.geometry, uTexEmission, 2);
+    r3d_shader_set_sampler2D_slot(raster.geometry, uTexOcclusion, 3);
+    r3d_shader_set_sampler2D_slot(raster.geometry, uTexRoughness, 4);
+    r3d_shader_set_sampler2D_slot(raster.geometry, uTexMetalness, 5);
+    r3d_shader_disable();
+}
+
 void r3d_shader_load_raster_skybox(void)
 {
     R3D.shader.raster.skybox.id = rlLoadShaderCode(
@@ -418,10 +449,30 @@ void r3d_shader_load_raster_depth(void)
     r3d_shader_get_location(raster.depth, uMatMVP);
 }
 
+void r3d_shader_load_raster_depth_inst(void)
+{
+    R3D.shader.raster.depthInst.id = rlLoadShaderCode(
+        VS_RASTER_DEPTH_INST, FS_RASTER_DEPTH
+    );
+
+    r3d_shader_get_location(raster.depth, uMatMVP);
+}
+
 void r3d_shader_load_raster_depth_cube(void)
 {
     R3D.shader.raster.depthCube.id = rlLoadShaderCode(
         VS_RASTER_DEPTH_CUBE, FS_RASTER_DEPTH_CUBE
+    );
+
+    r3d_shader_get_location(raster.depthCube, uViewPosition);
+    r3d_shader_get_location(raster.depthCube, uMatModel);
+    r3d_shader_get_location(raster.depthCube, uMatMVP);
+}
+
+void r3d_shader_load_raster_depth_cube_inst(void)
+{
+    R3D.shader.raster.depthCubeInst.id = rlLoadShaderCode(
+        VS_RASTER_DEPTH_CUBE_INST, FS_RASTER_DEPTH_CUBE
     );
 
     r3d_shader_get_location(raster.depthCube, uViewPosition);

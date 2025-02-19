@@ -39,12 +39,15 @@ extern const char FS_GENERATE_IRRADIANCE_CONVOLUTION[];
 extern const char FS_GENERATE_PREFILTER[];
 
 extern const char VS_RASTER_GEOMETRY[];
+extern const char VS_RASTER_GEOMETRY_INST[];
 extern const char FS_RASTER_GEOMETRY[];
 extern const char VS_RASTER_SKYBOX[];
 extern const char FS_RASTER_SKYBOX[];
 extern const char VS_RASTER_DEPTH[];
+extern const char VS_RASTER_DEPTH_INST[];
 extern const char FS_RASTER_DEPTH[];
 extern const char VS_RASTER_DEPTH_CUBE[];
+extern const char VS_RASTER_DEPTH_CUBE_INST[];
 extern const char FS_RASTER_DEPTH_CUBE[];
 
 extern const char FS_SCREEN_SSAO[];
@@ -121,6 +124,24 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
+    r3d_shader_uniform_mat4_t uMatModel;
+    r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_sampler2D_t uTexAlbedo;
+    r3d_shader_uniform_sampler2D_t uTexNormal;
+    r3d_shader_uniform_sampler2D_t uTexEmission;
+    r3d_shader_uniform_sampler2D_t uTexOcclusion;
+    r3d_shader_uniform_sampler2D_t uTexRoughness;
+    r3d_shader_uniform_sampler2D_t uTexMetalness;
+    r3d_shader_uniform_float_t uValEmission;
+    r3d_shader_uniform_float_t uValOcclusion;
+    r3d_shader_uniform_float_t uValRoughness;
+    r3d_shader_uniform_float_t uValMetalness;
+    r3d_shader_uniform_vec3_t uColAlbedo;
+    r3d_shader_uniform_vec3_t uColEmission;
+} r3d_shader_raster_geometry_inst_t;
+
+typedef struct {
+    unsigned int id;
     r3d_shader_uniform_mat4_t uMatProj;
     r3d_shader_uniform_mat4_t uMatView;
     r3d_shader_uniform_vec4_t uRotation;
@@ -132,12 +153,18 @@ typedef struct {
     r3d_shader_uniform_mat4_t uMatMVP;
 } r3d_shader_raster_depth_t;
 
+typedef r3d_shader_raster_depth_t
+    r3d_shader_raster_depth_inst_t;
+
 typedef struct {
     unsigned int id;
     r3d_shader_uniform_vec3_t uViewPosition;
     r3d_shader_uniform_mat4_t uMatModel;
     r3d_shader_uniform_mat4_t uMatMVP;
 } r3d_shader_raster_depth_cube_t;
+
+typedef r3d_shader_raster_depth_cube_t
+    r3d_shader_raster_depth_cube_inst_t;
 
 typedef struct {
     unsigned int id;

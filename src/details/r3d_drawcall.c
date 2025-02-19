@@ -30,27 +30,12 @@
 
 /* === Internal functions === */
 
-static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
-{
-    r3d_drawcall_t* drawCallA = a;
-    r3d_drawcall_t* drawCallB = b;
+// Cette fonction supporte le rendu instancié quand cela est nécéssaire
+static void r3d_draw_vertex_arrays(r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor);
 
-    Vector3 posA = { 0 };
-    Vector3 posB = { 0 };
+// Fonction de comparaison pour le trie des draw call dans les tableaux
+static int r3d_drawcall_compare_front_to_back(const void* a, const void* b);
 
-    posA.x = drawCallA->transform.m12;
-    posA.y = drawCallA->transform.m13;
-    posA.z = drawCallA->transform.m14;
-
-    posB.x = drawCallB->transform.m12;
-    posB.y = drawCallB->transform.m13;
-    posB.z = drawCallB->transform.m14;
-
-    float distA = Vector3DistanceSqr(R3D.state.transform.position, posA);
-    float distB = Vector3DistanceSqr(R3D.state.transform.position, posB);
-
-    return (distA > distB) - (distA < distB);
-}
 
 /* === Function definitions === */
 
@@ -66,7 +51,9 @@ void r3d_drawcall_raster_geometry_material(const r3d_drawcall_t* call)
     matModelView = MatrixMultiply(matModel, matView);
 
     // Set additional matrix uniforms
-    r3d_shader_set_mat4(raster.geometry, uMatNormal, MatrixTranspose(MatrixInvert(matModel)));
+    if (call->instanced.count == 0) {
+        r3d_shader_set_mat4(raster.geometry, uMatNormal, MatrixTranspose(MatrixInvert(matModel)));
+    }
     r3d_shader_set_mat4(raster.geometry, uMatModel, matModel);
 
     // Set factor material maps
@@ -158,12 +145,12 @@ void r3d_drawcall_raster_geometry_material(const r3d_drawcall_t* call)
         // Send combined model-view-projection matrix to shader
         r3d_shader_set_mat4(raster.geometry, uMatMVP, matModelViewProjection);
 
-        // Draw mesh
-        if (call->mesh.indices != NULL) {
-            rlDrawVertexArrayElements(0, call->mesh.triangleCount * 3, 0);
+        // Rasterisation du mesh en tenant compte du rendu instancié si besoin
+        if (call->instanced.count == 0) {
+            r3d_draw_vertex_arrays(call, -1, -1);
         }
         else {
-            rlDrawVertexArray(0, call->mesh.vertexCount);
+            r3d_draw_vertex_arrays(call, 10, 14);
         }
     }
 
@@ -202,11 +189,11 @@ void r3d_drawcall_raster_geometry_depth(const r3d_drawcall_t* call)
         }
     }
 
-    if (call->mesh.indices != NULL) {
-        rlDrawVertexArrayElements(0, call->mesh.triangleCount * 3, 0);
+    if (call->instanced.count == 0) {
+        r3d_draw_vertex_arrays(call, -1, -1);
     }
     else {
-        rlDrawVertexArray(0, call->mesh.vertexCount);
+        r3d_draw_vertex_arrays(call, 10, -1);
     }
 
     rlDisableVertexArray();
@@ -233,11 +220,11 @@ void r3d_drawcall_raster_geometry_depth_cube(const r3d_drawcall_t* call, Vector3
         }
     }
 
-    if (call->mesh.indices != NULL) {
-        rlDrawVertexArrayElements(0, call->mesh.triangleCount * 3, 0);
+    if (call->instanced.count == 0) {
+        r3d_draw_vertex_arrays(call, -1, -1);
     }
     else {
-        rlDrawVertexArray(0, call->mesh.vertexCount);
+        r3d_draw_vertex_arrays(call, 10, -1);
     }
 
     rlDisableVertexArray();
@@ -248,4 +235,132 @@ void r3d_drawcall_raster_geometry_depth_cube(const r3d_drawcall_t* call, Vector3
 void r3d_drawcall_sort_front_to_back(r3d_drawcall_t* calls, size_t count)
 {
     qsort(calls, count, sizeof(r3d_drawcall_t), r3d_drawcall_compare_front_to_back);
+}
+
+size_t r3d_drawcall_sort_instanced(r3d_drawcall_t* calls, size_t count)
+{
+    size_t nInstanced = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (calls[i].instanced.count > 0) {
+            if (i != nInstanced) {
+                r3d_drawcall_t temp = calls[i];
+                calls[i] = calls[nInstanced];
+                calls[nInstanced] = temp;
+            }
+            nInstanced++;
+        }
+    }
+    return nInstanced;
+}
+
+
+/* === Internal functions === */
+
+static void r3d_draw_vertex_arrays(r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor)
+{
+    // WARNING: Always use the same attribute locations in shaders for instance matrices and colors.
+    // If attribute locations differ between shaders (e.g., between the depth shader and the geometry shader),
+    // it will break the rendering. This is because the vertex attributes are assigned based on specific 
+    // attribute locations, and if those locations are not consistent across shaders, the attributes 
+    // for instance transforms and colors will not be correctly bound. 
+    // This results in undefined or incorrect behavior, such as missing or incorrectly transformed meshes.
+
+    unsigned int vboTransforms = 0;
+    unsigned int vboColors = 0;
+
+    // Determine whether instanced rendering is used
+    bool useInstancing = (
+        call->instanced.count > 0 && (call->instanced.transforms || call->instanced.colors)
+    );
+
+    // Enable the attribute for the transformation matrix (decomposed into 4 vec4 vectors)
+    if (useInstancing && call->instanced.transforms && locInstanceModel >= 0) {
+        vboTransforms = rlLoadVertexBuffer(call->instanced.transforms, call->instanced.count * sizeof(Matrix), true);
+        rlEnableVertexBuffer(vboTransforms);
+        for (int i = 0; i < 4; i++) {
+            rlSetVertexAttribute(locInstanceModel + i, 4, RL_FLOAT, false, sizeof(Matrix), i * sizeof(Vector4));
+            rlSetVertexAttributeDivisor(locInstanceModel + i, 1);
+            rlEnableVertexAttribute(locInstanceModel + i);
+        }
+    }
+    else if (locInstanceModel >= 0) {
+        const float defaultTransform[4 * 4] = {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        };
+        for (int i = 0; i < 4; i++) {
+            glVertexAttrib4fv(locInstanceModel + i, defaultTransform + i * 4);
+            rlDisableVertexAttribute(locInstanceModel + i);
+        }
+    }
+
+    // Handle per-instance colors if available
+    if (useInstancing && call->instanced.colors && locInstanceColor >= 0) {
+        vboColors = rlLoadVertexBuffer(call->instanced.colors, call->instanced.count * sizeof(Color), true);
+        rlEnableVertexBuffer(vboColors);
+        rlSetVertexAttribute(locInstanceColor, 4, RL_UNSIGNED_BYTE, true, 0, 0);
+        rlSetVertexAttributeDivisor(locInstanceColor, 1);
+        rlEnableVertexAttribute(locInstanceColor);
+    }
+    else if (locInstanceColor >= 0) {
+        const float defaultColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glVertexAttrib4fv(locInstanceColor, defaultColor);
+        rlDisableVertexAttribute(locInstanceColor);
+    }
+
+    // Draw instances or a single object depending on the case
+    if (useInstancing) {
+        if (call->mesh.indices != NULL) {
+            rlDrawVertexArrayElementsInstanced(0, call->mesh.triangleCount * 3, 0, call->instanced.count);
+        }
+        else {
+            rlDrawVertexArrayInstanced(0, call->mesh.vertexCount, call->instanced.count);
+        }
+    }
+    else {
+        if (call->mesh.indices != NULL) {
+            rlDrawVertexArrayElements(0, call->mesh.triangleCount * 3, 0);
+        }
+        else {
+            rlDrawVertexArray(0, call->mesh.vertexCount);
+        }
+    }
+
+    // Clean up resources
+    if (vboTransforms > 0) {
+        for (int i = 0; i < 4; i++) {
+            rlSetVertexAttributeDivisor(locInstanceModel + i, 0);
+            rlDisableVertexAttribute(locInstanceModel + i);
+        }
+        rlUnloadVertexBuffer(vboTransforms);
+    }
+    if (vboColors > 0) {
+        rlSetVertexAttributeDivisor(locInstanceColor, 0);
+        rlDisableVertexAttribute(locInstanceColor);
+        rlUnloadVertexBuffer(vboColors);
+    }
+}
+
+static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
+{
+    r3d_drawcall_t* drawCallA = a;
+    r3d_drawcall_t* drawCallB = b;
+
+    Vector3 posA = { 0 };
+    Vector3 posB = { 0 };
+
+    posA.x = drawCallA->transform.m12;
+    posA.y = drawCallA->transform.m13;
+    posA.z = drawCallA->transform.m14;
+
+    posB.x = drawCallB->transform.m12;
+    posB.y = drawCallB->transform.m13;
+    posB.z = drawCallB->transform.m14;
+
+    float distA = Vector3DistanceSqr(R3D.state.transform.position, posA);
+    float distB = Vector3DistanceSqr(R3D.state.transform.position, posB);
+
+    return (distA > distB) - (distA < distB);
 }

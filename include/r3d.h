@@ -93,6 +93,9 @@ void R3D_Begin(Camera3D camera);
 void R3D_End(void);
 
 void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform);
+void R3D_DrawMeshInstanced(Mesh mesh, Material material, Matrix* instanceTransforms, int instanceCount);
+void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTransforms, Color* instanceColors, int instanceCount);
+void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Matrix* instanceTransforms, Color* instanceColors, int instanceCount);
 
 void R3D_DrawModel(Model model, Vector3 position, float scale);
 void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale);
@@ -234,6 +237,7 @@ bool R3D_IsBoundingBoxInFrustum(BoundingBox aabb);
 /* === Utils functions === */
 
 void R3D_SetMaterialAlbedo(Material* material, Texture2D* texture, Color color);
+void R3D_SetMaterialOcclusion(Material* material, Texture2D* texture, float value);
 void R3D_SetMaterialRoughness(Material* material, Texture2D* texture, float value);
 void R3D_SetMaterialMetalness(Material* material, Texture2D* texture, float value);
 void R3D_SetMaterialEmission(Material* material, Texture2D* texture, Color color, float value);

@@ -40,6 +40,24 @@ void R3D_SetMaterialAlbedo(Material* material, Texture2D* texture, Color color)
     map->color = color;
 }
 
+void R3D_SetMaterialOcclusion(Material* material, Texture2D* texture, float value)
+{
+    if (material == NULL) {
+        return;
+    }
+
+    MaterialMap* map = &material->maps[MATERIAL_MAP_OCCLUSION];
+
+    if (texture != NULL) {
+        map->texture = *texture;
+    }
+    else if (map->texture.id == 0) {
+        map->texture = R3D_GetWhiteTexture();
+    }
+
+    map->value = value;
+}
+
 void R3D_SetMaterialRoughness(Material* material, Texture2D* texture, float value)
 {
     if (material == NULL) {

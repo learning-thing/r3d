@@ -60,9 +60,12 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Load raster shaders
     r3d_shader_load_raster_geometry();
+    r3d_shader_load_raster_geometry_inst();
     r3d_shader_load_raster_skybox();
     r3d_shader_load_raster_depth();
+    r3d_shader_load_raster_depth_inst();
     r3d_shader_load_raster_depth_cube();
+    r3d_shader_load_raster_depth_cube_inst();
 
     // Load screen shaders
     r3d_shader_load_screen_ssao();
@@ -145,9 +148,12 @@ void R3D_Close(void)
     rlUnloadShaderProgram(R3D.shader.generate.irradianceConvolution.id);
     rlUnloadShaderProgram(R3D.shader.generate.prefilter.id);
     rlUnloadShaderProgram(R3D.shader.raster.geometry.id);
+    rlUnloadShaderProgram(R3D.shader.raster.geometryInst.id);
     rlUnloadShaderProgram(R3D.shader.raster.skybox.id);
     rlUnloadShaderProgram(R3D.shader.raster.depth.id);
+    rlUnloadShaderProgram(R3D.shader.raster.depthInst.id);
     rlUnloadShaderProgram(R3D.shader.raster.depthCube.id);
+    rlUnloadShaderProgram(R3D.shader.raster.depthCubeInst.id);
     rlUnloadShaderProgram(R3D.shader.screen.ssao.id);
     rlUnloadShaderProgram(R3D.shader.screen.lighting.id);
     rlUnloadShaderProgram(R3D.shader.screen.bloom.id);
@@ -295,12 +301,23 @@ void R3D_End(void)
         rlDisableColorBlend();
     }
 
-    // [PART 2] - Sort draw calls from front to back based on the camera position
+    // [PART 2] - Sort the draw calls array
+    size_t instancedDrawCalls = 0;
     {
-        r3d_drawcall_sort_front_to_back(
+        // Sorts the instanced draw calls by placing them first in the array
+        instancedDrawCalls = r3d_drawcall_sort_instanced(
             R3D.container.drawCallArray.data,
             R3D.container.drawCallArray.count
         );
+        // Sorts the draw calls front-to-back, can optimize depth testing
+        // TODO: Will likely need to be revisited in the future when we implement transparent rendering
+        //       If this can be kept then make it optional via a flag?
+        if (instancedDrawCalls < R3D.container.drawCallArray.count) {
+            r3d_drawcall_sort_front_to_back(
+                (r3d_drawcall_t*)R3D.container.drawCallArray.data + instancedDrawCalls,
+                R3D.container.drawCallArray.count - instancedDrawCalls
+            );
+        }
     }
 
     // [PART 3] - Raster geometries to the geometry buffers
@@ -399,9 +416,19 @@ void R3D_End(void)
                 rlEnableDepthMask();
                 rlEnableDepthTest();
 
+                r3d_shader_enable(raster.geometryInst);
+                {
+                    if (instancedDrawCalls > 0) {
+                        for (size_t i = 0; i < instancedDrawCalls; i++) {
+                            r3d_drawcall_raster_geometry_material(
+                                (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
+                            );
+                        }
+                    }
+                }
                 r3d_shader_enable(raster.geometry);
                 {
-                    for (int i = 0; i < R3D.container.drawCallArray.count; i++) {
+                    for (size_t i = instancedDrawCalls; i < R3D.container.drawCallArray.count; i++) {
                         r3d_drawcall_raster_geometry_material(
                             (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
                         );
@@ -543,9 +570,6 @@ void R3D_End(void)
                 rlViewport(0, 0, light->shadow.map.resolution, light->shadow.map.resolution);
 
                 if (light->type == R3D_LIGHT_OMNI) {
-                    // Enable depth cube writing shader
-                    r3d_shader_enable(raster.depthCube);
-
                     // Set up projection matrix for omni-directional light
                     rlMatrixMode(RL_PROJECTION);
                     rlSetMatrixProjection(MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range));
@@ -562,20 +586,31 @@ void R3D_End(void)
                         rlMultMatrixf(MatrixToFloat(r3d_light_get_matrix_view_omni(light, j)));
 
                         // Rasterize geometries for depth rendering
-                        for (int i = 0; i < R3D.container.drawCallArray.count; i++) {
-                            r3d_drawcall_raster_geometry_depth_cube(
-                                (r3d_drawcall_t*)R3D.container.drawCallArray.data + i,
-                                light->position
-                            );
+                        r3d_shader_enable(raster.depthCubeInst);
+                        {
+                            if (instancedDrawCalls > 0) {
+                                for (size_t i = 0; i < instancedDrawCalls; i++) {
+                                    r3d_drawcall_raster_geometry_depth_cube(
+                                        (r3d_drawcall_t*)R3D.container.drawCallArray.data + i,
+                                        light->position
+                                    );
+                                }
+                            }
+                        }
+                        r3d_shader_enable(raster.depthCube);
+                        {
+                            for (size_t i = instancedDrawCalls; i < R3D.container.drawCallArray.count; i++) {
+                                r3d_drawcall_raster_geometry_depth_cube(
+                                    (r3d_drawcall_t*)R3D.container.drawCallArray.data + i,
+                                    light->position
+                                );
+                            }
                         }
                     }
                 }
                 else {
                     // Clear depth buffer for other light types
                     glClear(GL_DEPTH_BUFFER_BIT);
-
-                    // Set up shader for directional or spot light
-                    r3d_shader_enable(raster.depth);
 
                     Matrix matView = { 0 };
                     Matrix matProj = { 0 };
@@ -603,10 +638,23 @@ void R3D_End(void)
                     rlMultMatrixf(MatrixToFloat(matView));
 
                     // Rasterize geometry for depth rendering
-                    for (int i = 0; i < R3D.container.drawCallArray.count; i++) {
-                        r3d_drawcall_raster_geometry_depth(
-                            (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
-                        );
+                    r3d_shader_enable(raster.depthInst);
+                    {
+                        if (instancedDrawCalls > 0) {
+                            for (size_t i = 0; i < instancedDrawCalls; i++) {
+                                r3d_drawcall_raster_geometry_depth(
+                                    (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
+                                );
+                            }
+                        }
+                    }
+                    r3d_shader_enable(raster.depth);
+                    {
+                        for (size_t i = instancedDrawCalls; i < R3D.container.drawCallArray.count; i++) {
+                            r3d_drawcall_raster_geometry_depth(
+                                (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
+                            );
+                        }
                     }
                 }
 
@@ -972,11 +1020,47 @@ void R3D_End(void)
 
 void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
 {
-    r3d_drawcall_t drawCall = {
-        .transform = transform,
-        .material = material,
-        .mesh = mesh,
-    };
+    r3d_drawcall_t drawCall = { 0 };
+
+    drawCall.transform = transform;
+    drawCall.material = material;
+    drawCall.mesh = mesh;
+
+    drawCall.instanced.transforms = NULL;
+    drawCall.instanced.colors = NULL;
+    drawCall.instanced.count = 0;
+
+    r3d_array_push_back(
+        &R3D.container.drawCallArray,
+        &drawCall
+    );
+}
+
+void R3D_DrawMeshInstanced(Mesh mesh, Material material, Matrix* instanceTransforms, int instanceCount)
+{
+    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, NULL, instanceCount);
+}
+
+void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTransforms, Color* instanceColors, int instanceCount)
+{
+    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, instanceColors, instanceCount);
+}
+
+void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Matrix* instanceTransforms, Color* instanceColors, int instanceCount)
+{
+    r3d_drawcall_t drawCall = { 0 };
+
+    if (instanceCount == 0 || instanceTransforms == NULL) {
+        return;
+    }
+
+    drawCall.transform = transform;
+    drawCall.material = material;
+    drawCall.mesh = mesh;
+
+    drawCall.instanced.transforms = instanceTransforms;
+    drawCall.instanced.colors = instanceColors;
+    drawCall.instanced.count = instanceCount;
 
     r3d_array_push_back(
         &R3D.container.drawCallArray,
