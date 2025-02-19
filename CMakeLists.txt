@@ -19,6 +19,7 @@ endif()
 
 # Project configuration options
 
+option(R3D_BUILD_SHARED "Build r3d as a shared library" OFF)
 option(R3D_BUILD_EXAMPLES "Build the examples" ${R3D_IS_MAIN})
 
 # Submodule check for raylib
@@ -53,7 +54,13 @@ EmbedTextures(R3D_GENERATED_TEXTURES_SOURCE
 
 # Create the r3d library by adding all the source files
 
-add_library(${PROJECT_NAME}
+set(R3D_LIB_TYPE STATIC)
+
+if(R3D_BUILD_SHARED)
+    set(R3D_LIB_TYPE SHARED)
+endif()
+
+add_library(${PROJECT_NAME} ${R3D_LIB_TYPE}
     "${R3D_ROOT_PATH}/src/details/r3d_primitives.c"
     "${R3D_ROOT_PATH}/src/details/r3d_drawcall.c"
     "${R3D_ROOT_PATH}/src/details/r3d_frustum.c"
@@ -74,9 +81,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC raylib m)
 # Specify the include directories needed for the project
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-    "${R3D_ROOT_PATH}/include"  # Include the main project headers
-    "${R3D_ROOT_PATH}/external/glad"  # Include the glad headers
-    "${R3D_ROOT_PATH}/external/raylib/src"  # Include the raylib headers
+    "${R3D_ROOT_PATH}/include"
+    "${R3D_ROOT_PATH}/external/glad"
+    "${R3D_ROOT_PATH}/external/raylib/src"
 )
 
 # Ensure the C standard is set for MSVC if using CMake version greater than 3.12
