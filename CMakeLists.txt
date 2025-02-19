@@ -2,6 +2,7 @@
 project("r3d")
 
 # This section configures MSVC (Visual Studio) to enable "Edit and Continue" debugging
+
 if(POLICY CMP0141)
     cmake_policy(SET CMP0141 NEW)
     set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
@@ -21,6 +22,10 @@ endif()
 
 option(R3D_BUILD_SHARED "Build r3d as a shared library" OFF)
 option(R3D_BUILD_EXAMPLES "Build the examples" ${R3D_IS_MAIN})
+
+# Include standard cmake scripts
+
+include(CheckLibraryExists)
 
 # Submodule check for raylib
 
@@ -76,7 +81,15 @@ add_library(${PROJECT_NAME} ${R3D_LIB_TYPE}
     "${R3D_GENERATED_TEXTURES_SOURCE}"
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC raylib m)
+# Link project dependencies
+
+target_link_libraries(${PROJECT_NAME} PUBLIC raylib)
+
+check_library_exists(m cos "" HAVE_LIB_M)
+
+if(HAVE_LIB_M)
+    target_link_libraries(${PROJECT_NAME} PUBLIC m)
+endif()
 
 # Specify the include directories needed for the project
 
