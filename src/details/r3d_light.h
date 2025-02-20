@@ -62,6 +62,11 @@ typedef struct {
     bool enabled;
 } r3d_light_t;
 
+typedef struct {
+    r3d_light_t* data;
+    Rectangle dstRect;
+} r3d_light_batched_t;
+
 /* === Functions === */
 
 void r3d_light_init(r3d_light_t* light);

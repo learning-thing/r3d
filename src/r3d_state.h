@@ -95,6 +95,7 @@ extern struct R3D_State {
         r3d_array_t aDrawForwardInst;
 
         r3d_registry_t rLights;
+        r3d_array_t aLightBatch;
 
     } container;
 

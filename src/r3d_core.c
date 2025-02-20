@@ -56,6 +56,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Load lights registry
     R3D.container.rLights = r3d_registry_create(8, sizeof(r3d_light_t));
+    R3D.container.aLightBatch = r3d_array_create(8, sizeof(r3d_light_batched_t));
 
     // Load generation shaders
     r3d_shader_load_generate_gaussian_blur_dual_pass();
@@ -546,9 +547,9 @@ void R3D_End(void)
     }
 
     // [PART 5] - Update lights and determine what light should lit the visible scene
-    r3d_light_t* lights[R3D_SHADER_NUM_LIGHTS] = { 0 };
-    int lightCount = 0;
     {
+        r3d_array_clear(&R3D.container.aLightBatch);
+
         for (int id = 1; id <= r3d_registry_get_allocated_count(&R3D.container.rLights); id++) {
             // Check if the light in the array is still valid
             if (!r3d_registry_is_valid(&R3D.container.rLights, id)) continue;
@@ -562,9 +563,6 @@ void R3D_End(void)
                 r3d_light_process_shadow_update(light);
             }
 
-            // Stop here if we have reached the shader limit  
-            if (lightCount == R3D_SHADER_NUM_LIGHTS) continue;
-
             // Check if the light is visible in the frustum (only for non-directional lights)
             // TODO: Make it so that spot lights are tested by their cone rather than by a sphere...
             if (light->type != R3D_LIGHT_DIR) {
@@ -574,7 +572,11 @@ void R3D_End(void)
             }
 
             // Here the light is supposed to be visible
-            lights[lightCount++] = light;
+            r3d_light_batched_t batched = {
+                .data = light,
+                //.dstRect
+            };
+            r3d_array_push_back(&R3D.container.aLightBatch, &batched);
         }
     }
 
@@ -588,32 +590,32 @@ void R3D_End(void)
         rlPushMatrix();
 
         // Iterate through all lights to render all geometries
-        for (int i = 0; i < lightCount; i++) {
-            r3d_light_t* light = lights[i];
+        for (int i = 0; i < R3D.container.aLightBatch.count; i++) {
+            r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
 
             // Skip light if it doesn't produce shadows
-            if (!light->shadow.enabled) continue;
+            if (!light->data->shadow.enabled) continue;
 
             // Skip if it's not time to update shadows
-            if (!light->shadow.updateConf.shoudlUpdate) continue;
+            if (!light->data->shadow.updateConf.shoudlUpdate) continue;
             else r3d_light_indicate_shadow_update(light);
 
             // TODO: The lights could be sorted to avoid too frequent
             //       state changes, just like with shaders.
 
             // Start rendering to shadow map
-            rlEnableFramebuffer(light->shadow.map.id);
+            rlEnableFramebuffer(light->data->shadow.map.id);
             {
-                rlViewport(0, 0, light->shadow.map.resolution, light->shadow.map.resolution);
+                rlViewport(0, 0, light->data->shadow.map.resolution, light->data->shadow.map.resolution);
 
-                if (light->type == R3D_LIGHT_OMNI) {
+                if (light->data->type == R3D_LIGHT_OMNI) {
                     // Set up projection matrix for omni-directional light
                     rlMatrixMode(RL_PROJECTION);
-                    rlSetMatrixProjection(MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range));
+                    rlSetMatrixProjection(MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->data->range));
 
                     // Render geometries for each face of the cubemap
                     for (int j = 0; j < 6; j++) {
-                        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->shadow.map.color, 0);
+                        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->data->shadow.map.color, 0);
                         glClearColor(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
                         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -626,19 +628,19 @@ void R3D_End(void)
                         r3d_shader_enable(raster.depthCubeInst);
                         {
                             for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
-                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i, light->position);
+                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i, light->data->position);
                             }
                             for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
-                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i, light->position);
+                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i, light->data->position);
                             }
                         }
                         r3d_shader_enable(raster.depthCube);
                         {
                             for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
-                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i, light->position);
+                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i, light->data->position);
                             }
                             for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
-                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawForward.data + i, light->position);
+                                r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawForward.data + i, light->data->position);
                             }
                         }
                     }
@@ -650,18 +652,18 @@ void R3D_End(void)
                     Matrix matView = { 0 };
                     Matrix matProj = { 0 };
 
-                    if (light->type == R3D_LIGHT_DIR) {
-                        Vector3 lightPos = Vector3Add((Vector3) { 0 }, Vector3Scale(Vector3Negate(light->direction), 1000.0));
+                    if (light->data->type == R3D_LIGHT_DIR) {
+                        Vector3 lightPos = Vector3Add((Vector3) { 0 }, Vector3Scale(Vector3Negate(light->data->direction), 1000.0));
                         matView = MatrixLookAt(lightPos, (Vector3) { 0 }, (Vector3) { 0, 1, 0 });
                         matProj = MatrixOrtho(-10, 10, -10, 10, 0.1, 2000.0);
                     }
-                    else if (light->type == R3D_LIGHT_SPOT) {
-                        matView = MatrixLookAt(light->position, Vector3Add(light->position, light->direction), (Vector3) { 0, 1, 0 });
-                        matProj = MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range);
+                    else if (light->data->type == R3D_LIGHT_SPOT) {
+                        matView = MatrixLookAt(light->data->position, Vector3Add(light->data->position, light->data->direction), (Vector3) { 0, 1, 0 });
+                        matProj = MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->data->range);
                     }
 
                     // Store combined view and projection matrix for the shadow map
-                    light->shadow.matViewProj = MatrixMultiply(matView, matProj);
+                    light->data->shadow.matViewProj = MatrixMultiply(matView, matProj);
 
                     // Set up projection matrix
                     rlMatrixMode(RL_PROJECTION);
@@ -716,53 +718,53 @@ void R3D_End(void)
 
             r3d_shader_enable(screen.lighting);
             {
-                for (int i = 0; i < lightCount; i++) {
-                    r3d_light_t* light = lights[i];
+                for (int i = 0; i < R3D_SHADER_NUM_LIGHTS && i < R3D.container.aLightBatch.count; i++) {
+                    r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
+
+                    if (!light->data->enabled) {
+                        r3d_shader_set_int(screen.lighting, uLights[i].enabled, false);
+                    }
 
                     // Send common data
-                    r3d_shader_set_vec3(screen.lighting, uLights[i].color, light->color);
-                    r3d_shader_set_float(screen.lighting, uLights[i].energy, light->energy);
-                    r3d_shader_set_int(screen.lighting, uLights[i].type, light->type);
+                    r3d_shader_set_vec3(screen.lighting, uLights[i].color, light->data->color);
+                    r3d_shader_set_float(screen.lighting, uLights[i].energy, light->data->energy);
+                    r3d_shader_set_int(screen.lighting, uLights[i].type, light->data->type);
                     r3d_shader_set_int(screen.lighting, uLights[i].enabled, true);
 
                     // Send specific data
-                    if (light->type == R3D_LIGHT_DIR) {
-                        r3d_shader_set_vec3(screen.lighting, uLights[i].direction, light->direction);
+                    if (light->data->type == R3D_LIGHT_DIR) {
+                        r3d_shader_set_vec3(screen.lighting, uLights[i].direction, light->data->direction);
                     }
-                    else if (light->type == R3D_LIGHT_SPOT) {
-                        r3d_shader_set_vec3(screen.lighting, uLights[i].position, light->position);
-                        r3d_shader_set_vec3(screen.lighting, uLights[i].direction, light->direction);
-                        r3d_shader_set_float(screen.lighting, uLights[i].range, light->range);
-                        r3d_shader_set_float(screen.lighting, uLights[i].attenuation, light->attenuation);
-                        r3d_shader_set_float(screen.lighting, uLights[i].innerCutOff, light->innerCutOff);
-                        r3d_shader_set_float(screen.lighting, uLights[i].outerCutOff, light->outerCutOff);
+                    else if (light->data->type == R3D_LIGHT_SPOT) {
+                        r3d_shader_set_vec3(screen.lighting, uLights[i].position, light->data->position);
+                        r3d_shader_set_vec3(screen.lighting, uLights[i].direction, light->data->direction);
+                        r3d_shader_set_float(screen.lighting, uLights[i].range, light->data->range);
+                        r3d_shader_set_float(screen.lighting, uLights[i].attenuation, light->data->attenuation);
+                        r3d_shader_set_float(screen.lighting, uLights[i].innerCutOff, light->data->innerCutOff);
+                        r3d_shader_set_float(screen.lighting, uLights[i].outerCutOff, light->data->outerCutOff);
                     }
-                    else if (light->type == R3D_LIGHT_OMNI) {
-                        r3d_shader_set_vec3(screen.lighting, uLights[i].position, light->position);
-                        r3d_shader_set_float(screen.lighting, uLights[i].range, light->range);
-                        r3d_shader_set_float(screen.lighting, uLights[i].attenuation, light->attenuation);
+                    else if (light->data->type == R3D_LIGHT_OMNI) {
+                        r3d_shader_set_vec3(screen.lighting, uLights[i].position, light->data->position);
+                        r3d_shader_set_float(screen.lighting, uLights[i].range, light->data->range);
+                        r3d_shader_set_float(screen.lighting, uLights[i].attenuation, light->data->attenuation);
                     }
 
                     // Send shadow map data
-                    if (light->shadow.enabled) {
-                        if (light->type == R3D_LIGHT_OMNI) {
-                            r3d_shader_bind_samplerCube(screen.lighting, uLights[i].shadowCubemap, light->shadow.map.color);
+                    if (light->data->shadow.enabled) {
+                        if (light->data->type == R3D_LIGHT_OMNI) {
+                            r3d_shader_bind_samplerCube(screen.lighting, uLights[i].shadowCubemap, light->data->shadow.map.color);
                         }
                         else {
-                            r3d_shader_set_float(screen.lighting, uLights[i].shadowMapTxlSz, light->shadow.map.texelSize);
-                            r3d_shader_bind_sampler2D(screen.lighting, uLights[i].shadowMap, light->shadow.map.depth);
-                            r3d_shader_set_mat4(screen.lighting, uLights[i].matViewProj, light->shadow.matViewProj);
+                            r3d_shader_set_float(screen.lighting, uLights[i].shadowMapTxlSz, light->data->shadow.map.texelSize);
+                            r3d_shader_bind_sampler2D(screen.lighting, uLights[i].shadowMap, light->data->shadow.map.depth);
+                            r3d_shader_set_mat4(screen.lighting, uLights[i].matViewProj, light->data->shadow.matViewProj);
                         }
-                        r3d_shader_set_float(screen.lighting, uLights[i].shadowBias, light->shadow.bias);
+                        r3d_shader_set_float(screen.lighting, uLights[i].shadowBias, light->data->shadow.bias);
                         r3d_shader_set_int(screen.lighting, uLights[i].shadow, true);
                     }
                     else {
                         r3d_shader_set_int(screen.lighting, uLights[i].shadow, false);
                     }
-                }
-
-                for (int i = lightCount; i < R3D_SHADER_NUM_LIGHTS; i++) {
-                    r3d_shader_set_int(screen.lighting, uLights[i].enabled, false);
                 }
 
                 if (R3D.env.useSky) {
@@ -815,10 +817,10 @@ void R3D_End(void)
                     r3d_shader_unbind_sampler2D(screen.lighting, uTexBrdfLut);
                 }
 
-                for (int i = 0; i < lightCount; i++) {
-                    r3d_light_t* light = lights[i];
-                    if (light->shadow.enabled) {
-                        if (light->type == R3D_LIGHT_OMNI) {
+                for (int i = 0; i < R3D.container.aLightBatch.count; i++) {
+                    r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
+                    if (light->data->shadow.enabled) {
+                        if (light->data->type == R3D_LIGHT_OMNI) {
                             r3d_shader_unbind_samplerCube(screen.lighting, uLights[i].shadowCubemap);
                         }
                         else {
