@@ -22,29 +22,39 @@
 
 #version 330 core
 
-in vec2 vTexCoord;
+/* === Varyings === */
+
+noperspective in vec2 vTexCoord;
+
+/* === Uniforms === */
+
 uniform sampler2D uTexture;
-uniform vec2 uDirection;
+uniform vec2 uTexelDir;
+
+/* === Fragments === */
+
 out vec4 FragColor;
 
 /* === Blur Coefs === */
 
-const int SAMPLE_COUNT = 5;
+const int SAMPLE_COUNT = 6;
 
-const float OFFSETS[5] = float[5](
-    -3.4048471718931532,
-    -1.4588111840004858,
-    0.48624268466894843,
-    2.431625915613778,
-    4
+const float OFFSETS[6] = float[6](
+    -4.455269417428358,
+    -2.4751038298192056,
+    -0.4950160492928827,
+    1.485055021558738,
+    3.465172537482815,
+    5
 );
 
-const float WEIGHTS[5] = float[5](
-    0.15642123799829394,
-    0.26718801880015064,
-    0.29738065394682034,
-    0.21568339342709997,
-    0.06332669582763516
+const float WEIGHTS[6] = float[6](
+    0.14587920530480702,
+    0.19230308352110734,
+    0.21647621943673803,
+    0.20809835496561988,
+    0.17082879595769634,
+    0.06641434081403137
 );
 
 /* === Main Program === */
@@ -52,12 +62,10 @@ const float WEIGHTS[5] = float[5](
 void main()
 {
     vec3 result = vec3(0.0);
-    vec2 size = textureSize(uTexture, 0);
 
     for (int i = 0; i < SAMPLE_COUNT; ++i)
     {
-        vec2 offset = uDirection * OFFSETS[i] / size;
-        result += texture(uTexture, vTexCoord + offset).rgb * WEIGHTS[i];
+        result += texture(uTexture, vTexCoord + uTexelDir * OFFSETS[i]).rgb * WEIGHTS[i];
     }
 
     FragColor = vec4(result, 1.0);

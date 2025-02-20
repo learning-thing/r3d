@@ -78,7 +78,7 @@ typedef struct { int loc; } r3d_shader_uniform_mat4_t;
 typedef struct {
     unsigned int id;
     r3d_shader_uniform_sampler2D_t uTexture;
-    r3d_shader_uniform_vec2_t uDirection;
+    r3d_shader_uniform_vec2_t uTexelDir;
 } r3d_shader_generate_gaussian_blur_dual_pass_t;
 
 typedef struct {

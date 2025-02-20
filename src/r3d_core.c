@@ -526,8 +526,12 @@ void R3D_End(void)
                             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                             R3D.framebuffer.pingPongSSAO.textures[(*horizontalPass)], 0
                         );
-                        r3d_shader_set_vec2(generate.gaussianBlurDualPass, uDirection,
-                            ((*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 })
+                        Vector2 direction = (*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 };
+                        r3d_shader_set_vec2(generate.gaussianBlurDualPass, uTexelDir,
+                            Vector2Multiply(direction, (Vector2) {
+                                R3D.state.resolution.texelX,
+                                R3D.state.resolution.texelY
+                            })
                         );
                         r3d_shader_bind_sampler2D(generate.gaussianBlurDualPass, uTexture,
                             R3D.framebuffer.pingPongSSAO.textures[!(*horizontalPass)]
@@ -847,8 +851,12 @@ void R3D_End(void)
                             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                             R3D.framebuffer.pingPongBloom.textures[(*horizontalPass)], 0
                         );
-                        r3d_shader_set_vec2(generate.gaussianBlurDualPass, uDirection,
-                            ((*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 })
+                        Vector2 direction = (*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 };
+                        r3d_shader_set_vec2(generate.gaussianBlurDualPass, uTexelDir,
+                            Vector2Multiply(direction, (Vector2) {
+                                R3D.state.resolution.texelX,
+                                R3D.state.resolution.texelY
+                            })
                         );
                         r3d_shader_bind_sampler2D(generate.gaussianBlurDualPass, uTexture, i > 0
                             ? R3D.framebuffer.pingPongBloom.textures[!(*horizontalPass)]

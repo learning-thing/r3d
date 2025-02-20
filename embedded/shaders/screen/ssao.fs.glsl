@@ -99,7 +99,7 @@ void main()
     vec3 normal = DecodeOctahedral(texture(uTexNormal, vTexCoord).rg);
     
     // Calculate screen-space noise scale
-    vec2 noiseScale = uResolution / 4.0;
+    vec2 noiseScale = uResolution / 16.0;
     vec3 randomVec = normalize(texture(uTexNoise, vTexCoord * noiseScale).xyz * 2.0 - 1.0);
     
     // Generate tangent space basis
@@ -107,7 +107,7 @@ void main()
     vec3 bitangent = cross(normal, tangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
     
-    const int KERNEL_SIZE = 64;
+    const int KERNEL_SIZE = 32;
 
     float occlusion = 0.0;
     for (int i = 0; i < KERNEL_SIZE; i++)
@@ -134,9 +134,8 @@ void main()
             vec3 sampleViewPos = GetPositionFromDepth(sampleDepth);
             
             // Range and depth checks
-            float rangeCheck = smoothstep(0.0, 1.0, uRadius / abs(position.z - sampleViewPos.z));
-            float depthDiff = sampleViewPos.z - samplePos.z;
-            occlusion += (depthDiff >= uBias ? 1.0 : 0.0) * rangeCheck;
+            float rangeCheck = 1.0 - smoothstep(0.0, uRadius, abs(position.z - sampleViewPos.z));
+            occlusion += (sampleViewPos.z >= samplePos.z + uBias) ? rangeCheck : 0.0;
         }
     }
     

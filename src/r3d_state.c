@@ -26,6 +26,7 @@
 
 #include "./embedded/r3d_shaders.h"
 #include "./embedded/r3d_textures.h"
+#include "./details/misc/r3d_half.h"
 #include "./details/r3d_dds_loader_ext.h"
 
 
@@ -101,14 +102,15 @@ void r3d_framebuffer_load_pingpong_ssao(int width, int height)
 
     // Generate (ssao) buffers
     for (int i = 0; i < 2; i++) {
-        ssao->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE, 1);
+        glGenTextures(1, &ssao->textures[i]);
         glBindTexture(GL_TEXTURE_2D, ssao->textures[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, width, height, 0, GL_RED, GL_HALF_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glBindTexture(GL_TEXTURE_2D, 0);
     }
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     // Activate the draw buffers for all the attachments
     rlActiveDrawBuffers(1);
@@ -308,7 +310,7 @@ void r3d_shader_load_generate_gaussian_blur_dual_pass(void)
     );
 
     r3d_shader_get_location(generate.gaussianBlurDualPass, uTexture);
-    r3d_shader_get_location(generate.gaussianBlurDualPass, uDirection);
+    r3d_shader_get_location(generate.gaussianBlurDualPass, uTexelDir);
 
     r3d_shader_enable(generate.gaussianBlurDualPass);
     r3d_shader_set_sampler2D_slot(generate.gaussianBlurDualPass, uTexture, 0);
@@ -678,19 +680,31 @@ void r3d_texture_load_normal(void)
 
 void r3d_texture_load_ssao_noise(void)
 {
-    Vector3 noise[4 * 4] = { 0 };
-    for (int i = 0; i < sizeof(noise) / sizeof(*noise); i++) {
-        noise[i].x = ((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f;
-        noise[i].y = ((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f;
-        noise[i].z = (float)GetRandomValue(0, INT16_MAX) / INT16_MAX;
+#   define R3D_SSAO_NOISE_RESOLUTION 16
+
+    r3d_half_t noise[3 * R3D_SSAO_NOISE_RESOLUTION * R3D_SSAO_NOISE_RESOLUTION] = { 0 };
+
+    for (int i = 0; i < R3D_SSAO_NOISE_RESOLUTION * R3D_SSAO_NOISE_RESOLUTION; i++) {
+        noise[i * 3 + 0] = r3d_cvt_fh(((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f);
+        noise[i * 3 + 1] = r3d_cvt_fh(((float)GetRandomValue(0, INT16_MAX) / INT16_MAX) * 2.0f - 1.0f);
+        noise[i * 3 + 2] = r3d_cvt_fh((float)GetRandomValue(0, INT16_MAX) / INT16_MAX);
     }
-    R3D.texture.ssaoNoise = rlLoadTexture(noise, 4, 4, PIXELFORMAT_UNCOMPRESSED_R32G32B32, 1);
+
+    R3D.texture.ssaoNoise = rlLoadTexture(noise,
+        R3D_SSAO_NOISE_RESOLUTION,
+        R3D_SSAO_NOISE_RESOLUTION,
+        PIXELFORMAT_UNCOMPRESSED_R16G16B16,
+        1
+    );
 }
 
 void r3d_texture_load_ssao_kernel(void)
 {
-    Vector3 kernel[64] = { 0 };
-    for (int i = 0; i < 64; i++)
+#   define R3D_SSAO_KERNEL_SIZE 32
+
+    r3d_half_t kernel[3 * R3D_SSAO_KERNEL_SIZE] = { 0 };
+
+    for (int i = 0; i < R3D_SSAO_KERNEL_SIZE; i++)
     {
         Vector3 sample = { 0 };
 
@@ -701,15 +715,19 @@ void r3d_texture_load_ssao_kernel(void)
         sample = Vector3Normalize(sample);
         sample = Vector3Scale(sample, (float)GetRandomValue(0, INT16_MAX) / INT16_MAX);
 
-        float scale = (float)i / 64;
+        float scale = (float)i / R3D_SSAO_KERNEL_SIZE;
         scale = Lerp(0.1f, 1.0f, scale * scale);
-
         sample = Vector3Scale(sample, scale);
-        kernel[i] = sample;
+
+        kernel[i * 3 + 0] = r3d_cvt_fh(sample.x);
+        kernel[i * 3 + 1] = r3d_cvt_fh(sample.y);
+        kernel[i * 3 + 2] = r3d_cvt_fh(sample.z);
     }
+
     glGenTextures(1, &R3D.texture.ssaoKernel);
     glBindTexture(GL_TEXTURE_1D, R3D.texture.ssaoKernel);
-    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB32F, 64, 0, GL_RGB, GL_FLOAT, kernel);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB16F, R3D_SSAO_KERNEL_SIZE, 0, GL_RGB, GL_HALF_FLOAT, kernel);
+
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
