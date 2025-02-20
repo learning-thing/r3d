@@ -33,8 +33,9 @@
 // This function supports instanced rendering when necessary
 static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor);
 
-// Comparison function for sorting draw calls in the arrays
+// Comparison functions for sorting draw calls in the arrays
 static int r3d_drawcall_compare_front_to_back(const void* a, const void* b);
+static int r3d_drawcall_compare_back_to_front(const void* a, const void* b);
 
 
 /* === Function definitions === */
@@ -237,20 +238,9 @@ void r3d_drawcall_sort_front_to_back(r3d_drawcall_t* calls, size_t count)
     qsort(calls, count, sizeof(r3d_drawcall_t), r3d_drawcall_compare_front_to_back);
 }
 
-size_t r3d_drawcall_sort_instanced(r3d_drawcall_t* calls, size_t count)
+void r3d_drawcall_sort_back_to_front(r3d_drawcall_t* calls, size_t count)
 {
-    size_t nInstanced = 0;
-    for (size_t i = 0; i < count; i++) {
-        if (calls[i].instanced.count > 0) {
-            if (i != nInstanced) {
-                r3d_drawcall_t temp = calls[i];
-                calls[i] = calls[nInstanced];
-                calls[nInstanced] = temp;
-            }
-            nInstanced++;
-        }
-    }
-    return nInstanced;
+    qsort(calls, count, sizeof(r3d_drawcall_t), r3d_drawcall_compare_back_to_front);
 }
 
 
@@ -363,4 +353,26 @@ static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
     float distB = Vector3DistanceSqr(R3D.state.transform.position, posB);
 
     return (distA > distB) - (distA < distB);
+}
+
+static int r3d_drawcall_compare_back_to_front(const void* a, const void* b)
+{
+    const r3d_drawcall_t* drawCallA = a;
+    const r3d_drawcall_t* drawCallB = b;
+
+    Vector3 posA = { 0 };
+    Vector3 posB = { 0 };
+
+    posA.x = drawCallA->transform.m12;
+    posA.y = drawCallA->transform.m13;
+    posA.z = drawCallA->transform.m14;
+
+    posB.x = drawCallB->transform.m12;
+    posB.y = drawCallB->transform.m13;
+    posB.z = drawCallB->transform.m14;
+
+    float distA = Vector3DistanceSqr(R3D.state.transform.position, posA);
+    float distB = Vector3DistanceSqr(R3D.state.transform.position, posB);
+
+    return (distA < distB) - (distA > distB);
 }

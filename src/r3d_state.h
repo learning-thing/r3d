@@ -87,8 +87,15 @@ extern struct R3D_State {
 
     // Containers
     struct {
-        r3d_array_t drawCallArray;
-        r3d_registry_t lightRegistry;
+
+        r3d_array_t aDrawDeferred;
+        r3d_array_t aDrawDeferredInst;
+
+        r3d_array_t aDrawForward;
+        r3d_array_t aDrawForwardInst;
+
+        r3d_registry_t rLights;
+
     } container;
 
     // Internal shaders
@@ -201,6 +208,11 @@ extern struct R3D_State {
             float texelX;
             float texelY;
         } resolution;
+
+        // Render config (deferred/forward -> array[2])
+        struct {
+            R3D_SortMode sort;
+        } render[2];
 
         // Miscellaneous flags
         unsigned int flags;

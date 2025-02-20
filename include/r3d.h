@@ -34,6 +34,30 @@ typedef enum {
 } R3D_Flags;
 
 typedef enum {
+    R3D_RENDER_DEFERRED     = 0,        ///< More efficient on desktop GPUs but does not support transparency
+    R3D_RENDER_FORWARD      = 1         ///< More efficient on tile-based rendering devices, supports transparency
+} R3D_RenderMode;
+
+typedef enum {
+    R3D_SORT_AUTO           = 0,        ///< R3D will decide what to sort for you
+    R3D_SORT_DISABLED       = 1,        ///< No sorting will be applied to draw calls
+    R3D_SORT_FRONT_TO_BACK  = 2,        ///< Can optimize the depth testing phase
+    R3D_SORT_BACK_TO_FRONT  = 3         ///< Less optimized but suitable when rendering transparency in forward mode
+} R3D_SortMode;
+
+typedef enum {
+    R3D_LIGHT_DIR,
+    R3D_LIGHT_SPOT,
+    R3D_LIGHT_OMNI,
+} R3D_LightType;
+
+typedef enum {
+    R3D_SHADOW_UPDATE_MANUAL,           ///< Manual shadow map update  
+    R3D_SHADOW_UPDATE_INTERVAL,         ///< Update at regular intervals  
+    R3D_SHADOW_UPDATE_CONTINUOUS        ///< Continuous update  
+} R3D_ShadowUpdateMode;
+
+typedef enum {
     R3D_BLOOM_DISABLED,                 ///< Bloom effect is disabled.
     R3D_BLOOM_ADDITIVE,                 ///< Additive bloom effect, where bright areas are enhanced by adding light to them.
     R3D_BLOOM_SOFT_LIGHT                ///< Soft light bloom effect, which creates a softer, more diffused glow around bright areas.
@@ -64,18 +88,6 @@ typedef struct {
     Texture2D prefilter;                ///< The prefiltered cubemap for specular reflections with mipmaps.
 } R3D_Skybox;
 
-typedef enum {
-    R3D_LIGHT_DIR,
-    R3D_LIGHT_SPOT,
-    R3D_LIGHT_OMNI,
-} R3D_LightType;
-
-typedef enum {
-    R3D_SHADOW_UPDATE_MANUAL,           ///< Manual shadow map update  
-    R3D_SHADOW_UPDATE_INTERVAL,         ///< Update at regular intervals  
-    R3D_SHADOW_UPDATE_CONTINUOUS        ///< Continuous update  
-} R3D_ShadowUpdateMode;
-
 
 /* === Core functions === */
 
@@ -91,6 +103,9 @@ void R3D_UpdateResolution(int width, int height);
 
 void R3D_EnableCustomTarget(RenderTexture target);
 void R3D_DisableCustomTarget(void);
+
+R3D_SortMode R3D_GetSortMode(R3D_RenderMode renderMode);
+void R3D_SetSortMode(R3D_RenderMode renderMode, R3D_SortMode mode);
 
 void R3D_Begin(Camera3D camera);
 void R3D_End(void);

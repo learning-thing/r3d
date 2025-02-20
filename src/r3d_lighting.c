@@ -31,7 +31,7 @@
 #define r3d_get_and_check_light(var_name, id, ...)                  \
     r3d_light_t* var_name;                                          \
 {                                                                   \
-    var_name = r3d_registry_get(&R3D.container.lightRegistry, id);  \
+    var_name = r3d_registry_get(&R3D.container.rLights, id);  \
     if (light == NULL) {                                            \
         TraceLog(LOG_ERROR, "Light [ID %i] is not valid", id);      \
         return __VA_ARGS__;                                         \
@@ -43,8 +43,8 @@
 
 R3D_Light R3D_CreateLight(R3D_LightType type)
 {
-    R3D_Light id = r3d_registry_add(&R3D.container.lightRegistry, NULL);
-    r3d_light_t* light = r3d_registry_get(&R3D.container.lightRegistry, id);
+    R3D_Light id = r3d_registry_add(&R3D.container.rLights, NULL);
+    r3d_light_t* light = r3d_registry_get(&R3D.container.rLights, id);
 
     r3d_light_init(light);
     light->type = type;
@@ -70,7 +70,7 @@ void R3D_DestroyLight(R3D_Light id)
         r3d_light_destroy_shadow_map(light);
     }
 
-    r3d_registry_remove(&R3D.container.lightRegistry, id);
+    r3d_registry_remove(&R3D.container.rLights, id);
 }
 
 bool R3D_IsLightExist(R3D_Light id)
