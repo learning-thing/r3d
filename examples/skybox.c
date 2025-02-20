@@ -1,12 +1,14 @@
 #include "./common.h"
 #include <r3d.h>
 
+#include <raymath.h>
+
 
 /* === Resources === */
 
-static Model		sphere = { 0 };
-static R3D_Skybox	skybox = { 0 };
-static Camera3D		camera = { 0 };
+static Mesh         sphere = { 0 };
+static R3D_Skybox   skybox = { 0 };
+static Camera3D     camera = { 0 };
 
 static Material materials[7 * 7] = { 0 };
 
@@ -18,8 +20,7 @@ const char* Init(void)
     R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
     SetTargetFPS(60);
 
-    sphere = LoadModelFromMesh(GenMeshSphere(0.5f, 64, 64));
-    UnloadMaterial(sphere.materials[0]);
+    sphere = GenMeshSphere(0.5f, 64, 64);
 
     for (int x = 0; x < 7; x++) {
         for (int y = 0; y < 7; y++) {
@@ -42,6 +43,8 @@ const char* Init(void)
         .fovy = 60,
     };
 
+    DisableCursor();
+
     return "[r3d] - skybox example";
 }
 
@@ -55,9 +58,7 @@ void Draw(void)
     R3D_Begin(camera);
         for (int x = 0; x < 7; x++) {
             for (int y = 0; y < 7; y++) {
-                int i = y * 7 + x;
-                sphere.materials[0] = materials[i];
-                R3D_DrawModel(sphere, (Vector3) { (float)(x - 3), (float)(y - 3), 0.0f }, 1.0f);
+                R3D_DrawMesh(sphere, materials[y * 7 + x], MatrixTranslate(x - 3, y - 3, 0.0f));
             }
         }
     R3D_End();
@@ -66,9 +67,9 @@ void Draw(void)
 void Close(void)
 {
     for (int i = 0; i < 7 * 7; i++) {
-        UnloadMaterial(materials[i]);
+        RL_FREE(materials[i].maps);
     }
-    UnloadModel(sphere);
+    UnloadMesh(sphere);
     R3D_UnloadSkybox(skybox);
     R3D_Close();
 }
