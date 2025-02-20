@@ -402,7 +402,7 @@ void R3D_End(void)
                 {
                     if (instancedDrawCalls > 0) {
                         for (size_t i = 0; i < instancedDrawCalls; i++) {
-                            r3d_drawcall_raster_geometry_material(
+                            r3d_drawcall_raster_geometry(
                                 (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
                             );
                         }
@@ -411,7 +411,7 @@ void R3D_End(void)
                 r3d_shader_enable(raster.geometry);
                 {
                     for (size_t i = instancedDrawCalls; i < R3D.container.drawCallArray.count; i++) {
-                        r3d_drawcall_raster_geometry_material(
+                        r3d_drawcall_raster_geometry(
                             (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
                         );
                     }
@@ -584,7 +584,7 @@ void R3D_End(void)
                         {
                             if (instancedDrawCalls > 0) {
                                 for (size_t i = 0; i < instancedDrawCalls; i++) {
-                                    r3d_drawcall_raster_geometry_depth_cube(
+                                    r3d_drawcall_raster_depth_cube(
                                         (r3d_drawcall_t*)R3D.container.drawCallArray.data + i,
                                         light->position
                                     );
@@ -594,7 +594,7 @@ void R3D_End(void)
                         r3d_shader_enable(raster.depthCube);
                         {
                             for (size_t i = instancedDrawCalls; i < R3D.container.drawCallArray.count; i++) {
-                                r3d_drawcall_raster_geometry_depth_cube(
+                                r3d_drawcall_raster_depth_cube(
                                     (r3d_drawcall_t*)R3D.container.drawCallArray.data + i,
                                     light->position
                                 );
@@ -636,7 +636,7 @@ void R3D_End(void)
                     {
                         if (instancedDrawCalls > 0) {
                             for (size_t i = 0; i < instancedDrawCalls; i++) {
-                                r3d_drawcall_raster_geometry_depth(
+                                r3d_drawcall_raster_depth(
                                     (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
                                 );
                             }
@@ -645,7 +645,7 @@ void R3D_End(void)
                     r3d_shader_enable(raster.depth);
                     {
                         for (size_t i = instancedDrawCalls; i < R3D.container.drawCallArray.count; i++) {
-                            r3d_drawcall_raster_geometry_depth(
+                            r3d_drawcall_raster_depth(
                                 (r3d_drawcall_t*)R3D.container.drawCallArray.data + i
                             );
                         }

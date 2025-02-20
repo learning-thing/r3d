@@ -30,16 +30,16 @@
 
 /* === Internal functions === */
 
-// Cette fonction supporte le rendu instanci� quand cela est n�c�ssaire
+// This function supports instanced rendering when necessary
 static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor);
 
-// Fonction de comparaison pour le trie des draw call dans les tableaux
+// Comparison function for sorting draw calls in the arrays
 static int r3d_drawcall_compare_front_to_back(const void* a, const void* b);
 
 
 /* === Function definitions === */
 
-void r3d_drawcall_raster_geometry_material(const r3d_drawcall_t* call)
+void r3d_drawcall_raster_geometry(const r3d_drawcall_t* call)
 {
     Matrix matModel = MatrixIdentity();
     Matrix matView = rlGetMatrixModelview();
@@ -172,7 +172,7 @@ void r3d_drawcall_raster_geometry_material(const r3d_drawcall_t* call)
     rlSetMatrixProjection(matProjection);
 }
 
-void r3d_drawcall_raster_geometry_depth(const r3d_drawcall_t* call)
+void r3d_drawcall_raster_depth(const r3d_drawcall_t* call)
 {
     Matrix matMVP = MatrixMultiply(call->transform, rlGetMatrixTransform());
     matMVP = MatrixMultiply(matMVP, rlGetMatrixModelview());
@@ -201,7 +201,7 @@ void r3d_drawcall_raster_geometry_depth(const r3d_drawcall_t* call)
     rlDisableVertexBufferElement();
 }
 
-void r3d_drawcall_raster_geometry_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos)
+void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos)
 {
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
     Matrix matMVP = MatrixMultiply(matModel, rlGetMatrixModelview());
