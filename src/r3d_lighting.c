@@ -49,6 +49,13 @@ R3D_Light R3D_CreateLight(R3D_LightType type)
     r3d_light_init(light);
     light->type = type;
 
+    // Set default shadow map config
+    light->shadow.updateConf.mode = R3D_SHADOW_UPDATE_INTERVAL;
+    light->shadow.updateConf.frequencySec = 0.016f;
+    light->shadow.updateConf.timerSec = 0.0f;
+    light->shadow.updateConf.shoudlUpdate = true;
+
+    // Set default shadow bias
     switch (type) {
     case R3D_LIGHT_DIR:
     case R3D_LIGHT_SPOT:
@@ -250,7 +257,6 @@ void R3D_EnableShadow(R3D_Light id, int resolution)
     else {
         if (resolution == 0) resolution = 1024;
         r3d_light_create_shadow_map(light, resolution);
-        r3d_light_init_default_shadow_update_config(light);
     }
 
     light->shadow.enabled = true;

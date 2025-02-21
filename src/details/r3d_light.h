@@ -74,7 +74,6 @@ void r3d_light_init(r3d_light_t* light);
 void r3d_light_create_shadow_map(r3d_light_t* light, int resolution);
 void r3d_light_destroy_shadow_map(r3d_light_t* light);
 
-void r3d_light_init_default_shadow_update_config(r3d_light_t* light);
 void r3d_light_process_shadow_update(r3d_light_t* light);
 void r3d_light_indicate_shadow_update(r3d_light_t* light);
 
