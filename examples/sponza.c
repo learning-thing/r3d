@@ -1,8 +1,6 @@
 #include "./common.h"
 #include <r3d.h>
 
-#include <stddef.h> //< Needed for `NULL`
-
 /* === Resources === */
 
 static Model		sponza = { 0 };
