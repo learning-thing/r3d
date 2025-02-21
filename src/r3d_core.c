@@ -959,7 +959,6 @@ static void r3d_pass_lit(void)
                 r3d_shader_bind_sampler2D(screen.lighting, uTexSSAO, R3D.texture.white);
             }
             r3d_shader_bind_sampler2D(screen.lighting, uTexORM, R3D.framebuffer.gBuffer.orm);
-            r3d_shader_bind_sampler2D(screen.lighting, uTexID, R3D.framebuffer.gBuffer.matId);
 
             r3d_primitive_draw_quad();
 
@@ -969,7 +968,6 @@ static void r3d_pass_lit(void)
             r3d_shader_unbind_sampler2D(screen.lighting, uTexDepth);
             r3d_shader_unbind_sampler2D(screen.lighting, uTexSSAO);
             r3d_shader_unbind_sampler2D(screen.lighting, uTexORM);
-            r3d_shader_unbind_sampler2D(screen.lighting, uTexID);
 
             if (R3D.env.useSky) {
                 r3d_shader_unbind_samplerCube(screen.lighting, uCubeIrradiance);

@@ -52,7 +52,6 @@ void r3d_framebuffer_load_gbuffer(int width, int height)
     gBuffer->albedo = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
     gBuffer->emission = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
     gBuffer->orm = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
-    gBuffer->matId = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE, 1);
 
     // We generate the normal buffer here.
     // The setup for the normal buffer requires direct API calls
@@ -78,7 +77,6 @@ void r3d_framebuffer_load_gbuffer(int width, int height)
     rlFramebufferAttach(gBuffer->id, gBuffer->emission, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
     rlFramebufferAttach(gBuffer->id, gBuffer->normal, RL_ATTACHMENT_COLOR_CHANNEL2, RL_ATTACHMENT_TEXTURE2D, 0);
     rlFramebufferAttach(gBuffer->id, gBuffer->orm, RL_ATTACHMENT_COLOR_CHANNEL3, RL_ATTACHMENT_TEXTURE2D, 0);
-    rlFramebufferAttach(gBuffer->id, gBuffer->matId, RL_ATTACHMENT_COLOR_CHANNEL4, RL_ATTACHMENT_TEXTURE2D, 0);
     rlFramebufferAttach(gBuffer->id, gBuffer->depth, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
@@ -244,7 +242,6 @@ void r3d_framebuffer_unload_gbuffer(void)
     rlUnloadTexture(gBuffer->emission);
     rlUnloadTexture(gBuffer->normal);
     rlUnloadTexture(gBuffer->orm);
-    rlUnloadTexture(gBuffer->matId);
     rlUnloadTexture(gBuffer->depth);
 
     rlUnloadFramebuffer(gBuffer->id);
@@ -524,7 +521,6 @@ void r3d_shader_load_screen_lighting(void)
     r3d_shader_get_location(screen.lighting, uTexDepth);
     r3d_shader_get_location(screen.lighting, uTexSSAO);
     r3d_shader_get_location(screen.lighting, uTexORM);
-    r3d_shader_get_location(screen.lighting, uTexID);
     r3d_shader_get_location(screen.lighting, uColAmbient);
     r3d_shader_get_location(screen.lighting, uCubeIrradiance);
     r3d_shader_get_location(screen.lighting, uCubePrefilter);
@@ -544,7 +540,6 @@ void r3d_shader_load_screen_lighting(void)
     r3d_shader_set_sampler2D_slot(screen.lighting, uTexDepth, 3);
     r3d_shader_set_sampler2D_slot(screen.lighting, uTexSSAO, 4);
     r3d_shader_set_sampler2D_slot(screen.lighting, uTexORM, 5);
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexID, 6);
     r3d_shader_set_samplerCube_slot(screen.lighting, uCubeIrradiance, 7);
     r3d_shader_set_samplerCube_slot(screen.lighting, uCubePrefilter, 8);
     r3d_shader_set_sampler2D_slot(screen.lighting, uTexBrdfLut, 9);

@@ -32,7 +32,7 @@
 
 /* === Defines === */
 
-#define R3D_GBUFFER_COUNT 5
+#define R3D_GBUFFER_COUNT 4
 
 
 /* === Global r3d state === */
@@ -49,7 +49,6 @@ extern struct R3D_State {
             unsigned int emission;
             unsigned int normal;
             unsigned int orm;
-            unsigned int matId;
             unsigned int depth;
         } gBuffer;
 

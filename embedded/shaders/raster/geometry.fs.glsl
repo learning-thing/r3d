@@ -51,7 +51,6 @@ layout(location = 0) out vec3 FragAlbedo;
 layout(location = 1) out vec3 FragEmission;
 layout(location = 2) out vec2 FragNormal;
 layout(location = 3) out vec3 FragORM;
-layout(location = 4) out float FragID;
 
 
 /* === Helper functions === */
@@ -86,6 +85,4 @@ void main()
     FragORM.r = uValOcclusion * texture(uTexOcclusion, vTexCoord).r;
     FragORM.g = uValRoughness * texture(uTexRoughness, vTexCoord).g;
     FragORM.b = uValMetalness * texture(uTexMetalness, vTexCoord).b;
-
-    FragID = 1.0;
 }

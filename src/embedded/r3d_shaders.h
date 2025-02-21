@@ -209,7 +209,6 @@ typedef struct {
     r3d_shader_uniform_sampler2D_t uTexDepth;
     r3d_shader_uniform_sampler2D_t uTexSSAO;
     r3d_shader_uniform_sampler2D_t uTexORM;
-    r3d_shader_uniform_sampler2D_t uTexID;
     r3d_shader_uniform_vec3_t uColAmbient;
     r3d_shader_uniform_samplerCube_t uCubeIrradiance;
     r3d_shader_uniform_samplerCube_t uCubePrefilter;

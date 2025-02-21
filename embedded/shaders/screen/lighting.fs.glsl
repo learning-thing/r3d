@@ -63,7 +63,6 @@ uniform sampler2D uTexNormal;
 uniform sampler2D uTexDepth;
 uniform sampler2D uTexSSAO;
 uniform sampler2D uTexORM;
-uniform sampler2D uTexID;
 
 uniform vec3 uColAmbient;
 
@@ -291,50 +290,42 @@ float GetBrightness(vec3 color)
 
 void main()
 {
-    /* Sample albedo texture */
-
     vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
 
-    /* Sample material ID */
+    /* Sample the normal and return immediately if it is null */
 
-    float matIdF = texture(uTexID, vTexCoord).r;
+    vec2 eN = texture(uTexNormal, vTexCoord).rg;
 
-    if (matIdF == 0.0) //< If the material is null (background)
-    {
-        FragBrightness = vec4(vec3(0.0), GetBrightness(albedo));
+    if (eN.x == 0.0 && eN.y == 0.0) {
         FragColor = vec4(albedo, 1.0);
+        FragBrightness = vec4(0.0);
         return;
     }
 
-    /* Sample emission texture */
+    vec3 N = DecodeOctahedral(eN);
 
-    vec3 emission = texture(uTexEmission, vTexCoord).rgb;
-
-    /* Sample ORM texture and extract values */
-
+    /* Sample albedo and ORM texture and extract values */
+    
     vec3 orm = texture(uTexORM, vTexCoord).rgb;
     float occlusion = orm.r;
     float roughness = orm.g;
     float metalness = orm.b;
+
+    /* Compute F0 (reflectance at normal incidence) based on the metallic factor */
+
+    vec3 F0 = ComputeF0(metalness, 0.5, albedo);
 
     /* Sample world depth and reconstruct world position */
 
     float depth = texture(uTexDepth, vTexCoord).r;
     vec3 position = GetPositionFromDepth(depth);
 
-    /* Compute F0 (reflectance at normal incidence) based on the metallic factor */
-
-    vec3 F0 = ComputeF0(metalness, 0.5, albedo);
-
-    /* Sample normal and compute view direction vector */
-
-    vec3 N = DecodeOctahedral(texture(uTexNormal, vTexCoord).rg);
+    /* Compute view direction and the dot product of the normal and view direction */
+    
     vec3 V = normalize(uViewPosition - position);
 
-    /* Compute the dot product of the normal and view direction */
-
     float NdotV = dot(N, V);
-    float cNdotV = max(NdotV, 1e-4);  // Clamped to avoid division by zero
+    float cNdotV = max(NdotV, 1e-4); // Clamped to avoid division by zero
 
     /* Loop through all light sources accumulating diffuse and specular light */
 
@@ -487,6 +478,7 @@ void main()
 
     /* Compute the final fragment color by combining diffuse, specular, and emission contributions */
 
+    vec3 emission = texture(uTexEmission, vTexCoord).rgb;
     FragColor = vec4(diffuse + specular + emission, 1.0);
 
     /* Handle bright colors for bloom */
