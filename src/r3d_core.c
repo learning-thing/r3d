@@ -340,224 +340,31 @@ void R3D_End(void)
 
     r3d_pass_lit();
 
-    // [PART 8] - Post proccesses using ping-pong buffer
-    {
-        // Generating the blur for the brightness buffer to create the bloom effect.
-        if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
-            rlEnableFramebuffer(R3D.framebuffer.pingPongBloom.id);
-            {
-                rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
-                rlDisableDepthTest();
+    r3d_pass_post_init(
+        R3D.framebuffer.lit.id,
+        GL_COLOR_ATTACHMENT0,
+        GL_COLOR_ATTACHMENT0
+    );
 
-                bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTexIdx;
-                *horizontalPass = true;
-
-                r3d_shader_enable(generate.gaussianBlurDualPass)
-                {
-                    for (int i = 0; i < R3D.env.bloomIterations; i++, (*horizontalPass) = !(*horizontalPass)) {
-                        glFramebufferTexture2D(
-                            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                            R3D.framebuffer.pingPongBloom.textures[(*horizontalPass)], 0
-                        );
-                        Vector2 direction = (*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 };
-                        r3d_shader_set_vec2(generate.gaussianBlurDualPass, uTexelDir,
-                            Vector2Multiply(direction, (Vector2) {
-                                R3D.state.resolution.texelX,
-                                R3D.state.resolution.texelY
-                            })
-                        );
-                        r3d_shader_bind_sampler2D(generate.gaussianBlurDualPass, uTexture, i > 0
-                            ? R3D.framebuffer.pingPongBloom.textures[!(*horizontalPass)]
-                            : R3D.framebuffer.lit.bright
-                        );
-                        r3d_primitive_draw_quad();
-                    }
-                }
-                r3d_shader_disable();
-            }
-            rlDisableFramebuffer();
-        }
-
-        // Initializing data to alternate between the
-        // source/destination textures of the post-effects framebuffer.
-        r3d_pass_post_init(R3D.framebuffer.lit.id, GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT0);
-
-        // Post effect rendering
-        rlEnableFramebuffer(R3D.framebuffer.post.id);
-        {
-            rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
-            rlDisableDepthTest();
-
-            // Post process: Bloom
-            if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
-                );
-                r3d_shader_enable(screen.bloom);
-                {
-                    r3d_shader_bind_sampler2D(screen.bloom, uTexColor,
-                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
-                    );
-                    r3d_shader_bind_sampler2D(screen.bloom, uTexBloomBlur,
-                        R3D.framebuffer.pingPongBloom.textures[!R3D.framebuffer.pingPongBloom.targetTexIdx]
-                    );
-                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
-
-                    r3d_shader_set_int(screen.bloom, uBloomMode, R3D.env.bloomMode);
-                    r3d_shader_set_float(screen.bloom, uBloomIntensity, R3D.env.bloomIntensity);
-
-                    r3d_primitive_draw_quad();
-                }
-                r3d_shader_disable();
-            }
-
-            // Post process: Fog
-            if (R3D.env.fogMode != R3D_FOG_DISABLED) {
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
-                );
-                r3d_shader_enable(screen.fog);
-                {
-                    r3d_shader_bind_sampler2D(screen.fog, uTexColor,
-                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
-                    );
-                    r3d_shader_bind_sampler2D(screen.fog, uTexDepth,
-                        R3D.framebuffer.gBuffer.depth
-                    );
-                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
-
-                    r3d_shader_set_float(screen.fog, uNear, rlGetCullDistanceNear());
-                    r3d_shader_set_float(screen.fog, uFar, rlGetCullDistanceFar());
-                    r3d_shader_set_int(screen.fog, uFogMode, R3D.env.fogMode);
-                    r3d_shader_set_vec3(screen.fog, uFogColor, R3D.env.fogColor);
-                    r3d_shader_set_float(screen.fog, uFogStart, R3D.env.fogStart);
-                    r3d_shader_set_float(screen.fog, uFogEnd, R3D.env.fogEnd);
-                    r3d_shader_set_float(screen.fog, uFogDensity, R3D.env.fogDensity);
-
-                    r3d_primitive_draw_quad();
-                }
-                r3d_shader_disable();
-            }
-
-            // Post process: Tonemap
-            if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f || R3D.env.tonemapWhite != 1.0f) {
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
-                );
-                r3d_shader_enable(screen.tonemap);
-                {
-                    r3d_shader_bind_sampler2D(screen.tonemap, uTexColor,
-                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
-                    );
-                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
-
-                    r3d_shader_set_int(screen.tonemap, uTonemapMode, R3D.env.tonemapMode);
-                    r3d_shader_set_float(screen.tonemap, uTonemapExposure, R3D.env.tonemapExposure);
-                    r3d_shader_set_float(screen.tonemap, uTonemapWhite, R3D.env.tonemapWhite);
-
-                    r3d_primitive_draw_quad();
-                }
-                r3d_shader_disable();
-            }
-
-            // Post process: Adjustment
-            {
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
-                );
-                r3d_shader_enable(screen.adjustment);
-                {
-                    r3d_shader_bind_sampler2D(screen.adjustment, uTexColor,
-                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
-                    );
-                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
-
-                    r3d_shader_set_float(screen.adjustment, uBrightness, R3D.env.brightness);
-                    r3d_shader_set_float(screen.adjustment, uContrast, R3D.env.contrast);
-                    r3d_shader_set_float(screen.adjustment, uSaturation, R3D.env.saturation);
-
-                    r3d_primitive_draw_quad();
-                }
-                r3d_shader_disable();
-            }
-
-            // Post process: Anti aliasing
-            if (R3D.state.flags & R3D_FLAG_FXAA) {
-                glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
-                );
-                r3d_shader_enable(screen.fxaa);
-                {
-                    r3d_shader_bind_sampler2D(screen.fxaa, uTexture,
-                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
-                    );
-                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
-
-                    Vector2 texelSize = { R3D.state.resolution.texelX, R3D.state.resolution.texelY };
-                    r3d_shader_set_vec2(screen.fxaa, uTexelSize, texelSize);
-
-                    r3d_primitive_draw_quad();
-                }
-                r3d_shader_disable();
-            }
-        }
-        rlDisableFramebuffer();
+    if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
+        r3d_pass_post_bloom();
     }
 
-    // [PART 9] - Blit the final result to the main framebuffer
-    {
-        unsigned int dstId = 0;
-        int dstX = 0, dstY = 0;
-        int dstW = GetScreenWidth();
-        int dstH = GetScreenHeight();
-
-        // If a custom final framebuffer is set, use its ID and dimensions
-        if (R3D.framebuffer.customTarget.id != 0) {
-            dstId = R3D.framebuffer.customTarget.id;
-            dstW = R3D.framebuffer.customTarget.texture.width;
-            dstH = R3D.framebuffer.customTarget.texture.height;
-        }
-
-        // Maintain aspect ratio if the corresponding flag is set
-        if (R3D.state.flags & R3D_FLAG_ASPECT_KEEP) {
-            float srcRatio = (float)R3D.state.resolution.width / R3D.state.resolution.height;
-            float dstRatio = (float)dstW / dstH;
-            if (srcRatio > dstRatio) {
-                int prevH = dstH;
-                dstH = dstW * srcRatio;
-                dstY = (prevH - dstH) / 2;
-            }
-            else {
-                int prevW = dstW;
-                dstW = dstH * srcRatio;
-                dstX = (prevW - dstW) / 2;
-            }
-        }
-
-        // Bind the destination framebuffer for drawing
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstId);
-
-        // Blit only the color data from the post-processing framebuffer to the main framebuffer
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
-        glBlitFramebuffer(
-            0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
-            dstX, dstY, dstX + dstW, dstY + dstH, GL_COLOR_BUFFER_BIT,
-            (R3D.state.flags & R3D_FLAG_BLIT_LINEAR) ? GL_LINEAR : GL_NEAREST
-        );
-
-        // Blit the depth data from the gbuffer framebuffer to the main framebuffer
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.gBuffer.id);
-        glBlitFramebuffer(
-            0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
-            dstX, dstY, dstX + dstW, dstY + dstH,
-            GL_DEPTH_BUFFER_BIT, GL_NEAREST
-        );
+    if (R3D.env.fogMode != R3D_FOG_DISABLED) {
+        r3d_pass_post_fog();
     }
+
+    if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f || R3D.env.tonemapWhite != 1.0f) {
+        r3d_pass_post_tonemap();
+    }
+
+    r3d_pass_post_adjustment();
+
+    if (R3D.state.flags & R3D_FLAG_FXAA) {
+        r3d_pass_post_fxaa();
+    }
+
+    r3d_pass_final_blit();
 
     // [PART 10] - Reset global state
     {
@@ -1218,30 +1025,234 @@ void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf)
 
 void r3d_pass_post_bloom(void)
 {
+    rlEnableFramebuffer(R3D.framebuffer.pingPongBloom.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
+        rlDisableDepthTest();
 
+        bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTexIdx;
+        *horizontalPass = true;
+
+        r3d_shader_enable(generate.gaussianBlurDualPass)
+        {
+            for (int i = 0; i < R3D.env.bloomIterations; i++, (*horizontalPass) = !(*horizontalPass)) {
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                    R3D.framebuffer.pingPongBloom.textures[(*horizontalPass)], 0
+                );
+                Vector2 direction = (*horizontalPass) ? (Vector2) { 1, 0 } : (Vector2) { 0, 1 };
+                r3d_shader_set_vec2(generate.gaussianBlurDualPass, uTexelDir,
+                    Vector2Multiply(direction, (Vector2) {
+                    R3D.state.resolution.texelX,
+                        R3D.state.resolution.texelY
+                })
+                );
+                r3d_shader_bind_sampler2D(generate.gaussianBlurDualPass, uTexture, i > 0
+                    ? R3D.framebuffer.pingPongBloom.textures[!(*horizontalPass)]
+                    : R3D.framebuffer.lit.bright
+                );
+                r3d_primitive_draw_quad();
+            }
+        }
+        r3d_shader_disable();
+    }
+    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableDepthTest();
+
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
+        );
+
+        r3d_shader_enable(screen.bloom);
+        {
+            r3d_shader_bind_sampler2D(screen.bloom, uTexColor,
+                R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+            );
+            r3d_shader_bind_sampler2D(screen.bloom, uTexBloomBlur,
+                R3D.framebuffer.pingPongBloom.textures[!R3D.framebuffer.pingPongBloom.targetTexIdx]
+            );
+            R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
+
+            r3d_shader_set_int(screen.bloom, uBloomMode, R3D.env.bloomMode);
+            r3d_shader_set_float(screen.bloom, uBloomIntensity, R3D.env.bloomIntensity);
+
+            r3d_primitive_draw_quad();
+        }
+        r3d_shader_disable();
+    }
 }
 
 void r3d_pass_post_fog(void)
 {
+    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableDepthTest();
 
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
+        );
+
+        r3d_shader_enable(screen.fog);
+        {
+            r3d_shader_bind_sampler2D(screen.fog, uTexColor,
+                R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+            );
+            r3d_shader_bind_sampler2D(screen.fog, uTexDepth,
+                R3D.framebuffer.gBuffer.depth
+            );
+            R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
+
+            r3d_shader_set_float(screen.fog, uNear, rlGetCullDistanceNear());
+            r3d_shader_set_float(screen.fog, uFar, rlGetCullDistanceFar());
+            r3d_shader_set_int(screen.fog, uFogMode, R3D.env.fogMode);
+            r3d_shader_set_vec3(screen.fog, uFogColor, R3D.env.fogColor);
+            r3d_shader_set_float(screen.fog, uFogStart, R3D.env.fogStart);
+            r3d_shader_set_float(screen.fog, uFogEnd, R3D.env.fogEnd);
+            r3d_shader_set_float(screen.fog, uFogDensity, R3D.env.fogDensity);
+
+            r3d_primitive_draw_quad();
+        }
+        r3d_shader_disable();
+    }
 }
 
 void r3d_pass_post_tonemap(void)
 {
+    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableDepthTest();
 
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
+        );
+
+        r3d_shader_enable(screen.tonemap);
+        {
+            r3d_shader_bind_sampler2D(screen.tonemap, uTexColor,
+                R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+            );
+            R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
+
+            r3d_shader_set_int(screen.tonemap, uTonemapMode, R3D.env.tonemapMode);
+            r3d_shader_set_float(screen.tonemap, uTonemapExposure, R3D.env.tonemapExposure);
+            r3d_shader_set_float(screen.tonemap, uTonemapWhite, R3D.env.tonemapWhite);
+
+            r3d_primitive_draw_quad();
+        }
+        r3d_shader_disable();
+    }
 }
 
 void r3d_pass_post_adjustment(void)
 {
+    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableDepthTest();
 
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
+        );
+
+        r3d_shader_enable(screen.adjustment);
+        {
+            r3d_shader_bind_sampler2D(screen.adjustment, uTexColor,
+                R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+            );
+            R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
+
+            r3d_shader_set_float(screen.adjustment, uBrightness, R3D.env.brightness);
+            r3d_shader_set_float(screen.adjustment, uContrast, R3D.env.contrast);
+            r3d_shader_set_float(screen.adjustment, uSaturation, R3D.env.saturation);
+
+            r3d_primitive_draw_quad();
+        }
+        r3d_shader_disable();
+    }
 }
 
 void r3d_pass_post_fxaa(void)
 {
+    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableDepthTest();
 
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
+        );
+
+        r3d_shader_enable(screen.fxaa);
+        {
+            r3d_shader_bind_sampler2D(screen.fxaa, uTexture,
+                R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+            );
+            R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
+
+            Vector2 texelSize = { R3D.state.resolution.texelX, R3D.state.resolution.texelY };
+            r3d_shader_set_vec2(screen.fxaa, uTexelSize, texelSize);
+
+            r3d_primitive_draw_quad();
+        }
+        r3d_shader_disable();
+    }
 }
 
 void r3d_pass_final_blit(void)
 {
+    unsigned int dstId = 0;
+    int dstX = 0, dstY = 0;
+    int dstW = GetScreenWidth();
+    int dstH = GetScreenHeight();
 
+    // If a custom final framebuffer is set, use its ID and dimensions
+    if (R3D.framebuffer.customTarget.id != 0) {
+        dstId = R3D.framebuffer.customTarget.id;
+        dstW = R3D.framebuffer.customTarget.texture.width;
+        dstH = R3D.framebuffer.customTarget.texture.height;
+    }
+
+    // Maintain aspect ratio if the corresponding flag is set
+    if (R3D.state.flags & R3D_FLAG_ASPECT_KEEP) {
+        float srcRatio = (float)R3D.state.resolution.width / R3D.state.resolution.height;
+        float dstRatio = (float)dstW / dstH;
+        if (srcRatio > dstRatio) {
+            int prevH = dstH;
+            dstH = dstW * srcRatio;
+            dstY = (prevH - dstH) / 2;
+        }
+        else {
+            int prevW = dstW;
+            dstW = dstH * srcRatio;
+            dstX = (prevW - dstW) / 2;
+        }
+    }
+
+    // Bind the destination framebuffer for drawing
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstId);
+
+    // Blit only the color data from the post-processing framebuffer to the main framebuffer
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.post.id);
+    glBlitFramebuffer(
+        0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
+        dstX, dstY, dstX + dstW, dstY + dstH, GL_COLOR_BUFFER_BIT,
+        (R3D.state.flags & R3D_FLAG_BLIT_LINEAR) ? GL_LINEAR : GL_NEAREST
+    );
+
+    // Blit the depth data from the gbuffer framebuffer to the main framebuffer
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, R3D.framebuffer.gBuffer.id);
+    glBlitFramebuffer(
+        0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
+        dstX, dstY, dstX + dstW, dstY + dstH,
+        GL_DEPTH_BUFFER_BIT, GL_NEAREST
+    );
 }
