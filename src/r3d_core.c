@@ -57,6 +57,8 @@ static void r3d_pass_post_fxaa(void);
 
 static void r3d_pass_final_blit(void);
 
+static void r3d_reset_raylib_state(void);
+
 /* === Public functions === */
 
 void R3D_Init(int resWidth, int resHeight, unsigned int flags)
@@ -323,11 +325,6 @@ void R3D_Begin(Camera3D camera)
 
 void R3D_End(void)
 {
-    // [PART 1] - Init global state
-    {
-        rlDisableColorBlend();
-    }
-
     r3d_prepass_sort_drawcalls();
     r3d_prepass_process_lights_and_batch();
 
@@ -366,11 +363,7 @@ void R3D_End(void)
 
     r3d_pass_final_blit();
 
-    // [PART 10] - Reset global state
-    {
-        rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
-        rlEnableColorBlend();
-    }
+    r3d_reset_raylib_state();
 }
 
 void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
@@ -550,6 +543,7 @@ void r3d_prepass_process_lights_and_batch(void)
 void r3d_pass_shadow_maps(void)
 {
     // Config context state
+    rlDisableColorBlend();
     rlEnableDepthTest();
 
     // Push new projection matrix
@@ -664,8 +658,8 @@ void r3d_pass_shadow_maps(void)
 
             r3d_shader_disable();
         }
-        rlDisableFramebuffer();
     }
+    rlDisableFramebuffer();
 
     // Pop projection matrix
     rlMatrixMode(RL_PROJECTION);
@@ -681,6 +675,7 @@ void r3d_pass_gbuffer(void)
     rlEnableFramebuffer(R3D.framebuffer.gBuffer.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
 
         // Clear framebuffer
         {
@@ -690,9 +685,9 @@ void r3d_pass_gbuffer(void)
 
             glClearBufferfv(GL_COLOR, 0, (float[4]) {
                 R3D.env.backgroundColor.x,
-                    R3D.env.backgroundColor.y,
-                    R3D.env.backgroundColor.z,
-                    1.0f
+                R3D.env.backgroundColor.y,
+                R3D.env.backgroundColor.z,
+                1.0f
             });
 
             glClearBufferfv(GL_COLOR, 1, (float[4]) { 0 });
@@ -795,7 +790,6 @@ void r3d_pass_gbuffer(void)
         rlMatrixMode(RL_MODELVIEW);
         rlLoadIdentity();
     }
-    rlDisableFramebuffer();
 }
 
 void r3d_pass_ssao(void)
@@ -803,6 +797,7 @@ void r3d_pass_ssao(void)
     rlEnableFramebuffer(R3D.framebuffer.pingPongSSAO.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         // Bind first SSAO output texture
@@ -871,7 +866,6 @@ void r3d_pass_ssao(void)
             r3d_shader_disable();
         }
     }
-    rlDisableFramebuffer();
 }
 
 static void r3d_pass_lit(void)
@@ -879,6 +873,7 @@ static void r3d_pass_lit(void)
     rlEnableFramebuffer(R3D.framebuffer.lit.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         r3d_shader_enable(screen.lighting);
@@ -996,7 +991,6 @@ static void r3d_pass_lit(void)
         }
         r3d_shader_disable();
     }
-    rlDisableFramebuffer();
 }
 
 void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf)
@@ -1028,6 +1022,7 @@ void r3d_pass_post_bloom(void)
     rlEnableFramebuffer(R3D.framebuffer.pingPongBloom.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTexIdx;
@@ -1059,6 +1054,7 @@ void r3d_pass_post_bloom(void)
     rlEnableFramebuffer(R3D.framebuffer.post.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         glFramebufferTexture2D(
@@ -1090,6 +1086,7 @@ void r3d_pass_post_fog(void)
     rlEnableFramebuffer(R3D.framebuffer.post.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         glFramebufferTexture2D(
@@ -1126,6 +1123,7 @@ void r3d_pass_post_tonemap(void)
     rlEnableFramebuffer(R3D.framebuffer.post.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         glFramebufferTexture2D(
@@ -1155,6 +1153,7 @@ void r3d_pass_post_adjustment(void)
     rlEnableFramebuffer(R3D.framebuffer.post.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         glFramebufferTexture2D(
@@ -1184,6 +1183,7 @@ void r3d_pass_post_fxaa(void)
     rlEnableFramebuffer(R3D.framebuffer.post.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
         rlDisableDepthTest();
 
         glFramebufferTexture2D(
@@ -1255,4 +1255,14 @@ void r3d_pass_final_blit(void)
         dstX, dstY, dstX + dstW, dstY + dstH,
         GL_DEPTH_BUFFER_BIT, GL_NEAREST
     );
+}
+
+void r3d_reset_raylib_state(void)
+{
+    rlDisableFramebuffer();
+
+    rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
+    rlSetBlendMode(RL_BLEND_ALPHA);
+    rlEnableColorBlend();
+    rlDisableDepthTest();
 }
