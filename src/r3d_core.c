@@ -32,6 +32,7 @@
 #include "./details/r3d_light.h"
 #include "./details/r3d_drawcall.h"
 #include "./details/r3d_primitives.h"
+#include "./details/r3d_projection.h"
 #include "./details/containers/r3d_array.h"
 #include "./details/containers/r3d_registry.h"
 
@@ -508,10 +509,14 @@ void r3d_prepass_sort_drawcalls(void)
 
 void r3d_prepass_process_lights_and_batch(void)
 {
+    // Clear the previous light batch
     r3d_array_clear(&R3D.container.aLightBatch);
 
+    // Compute view / projection matrix
+    Matrix viewProj = MatrixMultiply(R3D.state.transform.view, R3D.state.transform.proj);
+
     for (int id = 1; id <= r3d_registry_get_allocated_count(&R3D.container.rLights); id++) {
-        // Check if the light in the array is still valid
+        // Check if the light in the registry is still valid
         if (!r3d_registry_is_valid(&R3D.container.rLights, id)) continue;
 
         // Get the valid light and check if it is active
@@ -523,19 +528,43 @@ void r3d_prepass_process_lights_and_batch(void)
             r3d_light_process_shadow_update(light);
         }
 
-        // Check if the light is visible in the frustum (only for non-directional lights)
-        // TODO: Make it so that spot lights are tested by their cone rather than by a sphere...
-        if (light->type != R3D_LIGHT_DIR) {
-            if (!r3d_frustum_is_sphere_in(&R3D.state.frustum.shape, light->position, light->range)) {
-                continue;
-            }
+        // Compute the projected area of the light into the screen
+        Rectangle dstRect = { 0 };
+        switch (light->type) {
+        case R3D_LIGHT_DIR:
+            dstRect.x = 0, dstRect.y = 0;
+            dstRect.width = R3D.state.resolution.width;
+            dstRect.height = R3D.state.resolution.height;
+            break;
+        case R3D_LIGHT_SPOT: {
+            dstRect = r3d_project_cone_bounding_box(
+                light->position, light->direction, light->range, fabsf(light->range * light->outerCutOff), //< r = h * cos(phi)
+                R3D.state.transform.position, viewProj, R3D.state.resolution.width, R3D.state.resolution.height
+            );
+        } break;
+        case R3D_LIGHT_OMNI:
+            dstRect = r3d_project_sphere_bounding_box(
+                light->position, light->range, R3D.state.transform.position, viewProj,
+                R3D.state.resolution.width, R3D.state.resolution.height
+            );
+            break;
         }
 
+        // Determine if the light illuminates a part visible to the screen
+        int screenW = R3D.state.resolution.width;
+        int screenH = R3D.state.resolution.height;
+        if (!CheckCollisionRecs(dstRect, (Rectangle) { 0, 0, screenW, screenH })) {
+            continue;
+        }
+
+        // Clamp light screen area to the screen dimensions
+        if (dstRect.x < 0) dstRect.width += dstRect.x, dstRect.x = 0;
+        if (dstRect.y < 0) dstRect.height += dstRect.y, dstRect.y = 0;
+        dstRect.width = Clamp(dstRect.width, 0, screenW - dstRect.x);
+        dstRect.height = Clamp(dstRect.height, 0, screenH - dstRect.y);
+
         // Here the light is supposed to be visible
-        r3d_light_batched_t batched = {
-            .data = light,
-            //.dstRect
-        };
+        r3d_light_batched_t batched = { .data = light, .dstRect = dstRect };
         r3d_array_push_back(&R3D.container.aLightBatch, &batched);
     }
 }
