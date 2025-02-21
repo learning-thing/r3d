@@ -8,6 +8,14 @@ R3D is ideal for developers who want to add 3D rendering to their raylib project
 
 ---
 
+## WARNING
+
+R3D is a work in progress and may have build or shader issues on some platforms.
+You can report them in an issue if you wish, but as long as this warning is present, nothing is guaranteed.
+A release version will be published once transparency support is complete and R3D has been tested on enough platforms.
+
+---
+
 ## Features
 
 - **Material**: Uses raylib’s material system, just load a model and set its material maps, R3D handles the rest.  
