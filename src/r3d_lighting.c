@@ -346,12 +346,104 @@ void R3D_DrawLightShape(R3D_Light id)
 
     DrawSphereEx(light->position, 0.1f, 4, 8, color);
 
-    if (light->type == R3D_LIGHT_SPOT) {
+    if (light->type == R3D_LIGHT_SPOT)
+    {
+        // Calculation of the circle radius (bottom of the spotlight) and the position of the base
         float radius = fabsf(light->range * light->outerCutOff);
-        Vector3 basePos = Vector3Add(light->position, Vector3Scale(R3D_GetLightDirection(1), light->range));
-        DrawCylinderWiresEx(light->position, basePos, 0.01f, radius, 8, color);
+        Vector3 spotDir = R3D_GetLightDirection(1);
+        Vector3 basePos = Vector3Add(light->position, Vector3Scale(spotDir, light->range));
+
+        // Calculation of an orthonormal reference frame for the circle plane
+        Vector3 right = { 0 };
+        if (fabsf(spotDir.x) < fabsf(spotDir.y) && fabsf(spotDir.x) < fabsf(spotDir.z)) {
+            right = (Vector3){ 0, -spotDir.z, spotDir.y };
+        }
+        else if (fabsf(spotDir.y) < fabsf(spotDir.z)) {
+            right = (Vector3){ -spotDir.z, 0, spotDir.x };
+        }
+        else {
+            right = (Vector3){ -spotDir.y, spotDir.x, 0 };
+        }
+
+        right = Vector3Normalize(right);
+        Vector3 up = Vector3CrossProduct(spotDir, right);
+        up = Vector3Normalize(up);
+
+        // Calculation of the 4 cardinal points on the circle (angles 0, 90, 180, and 270 degrees)
+        Vector3 circlePoints[4];
+        float angles[4] = { 0, DEG2RAD * 90.0f, DEG2RAD * 180.0f, DEG2RAD * 270.0f };
+        for (int i = 0; i < 4; i++) {
+            circlePoints[i].x = basePos.x + radius * (cosf(angles[i]) * right.x + sinf(angles[i]) * up.x);
+            circlePoints[i].y = basePos.y + radius * (cosf(angles[i]) * right.y + sinf(angles[i]) * up.y);
+            circlePoints[i].z = basePos.z + radius * (cosf(angles[i]) * right.z + sinf(angles[i]) * up.z);
+        }
+
+        // Draw 4 lines from the light position to each of the 4 points on the circle
+        rlBegin(RL_LINES);
+        {
+            rlColor4ub(color.r, color.g, color.b, color.a);
+            for (int i = 0; i < 4; i++) {
+                rlVertex3f(light->position.x, light->position.y, light->position.z);
+                rlVertex3f(circlePoints[i].x, circlePoints[i].y, circlePoints[i].z);
+            }
+        }
+        rlEnd();
+
+        // Draw the circle at the base with 32 segments
+        rlBegin(RL_LINES);
+        {
+            rlColor4ub(color.r, color.g, color.b, color.a);
+
+            const int SEGMENTS = 32;
+            const float STEP = 360.0f / SEGMENTS;
+
+            for (int i = 0; i < SEGMENTS; i++) {
+                float angle1 = i * STEP * DEG2RAD;
+                float angle2 = (i + 1) * STEP * DEG2RAD;
+
+                Vector3 p1 = {
+                    basePos.x + radius * (cosf(angle1) * right.x + sinf(angle1) * up.x),
+                    basePos.y + radius * (cosf(angle1) * right.y + sinf(angle1) * up.y),
+                    basePos.z + radius * (cosf(angle1) * right.z + sinf(angle1) * up.z)
+                };
+                Vector3 p2 = {
+                    basePos.x + radius * (cosf(angle2) * right.x + sinf(angle2) * up.x),
+                    basePos.y + radius * (cosf(angle2) * right.y + sinf(angle2) * up.y),
+                    basePos.z + radius * (cosf(angle2) * right.z + sinf(angle2) * up.z)
+                };
+
+                rlVertex3f(p1.x, p1.y, p1.z);
+                rlVertex3f(p2.x, p2.y, p2.z);
+            }
+        }
+        rlEnd();
     }
-    else if (light->type == R3D_LIGHT_OMNI) {
-        DrawSphereWires(light->position, light->range, 2, 4, color);
+    else if (light->type == R3D_LIGHT_OMNI)
+    {
+        const int SEGMENTS = 32;
+        const float STEP = 360.0f / SEGMENTS;
+
+        rlBegin(RL_LINES);
+        {
+            rlColor4ub(color.r, color.g, color.b, color.a);
+
+            for (int i = 0; i < SEGMENTS; i++) {
+                float angle1 = i * STEP * DEG2RAD;
+                float angle2 = (i + 1) * STEP * DEG2RAD;
+
+                // Circle around X-axis (YZ plane)
+                rlVertex3f(light->position.x, light->position.y + light->range * cosf(angle1), light->position.z + light->range * sinf(angle1));
+                rlVertex3f(light->position.x, light->position.y + light->range * cosf(angle2), light->position.z + light->range * sinf(angle2));
+
+                // Circle around Y-axis (XZ plane)
+                rlVertex3f(light->position.x + light->range * cosf(angle1), light->position.y, light->position.z + light->range * sinf(angle1));
+                rlVertex3f(light->position.x + light->range * cosf(angle2), light->position.y, light->position.z + light->range * sinf(angle2));
+
+                // Circle around Z-axis (XY plane)
+                rlVertex3f(light->position.x + light->range * cosf(angle1), light->position.y + light->range * sinf(angle1), light->position.z);
+                rlVertex3f(light->position.x + light->range * cosf(angle2), light->position.y + light->range * sinf(angle2), light->position.z);
+            }
+        }
+        rlEnd();
     }
 }
