@@ -48,9 +48,14 @@ static void r3d_pass_gbuffer(void);
 static void r3d_pass_ssao(void);
 static void r3d_pass_lit(void);
 
+static void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf);
+static void r3d_pass_post_bloom(void);
+static void r3d_pass_post_fog(void);
+static void r3d_pass_post_tonemap(void);
+static void r3d_pass_post_adjustment(void);
+static void r3d_pass_post_fxaa(void);
 
-
-
+static void r3d_pass_final_blit(void);
 
 /* === Public functions === */
 
@@ -344,7 +349,7 @@ void R3D_End(void)
                 rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
                 rlDisableDepthTest();
 
-                bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTextureIdx;
+                bool* horizontalPass = &R3D.framebuffer.pingPongBloom.targetTexIdx;
                 *horizontalPass = true;
 
                 r3d_shader_enable(generate.gaussianBlurDualPass)
@@ -375,12 +380,7 @@ void R3D_End(void)
 
         // Initializing data to alternate between the
         // source/destination textures of the post-effects framebuffer.
-        int texIndex = 2;
-        unsigned int textures[3] = {
-            R3D.framebuffer.post.textures[0],
-            R3D.framebuffer.post.textures[1],
-            R3D.framebuffer.lit.color
-        };
+        r3d_pass_post_init(R3D.framebuffer.lit.id, GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT0);
 
         // Post effect rendering
         rlEnableFramebuffer(R3D.framebuffer.post.id);
@@ -391,18 +391,18 @@ void R3D_End(void)
             // Post process: Bloom
             if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
                 glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                    GL_TEXTURE_2D, textures[!texIndex], 0
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
                 );
                 r3d_shader_enable(screen.bloom);
                 {
-                    r3d_shader_bind_sampler2D(screen.bloom, uTexColor, textures[texIndex]);
-                    r3d_shader_bind_sampler2D(screen.bloom, uTexBloomBlur,
-                        R3D.framebuffer.pingPongBloom.textures[
-                            !R3D.framebuffer.pingPongBloom.targetTextureIdx
-                        ]
+                    r3d_shader_bind_sampler2D(screen.bloom, uTexColor,
+                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
                     );
-                    texIndex = !texIndex;
+                    r3d_shader_bind_sampler2D(screen.bloom, uTexBloomBlur,
+                        R3D.framebuffer.pingPongBloom.textures[!R3D.framebuffer.pingPongBloom.targetTexIdx]
+                    );
+                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
 
                     r3d_shader_set_int(screen.bloom, uBloomMode, R3D.env.bloomMode);
                     r3d_shader_set_float(screen.bloom, uBloomIntensity, R3D.env.bloomIntensity);
@@ -415,14 +415,18 @@ void R3D_End(void)
             // Post process: Fog
             if (R3D.env.fogMode != R3D_FOG_DISABLED) {
                 glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                    GL_TEXTURE_2D, textures[!texIndex], 0
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
                 );
                 r3d_shader_enable(screen.fog);
                 {
-                    r3d_shader_bind_sampler2D(screen.fog, uTexColor, textures[texIndex]);
-                    r3d_shader_bind_sampler2D(screen.fog, uTexDepth, R3D.framebuffer.gBuffer.depth);
-                    texIndex = !texIndex;
+                    r3d_shader_bind_sampler2D(screen.fog, uTexColor,
+                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+                    );
+                    r3d_shader_bind_sampler2D(screen.fog, uTexDepth,
+                        R3D.framebuffer.gBuffer.depth
+                    );
+                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
 
                     r3d_shader_set_float(screen.fog, uNear, rlGetCullDistanceNear());
                     r3d_shader_set_float(screen.fog, uFar, rlGetCullDistanceFar());
@@ -440,13 +444,15 @@ void R3D_End(void)
             // Post process: Tonemap
             if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f || R3D.env.tonemapWhite != 1.0f) {
                 glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                    GL_TEXTURE_2D, textures[!texIndex], 0
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
                 );
                 r3d_shader_enable(screen.tonemap);
                 {
-                    r3d_shader_bind_sampler2D(screen.tonemap, uTexColor, textures[texIndex]);
-                    texIndex = !texIndex;
+                    r3d_shader_bind_sampler2D(screen.tonemap, uTexColor,
+                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+                    );
+                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
 
                     r3d_shader_set_int(screen.tonemap, uTonemapMode, R3D.env.tonemapMode);
                     r3d_shader_set_float(screen.tonemap, uTonemapExposure, R3D.env.tonemapExposure);
@@ -460,13 +466,15 @@ void R3D_End(void)
             // Post process: Adjustment
             {
                 glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                    GL_TEXTURE_2D, textures[!texIndex], 0
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
                 );
                 r3d_shader_enable(screen.adjustment);
                 {
-                    r3d_shader_bind_sampler2D(screen.adjustment, uTexColor, textures[texIndex]);
-                    texIndex = !texIndex;
+                    r3d_shader_bind_sampler2D(screen.adjustment, uTexColor,
+                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+                    );
+                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
 
                     r3d_shader_set_float(screen.adjustment, uBrightness, R3D.env.brightness);
                     r3d_shader_set_float(screen.adjustment, uContrast, R3D.env.contrast);
@@ -480,13 +488,15 @@ void R3D_End(void)
             // Post process: Anti aliasing
             if (R3D.state.flags & R3D_FLAG_FXAA) {
                 glFramebufferTexture2D(
-                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                    GL_TEXTURE_2D, textures[!texIndex], 0
+                    GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                    R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
                 );
                 r3d_shader_enable(screen.fxaa);
                 {
-                    r3d_shader_bind_sampler2D(screen.fxaa, uTexture, textures[texIndex]);
-                    texIndex = !texIndex;
+                    r3d_shader_bind_sampler2D(screen.fxaa, uTexture,
+                        R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx]
+                    );
+                    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
 
                     Vector2 texelSize = { R3D.state.resolution.texelX, R3D.state.resolution.texelY };
                     r3d_shader_set_vec2(screen.fxaa, uTexelSize, texelSize);
@@ -1028,7 +1038,7 @@ void r3d_pass_ssao(void)
 
         // Blur SSAO
         {
-            bool* horizontalPass = &R3D.framebuffer.pingPongSSAO.targetTextureIdx;
+            bool* horizontalPass = &R3D.framebuffer.pingPongSSAO.targetTexIdx;
             *horizontalPass = true;
 
             r3d_shader_enable(generate.gaussianBlurDualPass)
@@ -1140,7 +1150,7 @@ static void r3d_pass_lit(void)
             r3d_shader_bind_sampler2D(screen.lighting, uTexDepth, R3D.framebuffer.gBuffer.depth);
             if (R3D.env.ssaoEnabled) {
                 r3d_shader_bind_sampler2D(screen.lighting, uTexSSAO,
-                    R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTextureIdx]
+                    R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTexIdx]
                 );
             }
             else {
@@ -1180,4 +1190,58 @@ static void r3d_pass_lit(void)
         r3d_shader_disable();
     }
     rlDisableFramebuffer();
+}
+
+void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf)
+{
+    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+        R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
+    );
+    rlDisableFramebuffer();
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, R3D.framebuffer.post.id);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fb);
+
+    glReadBuffer(srcBuf);
+    glDrawBuffer(dstBuf);
+
+    glBlitFramebuffer(
+        0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
+        0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
+        GL_COLOR_BUFFER_BIT, GL_NEAREST
+    );
+
+    R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
+}
+
+void r3d_pass_post_bloom(void)
+{
+
+}
+
+void r3d_pass_post_fog(void)
+{
+
+}
+
+void r3d_pass_post_tonemap(void)
+{
+
+}
+
+void r3d_pass_post_adjustment(void)
+{
+
+}
+
+void r3d_pass_post_fxaa(void)
+{
+
+}
+
+void r3d_pass_final_blit(void)
+{
+
 }

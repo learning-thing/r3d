@@ -57,7 +57,7 @@ extern struct R3D_State {
         struct r3d_fb_pingpong_ssao_t {
             unsigned int id;
             unsigned int textures[2];
-            bool targetTextureIdx;
+            bool targetTexIdx;
         } pingPongSSAO;
 
         // Lit scene
@@ -71,13 +71,14 @@ extern struct R3D_State {
         struct r3d_fb_pingpong_bloom_t {
             unsigned int id;
             unsigned int textures[2];
-            bool targetTextureIdx;
+            bool targetTexIdx;
         } pingPongBloom;
 
         // Post-processing buffer (similar to ping-pong but with a different setup)  
         struct r3d_fb_post_t {
             unsigned int id;
             unsigned int textures[2];
+            bool targetTexIdx;
         } post;
 
         // Custom target (optional)

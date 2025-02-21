@@ -124,7 +124,7 @@ void r3d_framebuffer_load_pingpong_ssao(int width, int height)
     }
 
     // Internal data setup
-    ssao->targetTextureIdx = 0;
+    ssao->targetTexIdx = 0;
 }
 
 void r3d_framebuffer_load_lit(int width, int height)
@@ -203,7 +203,7 @@ void r3d_framebuffer_load_pingpong_bloom(int width, int height)
     }
 
     // Internal data setup
-    bloom->targetTextureIdx = 0;
+    bloom->targetTexIdx = 0;
 }
 
 void r3d_framebuffer_load_post(int width, int height)
@@ -231,6 +231,9 @@ void r3d_framebuffer_load_post(int width, int height)
     if (!rlFramebufferComplete(post->id)) {
         TraceLog(LOG_WARNING, "Framebuffer is not complete");
     }
+
+    // Internal data setup
+    post->targetTexIdx = 0;
 }
 
 void r3d_framebuffer_unload_gbuffer(void)
