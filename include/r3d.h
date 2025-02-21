@@ -175,6 +175,8 @@ void R3D_UpdateShadowMap(R3D_Light id);
 float R3D_GetShadowBias(R3D_Light id);
 void R3D_SetShadowBias(R3D_Light id, float value);
 
+void R3D_DrawLightShape(R3D_Light id);
+
 
 /* === Environment functions === */
 
