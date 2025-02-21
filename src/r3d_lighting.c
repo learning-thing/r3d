@@ -328,3 +328,30 @@ void R3D_SetShadowBias(R3D_Light id, float value)
     r3d_get_and_check_light(light, id);
     light->shadow.bias = value;
 }
+
+void R3D_DrawLightShape(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id);
+
+    if (light->type == R3D_LIGHT_DIR) {
+        return;
+    }
+
+    Color color = {
+        (unsigned char)(light->color.x * 255),
+        (unsigned char)(light->color.y * 255),
+        (unsigned char)(light->color.z * 255),
+        100
+    };
+
+    DrawSphereEx(light->position, 0.1f, 4, 8, color);
+
+    if (light->type == R3D_LIGHT_SPOT) {
+        float radius = fabsf(light->range * light->outerCutOff);
+        Vector3 basePos = Vector3Add(light->position, Vector3Scale(R3D_GetLightDirection(1), light->range));
+        DrawCylinderWiresEx(light->position, basePos, 0.01f, radius, 8, color);
+    }
+    else if (light->type == R3D_LIGHT_OMNI) {
+        DrawSphereWires(light->position, light->range, 2, 4, color);
+    }
+}
