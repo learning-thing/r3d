@@ -9,6 +9,7 @@ function(add_example example_name source_file)
 endfunction()
 
 add_example(r3d_basic "examples/basic.c")
+add_example(r3d_lights "examples/lights.c")
 add_example(r3d_pbr "examples/pbr.c")
 add_example(r3d_skybox "examples/skybox.c")
 add_example(r3d_sponza "examples/sponza.c")
