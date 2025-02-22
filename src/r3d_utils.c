@@ -229,7 +229,7 @@ void R3D_DrawBufferSSAO(float x, float y, float w, float h)
 void R3D_DrawBufferBrightColors(float x, float y, float w, float h)
 {
     Texture2D tex = {
-        .id = R3D.framebuffer.lit.bright,
+        .id = R3D.framebuffer.scene.bright,
         .width = R3D.state.resolution.width,
         .height = R3D.state.resolution.height
     };

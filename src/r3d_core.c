@@ -41,13 +41,23 @@
 static void r3d_framebuffers_load(int width, int height);
 static void r3d_framebuffers_unload(void);
 
+static void r3d_gbuffer_enable_stencil_write(void);
+static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry);
+static void r3d_gbuffer_disable_stencil(void);
+
 static void r3d_prepass_sort_drawcalls(void);
 static void r3d_prepass_process_lights_and_batch(void);
 
 static void r3d_pass_shadow_maps(void);
 static void r3d_pass_gbuffer(void);
 static void r3d_pass_ssao(void);
-static void r3d_pass_lit(void);
+
+static void r3d_pass_lit_env(void);
+static void r3d_pass_lit_obj(void);
+
+static void r3d_pass_scene_deferred(void);
+static void r3d_pass_scene_background(void);
+static void r3d_pass_scene_forward(void);
 
 static void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf);
 static void r3d_pass_post_bloom(void);
@@ -94,12 +104,15 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Load screen shaders
     r3d_shader_load_screen_ssao();
+    r3d_shader_load_screen_ibl();
     r3d_shader_load_screen_lighting();
+    r3d_shader_load_screen_scene();
     r3d_shader_load_screen_bloom();
     r3d_shader_load_screen_fog();
     r3d_shader_load_screen_tonemap();
     r3d_shader_load_screen_adjustment();
     r3d_shader_load_screen_fxaa();
+    r3d_shader_load_screen_color();
 
     // Environment data
     R3D.env.backgroundColor = (Vector3) { 0.2f, 0.2f, 0.2f };
@@ -191,6 +204,7 @@ void R3D_Close(void)
     rlUnloadShaderProgram(R3D.shader.screen.tonemap.id);
     rlUnloadShaderProgram(R3D.shader.screen.adjustment.id);
     rlUnloadShaderProgram(R3D.shader.screen.fxaa.id);
+    rlUnloadShaderProgram(R3D.shader.screen.color.id);
 
     rlUnloadTexture(R3D.texture.white);
     rlUnloadTexture(R3D.texture.black);
@@ -336,10 +350,13 @@ void R3D_End(void)
         r3d_pass_ssao();
     }
 
-    r3d_pass_lit();
+    r3d_pass_lit_env();
+    r3d_pass_lit_obj();
+    r3d_pass_scene_deferred();
+    r3d_pass_scene_background();
 
     r3d_pass_post_init(
-        R3D.framebuffer.lit.id,
+        R3D.framebuffer.scene.id,
         GL_COLOR_ATTACHMENT0,
         GL_COLOR_ATTACHMENT0
     );
@@ -444,7 +461,9 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
 void r3d_framebuffers_load(int width, int height)
 {
     r3d_framebuffer_load_gbuffer(width, height);
-    r3d_framebuffer_load_lit(width, height);
+    r3d_framebuffer_load_lit_env(width, height);
+    r3d_framebuffer_load_lit_obj(width, height);
+    r3d_framebuffer_load_scene(width, height);
     r3d_framebuffer_load_post(width, height);
 
     if (R3D.env.ssaoEnabled) {
@@ -459,7 +478,9 @@ void r3d_framebuffers_load(int width, int height)
 void r3d_framebuffers_unload(void)
 {
     r3d_framebuffer_unload_gbuffer();
-    r3d_framebuffer_unload_lit();
+    r3d_framebuffer_unload_lit_env();
+    r3d_framebuffer_unload_lit_obj();
+    r3d_framebuffer_unload_scene();
     r3d_framebuffer_unload_post();
 
     if (R3D.framebuffer.pingPongSSAO.id != 0) {
@@ -469,6 +490,41 @@ void r3d_framebuffers_unload(void)
     if (R3D.framebuffer.pingPongBloom.id != 0) {
         r3d_framebuffer_unload_pingpong_bloom();
     }
+}
+
+static void r3d_gbuffer_enable_stencil_write(void)
+{
+    // Re-attach the depth/stencil buffer to the framebuffer
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+        GL_TEXTURE_2D, R3D.framebuffer.gBuffer.depth, 0
+    );
+
+    // Setup the stencil: write 1 everywhere where geometry exists
+    glEnable(GL_STENCIL_TEST);
+    glStencilMask(0xFF);                        // Permit writing to stencil buffer
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);          // Always pass the test, write 1
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  // Replace stencil value with 1
+}
+
+static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry)
+{
+    // Attach the depth/stencil texture of the G-Buffer
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+        GL_TEXTURE_2D, R3D.framebuffer.gBuffer.depth, 0
+    );
+
+    // Setup the stencil
+    glEnable(GL_STENCIL_TEST);
+    glStencilMask(0x00);                            // Disable writing to the stencil buffer
+    glStencilFunc(GL_EQUAL, passOnGeometry, 0xFF);  // Pass the test only when the value is 0 or 1 (void or geometry)
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);         // Do not modify the stencil buffer
+}
+
+static void r3d_gbuffer_disable_stencil(void)
+{
+    glDisable(GL_STENCIL_TEST);
 }
 
 void r3d_prepass_sort_drawcalls(void)
@@ -704,27 +760,22 @@ void r3d_pass_gbuffer(void)
     rlEnableFramebuffer(R3D.framebuffer.gBuffer.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlEnableBackfaceCulling();
         rlDisableColorBlend();
+        rlEnableDepthTest();
+        rlEnableDepthMask();
 
-        // Clear framebuffer
-        {
-            glClearBufferfv(GL_DEPTH, 0, (float[4]) {
-                FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX
-            });
+        // Enbale geometry stencil write
+        r3d_gbuffer_enable_stencil_write();
 
-            glClearBufferfv(GL_COLOR, 0, (float[4]) {
-                R3D.env.backgroundColor.x,
-                R3D.env.backgroundColor.y,
-                R3D.env.backgroundColor.z,
-                1.0f
-            });
-
-            glClearBufferfv(GL_COLOR, 1, (float[4]) { 0 });
-            glClearBufferfv(GL_COLOR, 2, (float[4]) { 0 });
-            glClearBufferfv(GL_COLOR, 3, (float[4]) { 0 });
-            glClearBufferfv(GL_COLOR, 4, (float[4]) { 0 });
-            glClearBufferfv(GL_COLOR, 5, (float[4]) { 0 });
-        }
+        // Clear the buffers independently
+        glClearStencil(0);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glClearBufferfv(GL_COLOR, 0, (float[4]) { 0.0f, 0.0f, 0.0f, 0.0f });
+        glClearBufferfv(GL_COLOR, 1, (float[4]) { 0.0f, 0.0f, 0.0f, 0.0f });
+        glClearBufferfv(GL_COLOR, 2, (float[4]) { 0.0f, 0.0f, 0.0f, 0.0f });
+        glClearBufferfv(GL_COLOR, 3, (float[4]) { 1.0f, 0.0f, 0.0f, 0.0f });
 
         // Setup projection matrix
         rlMatrixMode(RL_PROJECTION);
@@ -736,80 +787,20 @@ void r3d_pass_gbuffer(void)
         rlLoadIdentity();
         rlMultMatrixf(MatrixToFloat(R3D.state.transform.view));
 
-        // Render skybox - (albedo buffer only)
-        if (R3D.env.useSky)
+        // Draw geometry with the stencil buffer activated
+        r3d_shader_enable(raster.geometryInst);
         {
-            rlDisableBackfaceCulling();
-            rlActiveDrawBuffers(1);
-            rlDisableDepthMask();
-
-            r3d_shader_enable(raster.skybox);
-
-            Matrix matView = rlGetMatrixModelview();
-            Matrix matProj = rlGetMatrixProjection();
-
-            // Bind cubemap texture
-            r3d_shader_bind_samplerCube(raster.skybox, uCubeSky, R3D.env.sky.cubemap.id);
-
-            // Set skybox parameters
-            r3d_shader_set_vec4(raster.skybox, uRotation, R3D.env.quatSky);
-
-            // Try binding vertex array objects (VAO) or use VBOs if not possible
-            if (!rlEnableVertexArray(R3D.primitive.cube.vao)) {
-                rlEnableVertexBuffer(R3D.primitive.cube.vbo);
-                rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
-                rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
-                rlEnableVertexBufferElement(R3D.primitive.cube.ebo);
+            for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
+                r3d_drawcall_raster_geometry((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i);
             }
-
-            // Draw skybox (supporting stereo rendering)
-            if (rlIsStereoRenderEnabled()) {
-                for (int eye = 0; eye < 2; eye++) {
-                    rlViewport(eye * rlGetFramebufferWidth() / 2, 0, rlGetFramebufferWidth() / 2, rlGetFramebufferHeight());
-                    r3d_shader_set_mat4(raster.skybox, uMatView, MatrixMultiply(matView, rlGetMatrixViewOffsetStereo(eye)));
-                    r3d_shader_set_mat4(raster.skybox, uMatProj, rlGetMatrixProjectionStereo(eye));
-                    rlDrawVertexArrayElements(0, 36, 0);
-                }
-            }
-            else {
-                r3d_shader_set_mat4(raster.skybox, uMatView, matView);
-                r3d_shader_set_mat4(raster.skybox, uMatProj, matProj);
-                rlDrawVertexArrayElements(0, 36, 0);
-            }
-
-            // Unbind cubemap texture
-            r3d_shader_unbind_samplerCube(raster.skybox, uCubeSky);
-
-            // Disable all possible vertex array objects (or VBOs)
-            rlDisableVertexArray();
-            rlDisableVertexBuffer();
-            rlDisableVertexBufferElement();
-
-            // Disable shader program
-            r3d_shader_disable();
         }
-
-        // Render meshes
+        r3d_shader_enable(raster.geometry);
         {
-            rlActiveDrawBuffers(R3D_GBUFFER_COUNT);
-            rlEnableBackfaceCulling();
-            rlEnableDepthMask();
-            rlEnableDepthTest();
-
-            r3d_shader_enable(raster.geometryInst);
-            {
-                for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
-                    r3d_drawcall_raster_geometry((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i);
-                }
+            for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
+                r3d_drawcall_raster_geometry((r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i);
             }
-            r3d_shader_enable(raster.geometry);
-            {
-                for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
-                    r3d_drawcall_raster_geometry((r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i);
-                }
-            }
-            r3d_shader_disable();
         }
+        r3d_shader_disable();
 
         // Reset projection matrix
         rlMatrixMode(RL_PROJECTION);
@@ -828,6 +819,9 @@ void r3d_pass_ssao(void)
         rlViewport(0, 0, R3D.state.resolution.width / 2, R3D.state.resolution.height / 2);
         rlDisableColorBlend();
         rlDisableDepthTest();
+
+        // Enable gbuffer stencil test (render on geometry)
+        r3d_gbuffer_enable_stencil_test(true);
 
         // Bind first SSAO output texture
         glFramebufferTexture2D(
@@ -897,8 +891,315 @@ void r3d_pass_ssao(void)
     }
 }
 
-static void r3d_pass_lit(void)
+void r3d_pass_lit_env(void)
 {
+    rlEnableFramebuffer(R3D.framebuffer.litEnv.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
+        rlDisableDepthTest();
+        rlDisableDepthMask();
+
+        // Enable gbuffer stencil test (render on geometry)
+        r3d_gbuffer_enable_stencil_test(true);
+
+        if (R3D.env.useSky)
+        {
+            rlActiveDrawBuffers(2);
+
+            // Compute skybox IBL
+            r3d_shader_enable(screen.ibl);
+            {
+                r3d_shader_bind_sampler2D(screen.ibl, uTexAlbedo, R3D.framebuffer.gBuffer.albedo);
+                r3d_shader_bind_sampler2D(screen.ibl, uTexNormal, R3D.framebuffer.gBuffer.normal);
+                r3d_shader_bind_sampler2D(screen.ibl, uTexDepth, R3D.framebuffer.gBuffer.depth);
+                r3d_shader_bind_sampler2D(screen.ibl, uTexORM, R3D.framebuffer.gBuffer.orm);
+
+                r3d_shader_bind_samplerCube(screen.ibl, uCubeIrradiance, R3D.env.sky.irradiance.id);
+                r3d_shader_bind_samplerCube(screen.ibl, uCubePrefilter, R3D.env.sky.prefilter.id);
+                r3d_shader_bind_sampler2D(screen.ibl, uTexBrdfLut, R3D.texture.iblBrdfLut);
+
+                r3d_shader_set_vec3(screen.ibl, uViewPosition, R3D.state.transform.position);
+                r3d_shader_set_mat4(screen.ibl, uMatInvProj, R3D.state.transform.invProj);
+                r3d_shader_set_mat4(screen.ibl, uMatInvView, R3D.state.transform.invView);
+                r3d_shader_set_vec4(screen.ibl, uQuatSkybox, R3D.env.quatSky);
+
+                r3d_primitive_draw_quad();
+
+                r3d_shader_unbind_sampler2D(screen.ibl, uTexAlbedo);
+                r3d_shader_unbind_sampler2D(screen.ibl, uTexNormal);
+                r3d_shader_unbind_sampler2D(screen.ibl, uTexDepth);
+                r3d_shader_unbind_sampler2D(screen.ibl, uTexORM);
+
+                r3d_shader_unbind_samplerCube(screen.ibl, uCubeIrradiance);
+                r3d_shader_unbind_samplerCube(screen.ibl, uCubePrefilter);
+                r3d_shader_unbind_sampler2D(screen.ibl, uTexBrdfLut);
+            }
+            r3d_shader_disable();
+        }
+        // If no skybox is set, we simply render the background and the ambient tint of the meshes.
+        else
+        {
+            glClearBufferfv(GL_COLOR, 1, (float[4]) { 0.0f, 0.0f, 0.0f, 0.0f });
+
+            rlActiveDrawBuffers(1);
+
+            r3d_shader_enable(screen.color);
+            {
+                r3d_shader_set_vec4(screen.color, uColor, ((Vector4) {
+                    R3D.env.ambientColor.x,
+                    R3D.env.ambientColor.y,
+                    R3D.env.ambientColor.z,
+                    0.0f
+                }));
+
+                r3d_primitive_draw_quad();
+            }
+            r3d_shader_disable();
+        }
+    }
+}
+
+void r3d_pass_lit_obj(void)
+{
+    rlEnableFramebuffer(R3D.framebuffer.litObj.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlClearScreenBuffers();
+        rlDisableDepthTest();
+
+        rlEnableColorBlend();
+        rlSetBlendMode(RL_BLEND_ADDITIVE);
+
+        // Enable gbuffer stencil test (render on geometry)
+        r3d_gbuffer_enable_stencil_test(true);
+
+        r3d_shader_enable(screen.lighting);
+        {
+            r3d_shader_set_mat4(screen.lighting, uMatInvProj, R3D.state.transform.invProj);
+            r3d_shader_set_mat4(screen.lighting, uMatInvView, R3D.state.transform.invView);
+            r3d_shader_set_vec3(screen.lighting, uViewPosition, R3D.state.transform.position);
+
+            r3d_shader_bind_sampler2D(screen.lighting, uTexAlbedo, R3D.framebuffer.gBuffer.albedo);
+            r3d_shader_bind_sampler2D(screen.lighting, uTexNormal, R3D.framebuffer.gBuffer.normal);
+            r3d_shader_bind_sampler2D(screen.lighting, uTexDepth, R3D.framebuffer.gBuffer.depth);
+            r3d_shader_bind_sampler2D(screen.lighting, uTexORM, R3D.framebuffer.gBuffer.orm);
+
+            for (int i = 0; i < R3D.container.aLightBatch.count; i++) {
+                r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
+
+                // Send common data
+                r3d_shader_set_vec3(screen.lighting, uLight.color, light->data->color);
+                r3d_shader_set_float(screen.lighting, uLight.energy, light->data->energy);
+                r3d_shader_set_int(screen.lighting, uLight.type, light->data->type);
+
+                // Send specific data
+                if (light->data->type == R3D_LIGHT_DIR) {
+                    r3d_shader_set_vec3(screen.lighting, uLight.direction, light->data->direction);
+                }
+                else if (light->data->type == R3D_LIGHT_SPOT) {
+                    r3d_shader_set_vec3(screen.lighting, uLight.position, light->data->position);
+                    r3d_shader_set_vec3(screen.lighting, uLight.direction, light->data->direction);
+                    r3d_shader_set_float(screen.lighting, uLight.range, light->data->range);
+                    r3d_shader_set_float(screen.lighting, uLight.attenuation, light->data->attenuation);
+                    r3d_shader_set_float(screen.lighting, uLight.innerCutOff, light->data->innerCutOff);
+                    r3d_shader_set_float(screen.lighting, uLight.outerCutOff, light->data->outerCutOff);
+                }
+                else if (light->data->type == R3D_LIGHT_OMNI) {
+                    r3d_shader_set_vec3(screen.lighting, uLight.position, light->data->position);
+                    r3d_shader_set_float(screen.lighting, uLight.range, light->data->range);
+                    r3d_shader_set_float(screen.lighting, uLight.attenuation, light->data->attenuation);
+                }
+
+                // Send shadow map data
+                if (light->data->shadow.enabled) {
+                    if (light->data->type == R3D_LIGHT_OMNI) {
+                        r3d_shader_bind_samplerCube(screen.lighting, uLight.shadowCubemap, light->data->shadow.map.color);
+                    }
+                    else {
+                        r3d_shader_set_float(screen.lighting, uLight.shadowMapTxlSz, light->data->shadow.map.texelSize);
+                        r3d_shader_bind_sampler2D(screen.lighting, uLight.shadowMap, light->data->shadow.map.depth);
+                        r3d_shader_set_mat4(screen.lighting, uLight.matViewProj, light->data->shadow.matViewProj);
+                    }
+                    r3d_shader_set_float(screen.lighting, uLight.shadowBias, light->data->shadow.bias);
+                    r3d_shader_set_int(screen.lighting, uLight.shadow, true);
+                }
+                else {
+                    r3d_shader_set_int(screen.lighting, uLight.shadow, false);
+                }
+
+                //if (light->data->type != R3D_LIGHT_DIR) {
+                //    glEnable(GL_SCISSOR_TEST);
+                //    glScissor(
+                //        light->dstRect.x, light->dstRect.y,
+                //        light->dstRect.width, light->dstRect.height
+                //    );
+                //}
+
+                r3d_primitive_draw_quad();
+
+                //if (light->data->type != R3D_LIGHT_DIR) {
+                //    glDisable(GL_SCISSOR_TEST);
+                //}
+            }
+
+            r3d_shader_unbind_sampler2D(screen.lighting, uTexAlbedo);
+            r3d_shader_unbind_sampler2D(screen.lighting, uTexNormal);
+            r3d_shader_unbind_sampler2D(screen.lighting, uTexDepth);
+            r3d_shader_unbind_sampler2D(screen.lighting, uTexORM);
+
+            r3d_shader_unbind_samplerCube(screen.lighting, uLight.shadowCubemap);
+            r3d_shader_unbind_sampler2D(screen.lighting, uLight.shadowMap);
+        }
+        r3d_shader_disable();
+    }
+}
+
+void r3d_pass_scene_deferred(void)
+{
+    rlEnableFramebuffer(R3D.framebuffer.scene.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
+        rlDisableDepthTest();
+
+        // Enable gbuffer stencil test (render on geometry)
+        r3d_gbuffer_enable_stencil_test(true);
+
+        r3d_shader_enable(screen.scene);
+        {
+            r3d_shader_set_float(screen.scene, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
+
+            r3d_shader_bind_sampler2D(screen.scene, uTexEnvAmbient, R3D.framebuffer.litEnv.ambient);
+            r3d_shader_bind_sampler2D(screen.scene, uTexEnvSpecular, R3D.framebuffer.litEnv.specular);
+            r3d_shader_bind_sampler2D(screen.scene, uTexObjDiffuse, R3D.framebuffer.litObj.diffuse);
+            r3d_shader_bind_sampler2D(screen.scene, uTexObjSpecular, R3D.framebuffer.litObj.specular);
+            if (R3D.env.ssaoEnabled) {
+                r3d_shader_bind_sampler2D(screen.scene, uTexSSAO,
+                    R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTexIdx]
+                );
+            }
+            else {
+                r3d_shader_bind_sampler2D(screen.scene, uTexSSAO, R3D.texture.white);
+            }
+            r3d_shader_bind_sampler2D(screen.scene, uTexAlbedo, R3D.framebuffer.gBuffer.albedo);
+            r3d_shader_bind_sampler2D(screen.scene, uTexEmission, R3D.framebuffer.gBuffer.emission);
+
+            r3d_primitive_draw_quad();
+
+            r3d_shader_unbind_sampler2D(screen.scene, uTexEnvAmbient);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexEnvSpecular);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexObjDiffuse);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexObjSpecular);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexSSAO);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexAlbedo);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexEmission);
+        }
+        r3d_shader_disable();
+    }
+}
+
+void r3d_pass_scene_background(void)
+{
+    rlEnableFramebuffer(R3D.framebuffer.scene.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlDisableColorBlend();
+        rlDisableDepthTest();
+
+        // Enable gbuffer stencil test (render in void)
+        r3d_gbuffer_enable_stencil_test(false);
+
+        if (R3D.env.useSky)
+        {
+            // Setup projection matrix
+            rlMatrixMode(RL_PROJECTION);
+            rlPushMatrix();
+            rlSetMatrixProjection(R3D.state.transform.proj);
+
+            // Setup view matrix
+            rlMatrixMode(RL_MODELVIEW);
+            rlLoadIdentity();
+            rlMultMatrixf(MatrixToFloat(R3D.state.transform.view));
+
+            // Skybox specific setup
+            rlActiveDrawBuffers(1);         // Draw only in the Buffer 'Ambient'
+            rlDisableBackfaceCulling();     // Disable backface culling to render the cube from the inside
+
+            // Render skybox
+            r3d_shader_enable(raster.skybox);
+            {
+                Matrix matView = rlGetMatrixModelview();
+                Matrix matProj = rlGetMatrixProjection();
+
+                // Bind cubemap texture
+                r3d_shader_bind_samplerCube(raster.skybox, uCubeSky, R3D.env.sky.cubemap.id);
+
+                // Set skybox parameters
+                r3d_shader_set_vec4(raster.skybox, uRotation, R3D.env.quatSky);
+
+                // Try binding vertex array objects (VAO) or use VBOs if not possible
+                if (!rlEnableVertexArray(R3D.primitive.cube.vao)) {
+                    rlEnableVertexBuffer(R3D.primitive.cube.vbo);
+                    rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
+                    rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
+                    rlEnableVertexBufferElement(R3D.primitive.cube.ebo);
+                }
+
+                // Draw skybox (supporting stereo rendering)
+                if (rlIsStereoRenderEnabled()) {
+                    for (int eye = 0; eye < 2; eye++) {
+                        rlViewport(eye * rlGetFramebufferWidth() / 2, 0, rlGetFramebufferWidth() / 2, rlGetFramebufferHeight());
+                        r3d_shader_set_mat4(raster.skybox, uMatView, MatrixMultiply(matView, rlGetMatrixViewOffsetStereo(eye)));
+                        r3d_shader_set_mat4(raster.skybox, uMatProj, rlGetMatrixProjectionStereo(eye));
+                        rlDrawVertexArrayElements(0, 36, 0);
+                    }
+                }
+                else {
+                    r3d_shader_set_mat4(raster.skybox, uMatView, matView);
+                    r3d_shader_set_mat4(raster.skybox, uMatProj, matProj);
+                    rlDrawVertexArrayElements(0, 36, 0);
+                }
+
+                // Unbind cubemap texture
+                r3d_shader_unbind_samplerCube(raster.skybox, uCubeSky);
+
+                // Disable all possible vertex array objects (or VBOs)
+                rlDisableVertexArray();
+                rlDisableVertexBuffer();
+                rlDisableVertexBufferElement();
+            }
+            r3d_shader_disable();
+
+            // Reset projection matrix
+            rlMatrixMode(RL_PROJECTION);
+            rlPopMatrix();
+
+            // Reset view matrix
+            rlMatrixMode(RL_MODELVIEW);
+            rlLoadIdentity();
+        }
+        else
+        {
+            r3d_shader_enable(screen.color);
+            {
+                r3d_shader_set_vec4(screen.color, uColor, ((Vector4) {
+                    R3D.env.backgroundColor.x,
+                    R3D.env.backgroundColor.y,
+                    R3D.env.backgroundColor.z,
+                    0.0f
+                }));
+
+                r3d_primitive_draw_quad();
+            }
+            r3d_shader_disable();
+        }
+    }
+}
+
+void r3d_pass_scene_forward(void)
+{
+    /*
     rlEnableFramebuffer(R3D.framebuffer.lit.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
@@ -1018,10 +1319,13 @@ static void r3d_pass_lit(void)
         }
         r3d_shader_disable();
     }
+    */
 }
 
 void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf)
 {
+    r3d_gbuffer_disable_stencil();
+
     rlEnableFramebuffer(R3D.framebuffer.post.id);
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
@@ -1071,7 +1375,7 @@ void r3d_pass_post_bloom(void)
                 );
                 r3d_shader_bind_sampler2D(generate.gaussianBlurDualPass, uTexture, i > 0
                     ? R3D.framebuffer.pingPongBloom.textures[!(*horizontalPass)]
-                    : R3D.framebuffer.lit.bright
+                    : R3D.framebuffer.scene.bright
                 );
                 r3d_primitive_draw_quad();
             }
@@ -1290,6 +1594,7 @@ void r3d_reset_raylib_state(void)
 
     rlViewport(0, 0, GetRenderWidth(), GetRenderHeight());
     rlSetBlendMode(RL_BLEND_ALPHA);
+    rlEnableBackfaceCulling();
     rlEnableColorBlend();
     rlDisableDepthTest();
 }

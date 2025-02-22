@@ -23,8 +23,6 @@
 
 #define PI 3.1415926535897932384626433832795028
 
-#define NUM_LIGHTS  8
-
 #define DIRLIGHT    0
 #define SPOTLIGHT   1
 #define OMNILIGHT   2
@@ -47,7 +45,6 @@ struct Light
     float shadowMapTxlSz;
     float shadowBias;
     lowp int type;
-    bool enabled;
     bool shadow;
 };
 
@@ -58,30 +55,20 @@ noperspective in vec2 vTexCoord;
 /* === Uniforms === */
 
 uniform sampler2D uTexAlbedo;
-uniform sampler2D uTexEmission;
 uniform sampler2D uTexNormal;
 uniform sampler2D uTexDepth;
-uniform sampler2D uTexSSAO;
 uniform sampler2D uTexORM;
 
-uniform vec3 uColAmbient;
+uniform Light uLight;
 
-uniform samplerCube uCubeIrradiance;
-uniform samplerCube uCubePrefilter;
-uniform sampler2D uTexBrdfLut;
-uniform vec4 uQuatSkybox;
-uniform bool uHasSkybox;
-
-uniform Light uLights[NUM_LIGHTS];
-uniform float uBloomHdrThreshold;
 uniform vec3 uViewPosition;
 uniform mat4 uMatInvProj;
 uniform mat4 uMatInvView;
 
 /* === Fragments === */
 
-layout(location = 0) out vec4 FragColor;
-layout(location = 1) out vec4 FragBrightness;
+layout(location = 0) out vec4 FragDiffuse;
+layout(location = 1) out vec4 FragSpecular;
 
 /* === PBR functions === */
 
@@ -121,16 +108,16 @@ vec3 ComputeF0(float metallic, float specular, vec3 albedo)
 
 /* === Shadow functions === */
 
-float ShadowOmni(int i, vec3 position, float cNdotL)
+float ShadowOmni(vec3 position, float cNdotL)
 {
     // Calculate the direction vector from the light to the fragment
-    vec3 lightToFrag = position - uLights[i].position;
+    vec3 lightToFrag = position - uLight.position;
     
     // Calculate the current depth, which is the distance from the light to the fragment
     float currentDepth = length(lightToFrag);
     
     // Compute the bias to reduce shadow acne, considering the angle of the surface normal
-    float bias = uLights[i].shadowBias * max(1.0 - cNdotL, 0.05);
+    float bias = uLight.shadowBias * max(1.0 - cNdotL, 0.05);
 
     // Normalize the light-to-fragment vector to get the sampling direction
     vec3 sampleDir = normalize(lightToFrag);
@@ -168,7 +155,7 @@ float ShadowOmni(int i, vec3 position, float cNdotL)
             vec3 sampleVec = lightToFrag + offset;
             
             // Retrieve the closest depth value from the shadow cubemap for the sample position
-            float closestDepth = texture(uLights[i].shadowCubemap, sampleVec).r;
+            float closestDepth = texture(uLight.shadowCubemap, sampleVec).r;
             
             // Compare the fragment's depth to the closest depth in the shadow map
             // The step function returns 1.0 if the fragment is in shadow, 0.0 otherwise
@@ -180,11 +167,11 @@ float ShadowOmni(int i, vec3 position, float cNdotL)
     return 1.0 - (shadow / SAMPLES);
 }
 
-float Shadow(int i, vec3 position, float cNdotL)
+float Shadow(vec3 position, float cNdotL)
 {
     // Transform the world-space position into light-space using the shadow projection matrix
-    vec4 p = uLights[i].matViewProj * vec4(position, 1.0);
-    
+    vec4 p = uLight.matViewProj * vec4(position, 1.0);
+
     // Convert from homogeneous clip space to normalized device coordinates (NDC)
     vec3 projCoords = p.xyz / p.w;
     
@@ -199,7 +186,7 @@ float Shadow(int i, vec3 position, float cNdotL)
         return 1.0;
 
     // Compute the bias to reduce shadow acne (self-shadowing artifacts)
-    float bias = max(uLights[i].shadowBias * (1.0 - cNdotL), 0.00002) + 0.00001;
+    float bias = max(uLight.shadowBias * (1.0 - cNdotL), 0.00002) + 0.00001;
     
     // Apply the bias to the depth value
     projCoords.z -= bias;
@@ -234,7 +221,7 @@ float Shadow(int i, vec3 position, float cNdotL)
             vec2 offset = tangent.xy * xOffset + bitangent.xy * yOffset;
             
             // Retrieve the closest depth value from the shadow map
-            float closestDepth = texture(uLights[i].shadowMap, projCoords.xy + offset).r;
+            float closestDepth = texture(uLight.shadowMap, projCoords.xy + offset).r;
             
             // Compare depth values: if the current fragment is in shadow, add to shadow factor
             shadow += step(projCoords.z, closestDepth);
@@ -281,31 +268,14 @@ vec3 RotateWithQuat(vec3 v, vec4 q)
     return v + q.w * t + cross(q.xyz, t);
 }
 
-float GetBrightness(vec3 color)
-{
-    return length(color);
-}
 
 /* === Main === */
 
 void main()
 {
-    vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
-
-    /* Sample the normal and return immediately if it is null */
-
-    vec2 eN = texture(uTexNormal, vTexCoord).rg;
-
-    if (eN.x == 0.0 && eN.y == 0.0) {
-        FragColor = vec4(albedo, 1.0);
-        FragBrightness = vec4(0.0);
-        return;
-    }
-
-    vec3 N = DecodeOctahedral(eN);
-
     /* Sample albedo and ORM texture and extract values */
     
+    vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
     vec3 orm = texture(uTexORM, vTexCoord).rgb;
     float occlusion = orm.r;
     float roughness = orm.g;
@@ -320,6 +290,10 @@ void main()
     float depth = texture(uTexDepth, vTexCoord).r;
     vec3 position = GetPositionFromDepth(depth);
 
+    /* Sample and decode normal in world space */
+
+    vec3 N = DecodeOctahedral(texture(uTexNormal, vTexCoord).rg);
+
     /* Compute view direction and the dot product of the normal and view direction */
     
     vec3 V = normalize(uViewPosition - position);
@@ -327,164 +301,92 @@ void main()
     float NdotV = dot(N, V);
     float cNdotV = max(NdotV, 1e-4); // Clamped to avoid division by zero
 
-    /* Loop through all light sources accumulating diffuse and specular light */
+    /* Compute light direction and the dot product of the normal and light direction */
+
+    vec3 L = (uLight.type == DIRLIGHT) ? -uLight.direction : normalize(uLight.position - position);
+
+    float NdotL = max(dot(N, L), 0.0);
+    float cNdotL = min(NdotL, 1.0); // Clamped to avoid division by zero
+
+    /* Compute the halfway vector between the view and light directions */
+
+    vec3 H = normalize(V + L);
+
+    float LdotH = max(dot(L, H), 0.0);
+    float cLdotH = min(dot(L, H), 1.0);
+
+    float NdotH = max(dot(N, H), 0.0);
+    float cNdotH = min(NdotH, 1.0);
+
+    /* Compute light color energy */
+
+    vec3 lightColE = uLight.color * uLight.energy;
+
+    /* Compute diffuse lighting */
 
     vec3 diffuse = vec3(0.0);
+
+    if (metalness < 1.0)
+    {
+        float FD90_minus_1 = 2.0 * cLdotH * cLdotH * roughness - 0.5;
+        float FdV = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotV);
+        float FdL = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotL);
+
+        float diffBRDF = (1.0 / PI) * (FdV * FdL * cNdotL);
+        diffuse = diffBRDF * lightColE;
+    }
+
+    /* Compute specular lighting */
+
+    // NOTE: When roughness is 0, specular light should not be entirely disabled.
+    // TODO: Handle perfect mirror reflection when roughness is 0.
+
     vec3 specular = vec3(0.0);
 
-    for (int i = 0; i < NUM_LIGHTS; i++)
+    if (roughness > 0.0)
     {
-        if (uLights[i].enabled)
-        {
-            /* Compute light direction */
+        float alphaGGX = roughness * roughness;
+        float D = DistributionGGX(cNdotH, alphaGGX);
+        float G = GeometryGGX(cNdotL, cNdotV, alphaGGX);
 
-            vec3 L = vec3(0.0);
-            if (uLights[i].type == DIRLIGHT) L = -uLights[i].direction;
-            else L = normalize(uLights[i].position - position);
+        float cLdotH5 = SchlickFresnel(cLdotH);
+        float F90 = clamp(50.0 * F0.g, 0.0, 1.0);
+        vec3 F = F0 + (F90 - F0) * cLdotH5;
 
-            /* Compute the dot product of the normal and light direction */
-
-            float NdotL = max(dot(N, L), 0.0);
-            float cNdotL = min(NdotL, 1.0); // clamped NdotL
-
-            /* Compute the halfway vector between the view and light directions */
-
-            vec3 H = normalize(V + L);
-
-            float LdotH = max(dot(L, H), 0.0);
-            float cLdotH = min(dot(L, H), 1.0);
-
-            float NdotH = max(dot(N, H), 0.0);
-            float cNdotH = min(NdotH, 1.0);
-
-            /* Compute light color energy */
-
-            vec3 lightColE = uLights[i].color * uLights[i].energy;
-
-            /* Compute diffuse lighting */
-
-            vec3 diffLight = vec3(0.0);
-
-            if (metalness < 1.0)
-            {
-                float FD90_minus_1 = 2.0 * cLdotH * cLdotH * roughness - 0.5;
-                float FdV = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotV);
-                float FdL = 1.0 + FD90_minus_1 * SchlickFresnel(cNdotL);
-
-                float diffBRDF = (1.0 / PI) * (FdV * FdL * cNdotL);
-                diffLight = diffBRDF * lightColE;
-            }
-
-            /* Compute specular lighting */
-
-            vec3 specLight = vec3(0.0);
-
-            // NOTE: When roughness is 0, specular light should not be entirely disabled.
-            // TODO: Handle perfect mirror reflection when roughness is 0.
-
-            if (roughness > 0.0)
-            {
-                float alphaGGX = roughness * roughness;
-                float D = DistributionGGX(cNdotH, alphaGGX);
-                float G = GeometryGGX(cNdotL, cNdotV, alphaGGX);
-
-                float cLdotH5 = SchlickFresnel(cLdotH);
-                float F90 = clamp(50.0 * F0.g, 0.0, 1.0);
-                vec3 F = F0 + (F90 - F0) * cLdotH5;
-
-                vec3 specBRDF = cNdotL * D * F * G;
-                specLight = specBRDF * lightColE; // (specLight) * uLights[i].specular
-            }
-
-            /* Apply shadow factor if the light casts shadows */
-
-            float shadow = 1.0;
-            if (uLights[i].shadow)
-            {
-                if (uLights[i].type != OMNILIGHT) shadow = Shadow(i, position, cNdotL);
-                else shadow = ShadowOmni(i, position, cNdotL);
-            }
-
-            /* Apply attenuation based on the distance from the light */
-
-            if (uLights[i].type != DIRLIGHT)
-            {
-                float dist = length(uLights[i].position - position);
-                float atten = 1.0 - clamp(dist / uLights[i].range, 0.0, 1.0);
-                shadow *= atten * uLights[i].attenuation;
-            }
-
-            /* Apply spotlight effect if the light is a spotlight */
-
-            if (uLights[i].type == SPOTLIGHT)
-            {
-                float theta = dot(L, -uLights[i].direction);
-                float epsilon = (uLights[i].innerCutOff - uLights[i].outerCutOff);
-                shadow *= smoothstep(0.0, 1.0, (theta - uLights[i].outerCutOff) / epsilon);
-            }
-
-            /* Accumulate the diffuse and specular lighting contributions */
-
-            diffuse += diffLight * shadow;
-            specular += specLight * shadow;
-        }
+        vec3 specBRDF = cNdotL * D * F * G;
+        specular = specBRDF * lightColE; // * uLight.specular
     }
 
-    /* Compute ambient - (IBL diffuse) */
+    /* Apply shadow factor in addition to the SSAO if the light casts shadows */
 
-    vec3 ambient = uColAmbient;
+    float shadow = occlusion;
 
-    if (uHasSkybox)
+    if (uLight.shadow)
     {
-        vec3 kS = F0 + (1.0 - F0) * SchlickFresnel(cNdotV);
-        vec3 kD = (1.0 - kS) * (1.0 - metalness);
-
-        vec3 Nr = RotateWithQuat(N, uQuatSkybox);
-
-        ambient = kD * texture(uCubeIrradiance, Nr).rgb;
+        if (uLight.type != OMNILIGHT) shadow = Shadow(position, cNdotL);
+        else shadow = ShadowOmni(position, cNdotL);
     }
 
-    /* Compute ambient occlusion - (from ORM / SSAO) */
+    /* Apply attenuation based on the distance from the light */
 
-    float ssao = texture(uTexSSAO, vTexCoord).r;
-    ambient *= occlusion * ssao;
-
-    // Light affect should be material-specific
-    //float lightAffect = mix(1.0, ao, uValAOLightAffect);
-    //specular *= lightAffect;
-    //diffuse *= lightAffect;
-
-    /* Skybox reflection - (IBL specular) */
-
-    if (uHasSkybox)
+    if (uLight.type != DIRLIGHT)
     {
-        vec3 R = RotateWithQuat(reflect(-V, N), uQuatSkybox);
-
-        const float MAX_REFLECTION_LOD = 7.0;
-        vec3 prefilteredColor = textureLod(uCubePrefilter, R, roughness * MAX_REFLECTION_LOD).rgb;
-
-        float fresnelTerm = SchlickFresnel(cNdotV);
-        vec3 F = F0 + (max(vec3(1.0 - roughness), F0) - F0) * fresnelTerm;
-
-        vec2 brdf = texture(uTexBrdfLut, vec2(cNdotV, roughness)).rg;
-        vec3 specularReflection = prefilteredColor * (F * brdf.x + brdf.y);
-
-        specular += specularReflection;
+        float dist = length(uLight.position - position);
+        float atten = 1.0 - clamp(dist / uLight.range, 0.0, 1.0);
+        shadow *= atten * uLight.attenuation;
     }
 
-    /* Compute the final diffuse color, including ambient and diffuse lighting contributions */
+    /* Apply spotlight effect if the light is a spotlight */
 
-    diffuse = albedo.rgb * (ambient + diffuse);
+    if (uLight.type == SPOTLIGHT)
+    {
+        float theta = dot(L, -uLight.direction);
+        float epsilon = (uLight.innerCutOff - uLight.outerCutOff);
+        shadow *= smoothstep(0.0, 1.0, (theta - uLight.outerCutOff) / epsilon);
+    }
 
-    /* Compute the final fragment color by combining diffuse, specular, and emission contributions */
-
-    vec3 emission = texture(uTexEmission, vTexCoord).rgb;
-    FragColor = vec4(diffuse + specular + emission, 1.0);
-
-    /* Handle bright colors for bloom */
-
-    float brightness = GetBrightness(FragColor.rgb);
-    FragBrightness = (brightness > uBloomHdrThreshold)
-        ? vec4(FragColor.rgb, brightness)
-        : vec4(0.0, 0.0, 0.0, brightness);
+    /* Compute final lighting contribution */
+    
+    FragDiffuse = vec4(diffuse * shadow, 1.0);
+    FragSpecular = vec4(specular * shadow, 1.0);
 }

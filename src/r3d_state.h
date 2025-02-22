@@ -45,26 +45,40 @@ extern struct R3D_State {
         // G-Buffer
         struct r3d_fb_gbuffer_t {
             unsigned int id;
-            unsigned int albedo;
-            unsigned int emission;
-            unsigned int normal;
-            unsigned int orm;
-            unsigned int depth;
+            unsigned int albedo;            ///< (RGB - 8-bit)
+            unsigned int emission;          ///< (RGB - 8-bit)
+            unsigned int normal;            ///< (RG - 16-bit)
+            unsigned int orm;               ///< (RGB - 8-bit)
+            unsigned int depth;             ///< (DS - 24-bit)
         } gBuffer;
 
         // Ping-pong buffer for SSAO blur processing (half internal resolution)
         struct r3d_fb_pingpong_ssao_t {
             unsigned int id;
-            unsigned int textures[2];
+            unsigned int textures[2];       ///< (RED - 16-bit) -> Used for initial SSAO rendering + blur effect
             bool targetTexIdx;
         } pingPongSSAO;
 
-        // Lit scene
-        struct r3d_fb_lit_t {
+        // Lit environment
+        struct r3d_fb_lit_env_t {
             unsigned int id;
-            unsigned int color;
-            unsigned int bright;
-        } lit;
+            unsigned int ambient;           ///< (RGB - 16-bit) -> Ambient color (sky or object irradiance)
+            unsigned int specular;          ///< (RGB - 16-bit) -> Specular reflection on objects
+        } litEnv;
+
+        // Lit objects
+        struct r3d_fb_lit_obj_t {
+            unsigned int id;
+            unsigned int diffuse;           ///< (RGB - 16-bit) -> Diffuse contribution
+            unsigned int specular;          ///< (RGB - 16-bit) -> Specular contribution
+        } litObj;
+
+        // Final scene (before post process)
+        struct r3d_fb_scene_t {
+            unsigned int id;
+            unsigned int color;             ///< (RGB - 8-bit) -> Final color
+            unsigned int bright;            ///< (RGB - 16-bit) -> Bright areas only, used for bloom
+        } scene;
 
         // Ping-pong buffer for bloom blur processing (half internal resolution)
         struct r3d_fb_pingpong_bloom_t {
@@ -124,12 +138,15 @@ extern struct R3D_State {
         // Screen shaders
         struct {
             r3d_shader_screen_ssao_t ssao;
+            r3d_shader_screen_ibl_t ibl;
             r3d_shader_screen_lighting_t lighting;
+            r3d_shader_screen_scene_t scene;
             r3d_shader_screen_bloom_t bloom;
             r3d_shader_screen_fog_t fog;
             r3d_shader_screen_tonemap_t tonemap;
             r3d_shader_screen_adjustment_t adjustment;
             r3d_shader_screen_fxaa_t fxaa;
+            r3d_shader_screen_color_t color;
         } screen;
 
     } shader;
@@ -232,13 +249,17 @@ extern struct R3D_State {
 
 void r3d_framebuffer_load_gbuffer(int width, int height);
 void r3d_framebuffer_load_pingpong_ssao(int width, int height);
-void r3d_framebuffer_load_lit(int width, int height);
+void r3d_framebuffer_load_lit_env(int width, int height);
+void r3d_framebuffer_load_lit_obj(int width, int height);
+void r3d_framebuffer_load_scene(int width, int height);
 void r3d_framebuffer_load_pingpong_bloom(int width, int height);
 void r3d_framebuffer_load_post(int width, int height);
 
 void r3d_framebuffer_unload_gbuffer(void);
 void r3d_framebuffer_unload_pingpong_ssao(void);
-void r3d_framebuffer_unload_lit(void);
+void r3d_framebuffer_unload_lit_env(void);
+void r3d_framebuffer_unload_lit_obj(void);
+void r3d_framebuffer_unload_scene(void);
 void r3d_framebuffer_unload_pingpong_bloom(void);
 void r3d_framebuffer_unload_post(void);
 
@@ -257,12 +278,15 @@ void r3d_shader_load_raster_depth_inst(void);
 void r3d_shader_load_raster_depth_cube(void);
 void r3d_shader_load_raster_depth_cube_inst(void);
 void r3d_shader_load_screen_ssao(void);
+void r3d_shader_load_screen_ibl(void);
 void r3d_shader_load_screen_lighting(void);
+void r3d_shader_load_screen_scene(void);
 void r3d_shader_load_screen_bloom(void);
 void r3d_shader_load_screen_fog(void);
 void r3d_shader_load_screen_tonemap(void);
 void r3d_shader_load_screen_adjustment(void);
 void r3d_shader_load_screen_fxaa(void);
+void r3d_shader_load_screen_color(void);
 
 
 /* === Texture loading functions === */

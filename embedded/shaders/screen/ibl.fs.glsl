@@ -1,0 +1,157 @@
+/*
+ * Copyright (c) 2025 Le Juez Victor
+ *
+ * This software is provided "as-is", without any express or implied warranty. In no event
+ * will the authors be held liable for any damages arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose, including commercial
+ * applications, and to alter it and redistribute it freely, subject to the following restrictions:
+ *
+ *   1. The origin of this software must not be misrepresented; you must not claim that you
+ *   wrote the original software. If you use this software in a product, an acknowledgment
+ *   in the product documentation would be appreciated but is not required.
+ *
+ *   2. Altered source versions must be plainly marked as such, and must not be misrepresented
+ *   as being the original software.
+ *
+ *   3. This notice may not be removed or altered from any source distribution.
+ */
+
+#version 330 core
+
+/* === Defines === */
+
+#define PI 3.1415926535897932384626433832795028
+
+/* === Varyings === */
+
+noperspective in vec2 vTexCoord;
+
+/* === Uniforms === */
+
+uniform sampler2D uTexAlbedo;
+uniform sampler2D uTexNormal;
+uniform sampler2D uTexDepth;
+uniform sampler2D uTexORM;
+
+uniform samplerCube uCubeIrradiance;
+uniform samplerCube uCubePrefilter;
+uniform sampler2D uTexBrdfLut;
+uniform vec4 uQuatSkybox;
+
+uniform vec3 uViewPosition;
+uniform mat4 uMatInvProj;
+uniform mat4 uMatInvView;
+
+/* === Fragments === */
+
+layout(location = 0) out vec3 FragAmbient;
+layout(location = 1) out vec3 FragSpecular;
+
+/* === PBR functions === */
+
+float SchlickFresnel(float u)
+{
+    float m = 1.0 - u;
+    float m2 = m * m;
+    return m2 * m2 * m; // pow(m,5)
+}
+
+vec3 ComputeF0(float metallic, float specular, vec3 albedo)
+{
+    float dielectric = 0.16 * specular * specular;
+    // use (albedo * metallic) as colored specular reflectance at 0 angle for metallic materials
+    // SEE: https://google.github.io/filament/Filament.md.html
+    return mix(vec3(dielectric), albedo, vec3(metallic));
+}
+
+/* === Misc functions === */
+
+vec3 GetPositionFromDepth(float depth)
+{
+    vec4 ndcPos = vec4(vTexCoord * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 viewPos = uMatInvProj * ndcPos;
+    viewPos /= viewPos.w;
+
+    return (uMatInvView * viewPos).xyz;
+}
+
+vec3 DecodeOctahedral(vec2 encoded)
+{
+    // Remap from [0,1] to [-1,1]
+    vec2 f = encoded * 2.0 - 1.0;
+    
+    // Initial reconstruction
+    vec3 normal = vec3(f.xy, 1.0 - abs(f.x) - abs(f.y));
+    
+    // Unfold if outside the octahedron (also avoids the use of boolean vectors)
+    if (normal.z < 0.0) {
+        vec2 signValue = vec2(normal.x >= 0.0 ? 1.0 : -1.0, normal.y >= 0.0 ? 1.0 : -1.0);
+        normal.xy = (1.0 - abs(normal.yx)) * signValue;
+    }
+    
+    // Final normalization
+    return normalize(normal);
+}
+
+vec3 RotateWithQuat(vec3 v, vec4 q)
+{
+    vec3 t = 2.0 * cross(q.xyz, v);
+    return v + q.w * t + cross(q.xyz, t);
+}
+
+/* === Main === */
+
+void main()
+{
+    /* Sample albedo and ORM texture and extract values */
+    
+    vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
+    vec3 orm = texture(uTexORM, vTexCoord).rgb;
+    float roughness = orm.g;
+    float metalness = orm.b;
+
+    /* Compute F0 (reflectance at normal incidence) based on the metallic factor */
+
+    vec3 F0 = ComputeF0(metalness, 0.5, albedo);
+
+    /* Sample world depth and reconstruct world position */
+
+    float depth = texture(uTexDepth, vTexCoord).r;
+    vec3 position = GetPositionFromDepth(depth);
+
+    /* Sample and decode normal in world space */
+
+    vec3 N = DecodeOctahedral(texture(uTexNormal, vTexCoord).rg);
+
+    /* Compute view direction and the dot product of the normal and view direction */
+    
+    vec3 V = normalize(uViewPosition - position);
+
+    float NdotV = dot(N, V);
+    float cNdotV = max(NdotV, 1e-4); // Clamped to avoid division by zero
+
+    /* Compute ambient - (IBL diffuse) */
+
+    vec3 kS = F0 + (1.0 - F0) * SchlickFresnel(cNdotV);
+    vec3 kD = (1.0 - kS) * (1.0 - metalness);
+
+    vec3 Nr = RotateWithQuat(N, uQuatSkybox);
+
+    FragAmbient = kD * texture(uCubeIrradiance, Nr).rgb; // Added with lighting `albedo * diffuse`
+
+    /* Skybox reflection - (IBL specular) */
+
+    vec3 R = RotateWithQuat(reflect(-V, N), uQuatSkybox);
+
+    const float MAX_REFLECTION_LOD = 7.0;
+    vec3 prefilteredColor = textureLod(uCubePrefilter, R, roughness * MAX_REFLECTION_LOD).rgb;
+
+    float fresnelTerm = SchlickFresnel(cNdotV);
+    vec3 F = F0 + (max(vec3(1.0 - roughness), F0) - F0) * fresnelTerm;
+
+    vec2 brdf = texture(uTexBrdfLut, vec2(cNdotV, roughness)).rg;
+    vec3 specularReflection = prefilteredColor * (F * brdf.x + brdf.y);
+
+    FragSpecular = specularReflection;
+}
