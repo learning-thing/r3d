@@ -50,7 +50,7 @@ void main()
     // It is currently used to transform normals from a normal map to world space normals
     vec3 T = normalize(vec3(uMatModel * vec4(aTangent.xyz, 0.0)));
     vec3 N = normalize(vec3(uMatNormal * vec4(aNormal, 0.0)));
-    vec3 B = cross(N, T) * aTangent.w;
+    vec3 B = normalize(cross(N, T)) * aTangent.w;
     vTBN = mat3(T, B, N);
 
     gl_Position = uMatMVP * vec4(aPosition, 1.0);
