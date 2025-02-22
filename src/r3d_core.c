@@ -1064,8 +1064,12 @@ void r3d_pass_scene_deferred(void)
     rlEnableFramebuffer(R3D.framebuffer.scene.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlActiveDrawBuffers(2);
         rlDisableColorBlend();
         rlDisableDepthTest();
+
+        // Clear color buffers (really useful for brightness buffer)
+        glClear(GL_COLOR_BUFFER_BIT);
 
         // Enable gbuffer stencil test (render on geometry)
         r3d_gbuffer_enable_stencil_test(true);
@@ -1127,7 +1131,7 @@ void r3d_pass_scene_background(void)
             rlMultMatrixf(MatrixToFloat(R3D.state.transform.view));
 
             // Skybox specific setup
-            rlActiveDrawBuffers(1);         // Draw only in the Buffer 'Ambient'
+            rlActiveDrawBuffers(1);         // Draw only in the color buffer (deactivates the brightness buffer)
             rlDisableBackfaceCulling();     // Disable backface culling to render the cube from the inside
 
             // Render skybox
@@ -1397,7 +1401,7 @@ void r3d_pass_post_bloom(void)
                 r3d_shader_set_vec2(generate.gaussianBlurDualPass, uTexelDir,
                     Vector2Multiply(direction, (Vector2) {
                     R3D.state.resolution.texelX,
-                        R3D.state.resolution.texelY
+                    R3D.state.resolution.texelY
                 })
                 );
                 r3d_shader_bind_sampler2D(generate.gaussianBlurDualPass, uTexture, i > 0
