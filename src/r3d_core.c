@@ -352,8 +352,10 @@ void R3D_End(void)
 
     r3d_pass_lit_env();
     r3d_pass_lit_obj();
+
     r3d_pass_scene_deferred();
     r3d_pass_scene_background();
+    //r3d_pass_scene_forward();
 
     r3d_pass_post_init(
         R3D.framebuffer.scene.id,
@@ -768,14 +770,10 @@ void r3d_pass_gbuffer(void)
         // Enbale geometry stencil write
         r3d_gbuffer_enable_stencil_write();
 
-        // Clear the buffers independently
+        // Clear the buffers
         glClearStencil(0);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glClearBufferfv(GL_COLOR, 0, (float[4]) { 0.0f, 0.0f, 0.0f, 0.0f });
-        glClearBufferfv(GL_COLOR, 1, (float[4]) { 0.0f, 0.0f, 0.0f, 0.0f });
-        glClearBufferfv(GL_COLOR, 2, (float[4]) { 0.0f, 0.0f, 0.0f, 0.0f });
-        glClearBufferfv(GL_COLOR, 3, (float[4]) { 1.0f, 0.0f, 0.0f, 0.0f });
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         // Setup projection matrix
         rlMatrixMode(RL_PROJECTION);

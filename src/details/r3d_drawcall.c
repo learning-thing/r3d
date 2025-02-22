@@ -321,14 +321,14 @@ static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceMo
     // Clean up resources
     if (vboTransforms > 0) {
         for (int i = 0; i < 4; i++) {
-            rlSetVertexAttributeDivisor(locInstanceModel + i, 0);
             rlDisableVertexAttribute(locInstanceModel + i);
+            rlSetVertexAttributeDivisor(locInstanceModel + i, 0);
         }
         rlUnloadVertexBuffer(vboTransforms);
     }
     if (vboColors > 0) {
-        rlSetVertexAttributeDivisor(locInstanceColor, 0);
         rlDisableVertexAttribute(locInstanceColor);
+        rlSetVertexAttributeDivisor(locInstanceColor, 0);
         rlUnloadVertexBuffer(vboColors);
     }
 }
