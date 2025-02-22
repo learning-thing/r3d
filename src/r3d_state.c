@@ -689,6 +689,7 @@ void r3d_shader_load_raster_skybox(void)
     r3d_shader_get_location(raster.skybox, uMatView);
     r3d_shader_get_location(raster.skybox, uRotation);
     r3d_shader_get_location(raster.skybox, uCubeSky);
+    r3d_shader_get_location(raster.skybox, uBloomHdrThreshold);
 
     r3d_shader_enable(raster.skybox);
     r3d_shader_set_samplerCube_slot(raster.skybox, uCubeSky, 0);

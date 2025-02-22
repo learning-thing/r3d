@@ -129,6 +129,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     R3D.env.bloomMode = R3D_BLOOM_DISABLED;
     R3D.env.bloomIntensity = 1.0f;
     R3D.env.bloomHdrThreshold = 1.0f;
+    R3D.env.bloomSkyHdrThreshold = 2.0f;
     R3D.env.bloomIterations = 10;
     R3D.env.fogMode = R3D_FOG_DISABLED;
     R3D.env.fogColor = (Vector3) { 1.0f, 1.0f, 1.0f };
@@ -150,6 +151,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Init rendering mode configs
     R3D.state.render.mode = R3D_RENDER_DEFERRED;
+    R3D.state.render.shadowCasting = true;
 
     // Set parameter flags
     R3D.state.flags = flags;
@@ -1064,7 +1066,6 @@ void r3d_pass_scene_deferred(void)
     rlEnableFramebuffer(R3D.framebuffer.scene.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
-        rlActiveDrawBuffers(2);
         rlDisableColorBlend();
         rlDisableDepthTest();
 
@@ -1130,9 +1131,8 @@ void r3d_pass_scene_background(void)
             rlLoadIdentity();
             rlMultMatrixf(MatrixToFloat(R3D.state.transform.view));
 
-            // Skybox specific setup
-            rlActiveDrawBuffers(1);         // Draw only in the color buffer (deactivates the brightness buffer)
-            rlDisableBackfaceCulling();     // Disable backface culling to render the cube from the inside
+            // Disable backface culling to render the cube from the inside
+            rlDisableBackfaceCulling();
 
             // Render skybox
             r3d_shader_enable(raster.skybox);
@@ -1145,6 +1145,7 @@ void r3d_pass_scene_background(void)
 
                 // Set skybox parameters
                 r3d_shader_set_vec4(raster.skybox, uRotation, R3D.env.quatSky);
+                r3d_shader_set_float(raster.skybox, uBloomHdrThreshold, R3D.env.bloomSkyHdrThreshold);
 
                 // Try binding vertex array objects (VAO) or use VBOs if not possible
                 if (!rlEnableVertexArray(R3D.primitive.cube.vao)) {
@@ -1178,6 +1179,9 @@ void r3d_pass_scene_background(void)
                 rlDisableVertexBufferElement();
             }
             r3d_shader_disable();
+
+            // Reset back face culling
+            rlEnableBackfaceCulling();
 
             // Reset projection matrix
             rlMatrixMode(RL_PROJECTION);

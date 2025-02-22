@@ -202,6 +202,9 @@ float R3D_GetBloomIntensity(void);
 void R3D_SetBloomHdrThreshold(float value);
 float R3D_GetBloomHdrThreshold(void);
 
+void R3D_SetBloomSkyHdrThreshold(float value);
+float R3D_GetBloomSkyHdrThreshold(void);
+
 void R3D_SetBloomIterations(int value);
 int R3D_GetBloomIterations(void);
 

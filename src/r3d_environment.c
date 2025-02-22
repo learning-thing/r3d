@@ -141,6 +141,16 @@ float R3D_GetBloomHdrThreshold(void)
 	return R3D.env.bloomHdrThreshold;
 }
 
+void R3D_SetBloomSkyHdrThreshold(float value)
+{
+	R3D.env.bloomSkyHdrThreshold = value;
+}
+
+float R3D_GetBloomSkyHdrThreshold(void)
+{
+	return R3D.env.bloomSkyHdrThreshold;
+}
+
 void R3D_SetBloomIterations(int value)
 {
 	R3D.env.bloomIterations = value;

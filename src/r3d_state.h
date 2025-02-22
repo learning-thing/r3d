@@ -170,7 +170,8 @@ extern struct R3D_State {
 
         R3D_Bloom bloomMode;        // (post pass)
         float bloomIntensity;       // (post pass)
-        float bloomHdrThreshold;    // (light pass)
+        float bloomHdrThreshold;    // (raster pass)
+        float bloomSkyHdrThreshold; // (raster pass)
         int bloomIterations;        // Number of iteration during the generation of the vagueness (post pass)
 
         R3D_Fog fogMode;            // (post pass)
