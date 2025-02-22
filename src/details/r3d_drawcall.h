@@ -41,9 +41,13 @@ typedef struct {
 /* === Functions === */
 
 void r3d_drawcall_raster_geometry(const r3d_drawcall_t* call);
+void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call);
 
 void r3d_drawcall_raster_depth(const r3d_drawcall_t* call);
+void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call);
+
 void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos);
+void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call, Vector3 viewPos);
 
 void r3d_drawcall_sort_front_to_back(r3d_drawcall_t* calls, size_t count);
 void r3d_drawcall_sort_back_to_front(r3d_drawcall_t* calls, size_t count);

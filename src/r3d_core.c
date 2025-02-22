@@ -676,10 +676,10 @@ void r3d_pass_shadow_maps(void)
                     r3d_shader_enable(raster.depthCubeInst);
                     {
                         for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
-                            r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i, light->data->position);
+                            r3d_drawcall_raster_depth_cube_inst((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i, light->data->position);
                         }
                         for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
-                            r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i, light->data->position);
+                            r3d_drawcall_raster_depth_cube_inst((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i, light->data->position);
                         }
                     }
                     r3d_shader_enable(raster.depthCube);
@@ -726,10 +726,10 @@ void r3d_pass_shadow_maps(void)
                 r3d_shader_enable(raster.depthInst);
                 {
                     for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
-                        r3d_drawcall_raster_depth((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i);
+                        r3d_drawcall_raster_depth_inst((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i);
                     }
                     for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
-                        r3d_drawcall_raster_depth((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i);
+                        r3d_drawcall_raster_depth_inst((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i);
                     }
                 }
                 r3d_shader_enable(raster.depth);
@@ -789,7 +789,7 @@ void r3d_pass_gbuffer(void)
         r3d_shader_enable(raster.geometryInst);
         {
             for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
-                r3d_drawcall_raster_geometry((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i);
+                r3d_drawcall_raster_geometry_inst((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i);
             }
         }
         r3d_shader_enable(raster.geometry);

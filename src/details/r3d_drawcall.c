@@ -28,10 +28,12 @@
 #include <rlgl.h>
 #include <glad.h>
 
+
 /* === Internal functions === */
 
 // This function supports instanced rendering when necessary
-static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor);
+static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call);
+static void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor);
 
 // Comparison functions for sorting draw calls in the arrays
 static int r3d_drawcall_compare_front_to_back(const void* a, const void* b);
@@ -52,9 +54,7 @@ void r3d_drawcall_raster_geometry(const r3d_drawcall_t* call)
     matModelView = MatrixMultiply(matModel, matView);
 
     // Set additional matrix uniforms
-    if (call->instanced.count == 0) {
-        r3d_shader_set_mat4(raster.geometry, uMatNormal, MatrixTranspose(MatrixInvert(matModel)));
-    }
+    r3d_shader_set_mat4(raster.geometry, uMatNormal, MatrixTranspose(MatrixInvert(matModel)));
     r3d_shader_set_mat4(raster.geometry, uMatModel, matModel);
 
     // Set factor material maps
@@ -147,12 +147,7 @@ void r3d_drawcall_raster_geometry(const r3d_drawcall_t* call)
         r3d_shader_set_mat4(raster.geometry, uMatMVP, matModelViewProjection);
 
         // Rasterisation du mesh en tenant compte du rendu instanci� si besoin
-        if (call->instanced.count == 0) {
-            r3d_draw_vertex_arrays(call, -1, -1);
-        }
-        else {
-            r3d_draw_vertex_arrays(call, 10, 14);
-        }
+        r3d_draw_vertex_arrays(call);
     }
 
     // Unbind all bound texture maps
@@ -162,6 +157,135 @@ void r3d_drawcall_raster_geometry(const r3d_drawcall_t* call)
     r3d_shader_unbind_sampler2D(raster.geometry, uTexOcclusion);
     r3d_shader_unbind_sampler2D(raster.geometry, uTexRoughness);
     r3d_shader_unbind_sampler2D(raster.geometry, uTexMetalness);
+
+    // Disable all possible vertex array objects (or VBOs)
+    rlDisableVertexArray();
+    rlDisableVertexBuffer();
+    rlDisableVertexBufferElement();
+
+    // Restore rlgl internal modelview and projection matrices
+    rlSetMatrixModelview(matView);
+    rlSetMatrixProjection(matProjection);
+}
+
+void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call)
+{
+    if (call->instanced.count == 0 || call->instanced.transforms == NULL) {
+        return;
+    }
+
+    Matrix matModel = MatrixIdentity();
+    Matrix matView = rlGetMatrixModelview();
+    Matrix matModelView = MatrixIdentity();
+    Matrix matProjection = rlGetMatrixProjection();
+
+    // Compute model and model/view matrices
+    matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
+    matModelView = MatrixMultiply(matModel, matView);
+
+    // Set additional matrix uniforms
+    r3d_shader_set_mat4(raster.geometryInst, uMatModel, matModel);
+
+    // Set factor material maps
+    r3d_shader_set_float(raster.geometryInst, uValEmission, call->material.maps[MATERIAL_MAP_EMISSION].value);
+    r3d_shader_set_float(raster.geometryInst, uValOcclusion, call->material.maps[MATERIAL_MAP_OCCLUSION].value);
+    r3d_shader_set_float(raster.geometryInst, uValRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].value);
+    r3d_shader_set_float(raster.geometryInst, uValMetalness, call->material.maps[MATERIAL_MAP_METALNESS].value);
+
+    // Set color material maps
+    r3d_shader_set_col3(raster.geometryInst, uColAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].color);
+    r3d_shader_set_col3(raster.geometryInst, uColEmission, call->material.maps[MATERIAL_MAP_EMISSION].color);
+
+    // Bind active texture maps
+    r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].texture.id, white);
+    r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexNormal, call->material.maps[MATERIAL_MAP_NORMAL].texture.id, normal);
+    r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexEmission, call->material.maps[MATERIAL_MAP_EMISSION].texture.id, black);
+    r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexOcclusion, call->material.maps[MATERIAL_MAP_OCCLUSION].texture.id, white);
+    r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].texture.id, white);
+    r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexMetalness, call->material.maps[MATERIAL_MAP_METALNESS].texture.id, black);
+
+    // Try binding vertex array objects (VAO) or use VBOs if not possible
+    // WARNING: UploadMesh() enables all vertex attributes available in mesh and sets default attribute values
+    // for shader expected vertex attributes that are not provided by the mesh (i.e. colors)
+    // This could be a dangerous approach because different meshes with different shaders can enable/disable some attributes
+    if (!rlEnableVertexArray(call->mesh.vaoId)) {
+        // Bind mesh VBO - Positions
+        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
+        rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
+        rlEnableVertexAttribute(0);
+
+        // Bind mesh VBO - TexCoords
+        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
+        rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
+        rlEnableVertexAttribute(1);
+
+        // Bind mesh VBO - Normals
+        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
+        rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
+        rlEnableVertexAttribute(2);
+
+        // Bind mesh VBO - Tagents
+        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
+            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
+            rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(3);
+        }
+        else {
+            // Set default value for defined vertex attribute in shader but not provided by mesh
+            // WARNING: It could result in GPU undefined behaviour
+            float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+            rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
+            rlDisableVertexAttribute(3);
+        }
+
+        // Bind mesh VBO - Colors
+        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
+            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
+            rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
+            rlEnableVertexAttribute(4);
+        }
+        else {
+            // Set default value for defined vertex attribute in shader but not provided by mesh
+            // WARNING: It could result in GPU undefined behaviour
+            float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+            rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
+            rlDisableVertexAttribute(4);
+        }
+
+        if (call->mesh.indices != NULL) {
+            rlEnableVertexBufferElement(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+        }
+    }
+
+    int eyeCount = 1;
+    if (rlIsStereoRenderEnabled()) eyeCount = 2;
+
+    for (int eye = 0; eye < eyeCount; eye++) {
+        // Calculate model-view-projection matrix (MVP)
+        Matrix matModelViewProjection = MatrixIdentity();
+        if (eyeCount == 1) {
+            matModelViewProjection = MatrixMultiply(matModelView, matProjection);
+        }
+        else {
+            // Setup current eye viewport (half screen width)
+            rlViewport(eye * rlGetFramebufferWidth() / 2, 0, rlGetFramebufferWidth() / 2, rlGetFramebufferHeight());
+            matModelViewProjection = MatrixMultiply(MatrixMultiply(matModelView, rlGetMatrixViewOffsetStereo(eye)), rlGetMatrixProjectionStereo(eye));
+        }
+
+        // Send combined model-view-projection matrix to shader
+        r3d_shader_set_mat4(raster.geometry, uMatMVP, matModelViewProjection);
+
+        // Rasterisation du mesh en tenant compte du rendu instanci� si besoin
+        r3d_draw_vertex_arrays_inst(call, 10, 14);
+    }
+
+    // Unbind all bound texture maps
+    r3d_shader_unbind_sampler2D(raster.geometryInst, uTexAlbedo);
+    r3d_shader_unbind_sampler2D(raster.geometryInst, uTexNormal);
+    r3d_shader_unbind_sampler2D(raster.geometryInst, uTexEmission);
+    r3d_shader_unbind_sampler2D(raster.geometryInst, uTexOcclusion);
+    r3d_shader_unbind_sampler2D(raster.geometryInst, uTexRoughness);
+    r3d_shader_unbind_sampler2D(raster.geometryInst, uTexMetalness);
 
     // Disable all possible vertex array objects (or VBOs)
     rlDisableVertexArray();
@@ -190,12 +314,31 @@ void r3d_drawcall_raster_depth(const r3d_drawcall_t* call)
         }
     }
 
-    if (call->instanced.count == 0) {
-        r3d_draw_vertex_arrays(call, -1, -1);
+    r3d_draw_vertex_arrays(call);
+
+    rlDisableVertexArray();
+    rlDisableVertexBuffer();
+    rlDisableVertexBufferElement();
+}
+
+void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call)
+{
+    Matrix matMVP = MatrixMultiply(call->transform, rlGetMatrixTransform());
+    matMVP = MatrixMultiply(matMVP, rlGetMatrixModelview());
+    matMVP = MatrixMultiply(matMVP, rlGetMatrixProjection());
+
+    r3d_shader_set_mat4(raster.depthInst, uMatMVP, matMVP);
+
+    if (!rlEnableVertexArray(call->mesh.vaoId)) {
+        rlEnableVertexBuffer(call->mesh.vboId[0]);
+        rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
+        rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
+        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
+            rlEnableVertexBufferElement(call->mesh.vboId[6]);
+        }
     }
-    else {
-        r3d_draw_vertex_arrays(call, 10, -1);
-    }
+
+    r3d_draw_vertex_arrays_inst(call, 10, -1);
 
     rlDisableVertexArray();
     rlDisableVertexBuffer();
@@ -221,12 +364,33 @@ void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos)
         }
     }
 
-    if (call->instanced.count == 0) {
-        r3d_draw_vertex_arrays(call, -1, -1);
+    r3d_draw_vertex_arrays(call);
+
+    rlDisableVertexArray();
+    rlDisableVertexBuffer();
+    rlDisableVertexBufferElement();
+}
+
+void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call, Vector3 viewPos)
+{
+    Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
+    Matrix matMVP = MatrixMultiply(matModel, rlGetMatrixModelview());
+    matMVP = MatrixMultiply(matMVP, rlGetMatrixProjection());
+
+    r3d_shader_set_vec3(raster.depthCubeInst, uViewPosition, viewPos);
+    r3d_shader_set_mat4(raster.depthCubeInst, uMatModel, matModel);
+    r3d_shader_set_mat4(raster.depthCubeInst, uMatMVP, matMVP);
+
+    if (!rlEnableVertexArray(call->mesh.vaoId)) {
+        rlEnableVertexBuffer(call->mesh.vboId[0]);
+        rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
+        rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
+        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
+            rlEnableVertexBufferElement(call->mesh.vboId[6]);
+        }
     }
-    else {
-        r3d_draw_vertex_arrays(call, 10, -1);
-    }
+
+    r3d_draw_vertex_arrays_inst(call, 10, -1);
 
     rlDisableVertexArray();
     rlDisableVertexBuffer();
@@ -246,7 +410,13 @@ void r3d_drawcall_sort_back_to_front(r3d_drawcall_t* calls, size_t count)
 
 /* === Internal functions === */
 
-static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor)
+void r3d_draw_vertex_arrays(const r3d_drawcall_t* call)
+{
+    if (call->mesh.indices == NULL) rlDrawVertexArray(0, call->mesh.vertexCount);
+    else rlDrawVertexArrayElements(0, call->mesh.triangleCount * 3, 0);
+}
+
+void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor)
 {
     // WARNING: Always use the same attribute locations in shaders for instance matrices and colors.
     // If attribute locations differ between shaders (e.g., between the depth shader and the geometry shader),
@@ -258,13 +428,8 @@ static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceMo
     unsigned int vboTransforms = 0;
     unsigned int vboColors = 0;
 
-    // Determine whether instanced rendering is used
-    bool useInstancing = (
-        call->instanced.count > 0 && (call->instanced.transforms || call->instanced.colors)
-    );
-
     // Enable the attribute for the transformation matrix (decomposed into 4 vec4 vectors)
-    if (useInstancing && call->instanced.transforms && locInstanceModel >= 0) {
+    if (locInstanceModel >= 0 && call->instanced.transforms) {
         vboTransforms = rlLoadVertexBuffer(call->instanced.transforms, call->instanced.count * sizeof(Matrix), true);
         rlEnableVertexBuffer(vboTransforms);
         for (int i = 0; i < 4; i++) {
@@ -287,7 +452,7 @@ static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceMo
     }
 
     // Handle per-instance colors if available
-    if (useInstancing && call->instanced.colors && locInstanceColor >= 0) {
+    if (locInstanceColor >= 0 && call->instanced.colors) {
         vboColors = rlLoadVertexBuffer(call->instanced.colors, call->instanced.count * sizeof(Color), true);
         rlEnableVertexBuffer(vboColors);
         rlSetVertexAttribute(locInstanceColor, 4, RL_UNSIGNED_BYTE, true, 0, 0);
@@ -301,21 +466,15 @@ static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceMo
     }
 
     // Draw instances or a single object depending on the case
-    if (useInstancing) {
-        if (call->mesh.indices != NULL) {
-            rlDrawVertexArrayElementsInstanced(0, call->mesh.triangleCount * 3, 0, call->instanced.count);
-        }
-        else {
-            rlDrawVertexArrayInstanced(0, call->mesh.vertexCount, call->instanced.count);
-        }
+    if (call->mesh.indices != NULL) {
+        rlDrawVertexArrayElementsInstanced
+        (0, call->mesh.triangleCount * 3, 0, call->instanced.count
+        );
     }
     else {
-        if (call->mesh.indices != NULL) {
-            rlDrawVertexArrayElements(0, call->mesh.triangleCount * 3, 0);
-        }
-        else {
-            rlDrawVertexArray(0, call->mesh.vertexCount);
-        }
+        rlDrawVertexArrayInstanced(
+            0, call->mesh.vertexCount, call->instanced.count
+        );
     }
 
     // Clean up resources
@@ -333,7 +492,7 @@ static void r3d_draw_vertex_arrays(const r3d_drawcall_t* call, int locInstanceMo
     }
 }
 
-static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
+int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
 {
     const r3d_drawcall_t* drawCallA = a;
     const r3d_drawcall_t* drawCallB = b;
@@ -355,7 +514,7 @@ static int r3d_drawcall_compare_front_to_back(const void* a, const void* b)
     return (distA > distB) - (distA < distB);
 }
 
-static int r3d_drawcall_compare_back_to_front(const void* a, const void* b)
+int r3d_drawcall_compare_back_to_front(const void* a, const void* b)
 {
     const r3d_drawcall_t* drawCallA = a;
     const r3d_drawcall_t* drawCallB = b;

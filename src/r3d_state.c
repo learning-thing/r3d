@@ -515,28 +515,28 @@ void r3d_shader_load_raster_geometry_inst(void)
         VS_RASTER_GEOMETRY_INST, FS_RASTER_GEOMETRY
     );
 
-    r3d_shader_get_location(raster.geometry, uMatModel);
-    r3d_shader_get_location(raster.geometry, uMatMVP);
-    r3d_shader_get_location(raster.geometry, uTexAlbedo);
-    r3d_shader_get_location(raster.geometry, uTexNormal);
-    r3d_shader_get_location(raster.geometry, uTexEmission);
-    r3d_shader_get_location(raster.geometry, uTexOcclusion);
-    r3d_shader_get_location(raster.geometry, uTexRoughness);
-    r3d_shader_get_location(raster.geometry, uTexMetalness);
-    r3d_shader_get_location(raster.geometry, uValEmission);
-    r3d_shader_get_location(raster.geometry, uValOcclusion);
-    r3d_shader_get_location(raster.geometry, uValRoughness);
-    r3d_shader_get_location(raster.geometry, uValMetalness);
-    r3d_shader_get_location(raster.geometry, uColAlbedo);
-    r3d_shader_get_location(raster.geometry, uColEmission);
+    r3d_shader_get_location(raster.geometryInst, uMatModel);
+    r3d_shader_get_location(raster.geometryInst, uMatMVP);
+    r3d_shader_get_location(raster.geometryInst, uTexAlbedo);
+    r3d_shader_get_location(raster.geometryInst, uTexNormal);
+    r3d_shader_get_location(raster.geometryInst, uTexEmission);
+    r3d_shader_get_location(raster.geometryInst, uTexOcclusion);
+    r3d_shader_get_location(raster.geometryInst, uTexRoughness);
+    r3d_shader_get_location(raster.geometryInst, uTexMetalness);
+    r3d_shader_get_location(raster.geometryInst, uValEmission);
+    r3d_shader_get_location(raster.geometryInst, uValOcclusion);
+    r3d_shader_get_location(raster.geometryInst, uValRoughness);
+    r3d_shader_get_location(raster.geometryInst, uValMetalness);
+    r3d_shader_get_location(raster.geometryInst, uColAlbedo);
+    r3d_shader_get_location(raster.geometryInst, uColEmission);
 
-    r3d_shader_enable(raster.geometry);
-    r3d_shader_set_sampler2D_slot(raster.geometry, uTexAlbedo, 0);
-    r3d_shader_set_sampler2D_slot(raster.geometry, uTexNormal, 1);
-    r3d_shader_set_sampler2D_slot(raster.geometry, uTexEmission, 2);
-    r3d_shader_set_sampler2D_slot(raster.geometry, uTexOcclusion, 3);
-    r3d_shader_set_sampler2D_slot(raster.geometry, uTexRoughness, 4);
-    r3d_shader_set_sampler2D_slot(raster.geometry, uTexMetalness, 5);
+    r3d_shader_enable(raster.geometryInst);
+    r3d_shader_set_sampler2D_slot(raster.geometryInst, uTexAlbedo, 0);
+    r3d_shader_set_sampler2D_slot(raster.geometryInst, uTexNormal, 1);
+    r3d_shader_set_sampler2D_slot(raster.geometryInst, uTexEmission, 2);
+    r3d_shader_set_sampler2D_slot(raster.geometryInst, uTexOcclusion, 3);
+    r3d_shader_set_sampler2D_slot(raster.geometryInst, uTexRoughness, 4);
+    r3d_shader_set_sampler2D_slot(raster.geometryInst, uTexMetalness, 5);
     r3d_shader_disable();
 }
 
@@ -571,7 +571,7 @@ void r3d_shader_load_raster_depth_inst(void)
         VS_RASTER_DEPTH_INST, FS_RASTER_DEPTH
     );
 
-    r3d_shader_get_location(raster.depth, uMatMVP);
+    r3d_shader_get_location(raster.depthInst, uMatMVP);
 }
 
 void r3d_shader_load_raster_depth_cube(void)
@@ -591,9 +591,9 @@ void r3d_shader_load_raster_depth_cube_inst(void)
         VS_RASTER_DEPTH_CUBE_INST, FS_RASTER_DEPTH_CUBE
     );
 
-    r3d_shader_get_location(raster.depthCube, uViewPosition);
-    r3d_shader_get_location(raster.depthCube, uMatModel);
-    r3d_shader_get_location(raster.depthCube, uMatMVP);
+    r3d_shader_get_location(raster.depthCubeInst, uViewPosition);
+    r3d_shader_get_location(raster.depthCubeInst, uMatModel);
+    r3d_shader_get_location(raster.depthCubeInst, uMatMVP);
 }
 
 void r3d_shader_load_screen_ssao(void)
