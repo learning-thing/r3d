@@ -56,7 +56,7 @@ void main()
 
     // The TBN matrix is used to transform vectors from tangent space to world space
     // It is currently used to transform normals from a normal map to world space normals
-    vec3 T = normalize(vec3(matModel * vec4(aTangent.xyz, 1.0)));
+    vec3 T = normalize(vec3(matModel * vec4(aTangent.xyz, 0.0)));
     vec3 N = normalize(matNormal * aNormal);
     vec3 B = cross(N, T) * aTangent.w;
     vTBN = mat3(T, B, N);
