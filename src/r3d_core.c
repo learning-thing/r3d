@@ -688,7 +688,7 @@ void r3d_pass_shadow_maps(void)
 
                 // Render geometries for each face of the cubemap
                 for (int j = 0; j < 6; j++) {
-                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->data->shadow.map.color, 0);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->data->shadow.map.cube, 0);
                     glClearColor(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1037,7 +1037,7 @@ void r3d_pass_lit_obj(void)
                 // Send shadow map data
                 if (light->data->shadow.enabled) {
                     if (light->data->type == R3D_LIGHT_OMNI) {
-                        r3d_shader_bind_samplerCube(screen.lighting, uLight.shadowCubemap, light->data->shadow.map.color);
+                        r3d_shader_bind_samplerCube(screen.lighting, uLight.shadowCubemap, light->data->shadow.map.cube);
                     }
                     else {
                         r3d_shader_set_float(screen.lighting, uLight.shadowMapTxlSz, light->data->shadow.map.texelSize);
@@ -1264,7 +1264,7 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
         // Send shadow map data
         if (light->data->shadow.enabled) {
             if (light->data->type == R3D_LIGHT_OMNI) {
-                r3d_shader_bind_samplerCube(raster.forward, uLights[i].shadowCubemap, light->data->shadow.map.color);
+                r3d_shader_bind_samplerCube(raster.forward, uLights[i].shadowCubemap, light->data->shadow.map.cube);
             }
             else {
                 r3d_shader_set_float(raster.forward, uLights[i].shadowMapTxlSz, light->data->shadow.map.texelSize);

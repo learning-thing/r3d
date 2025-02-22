@@ -82,8 +82,8 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_omni(int resolution)
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, shadowMap.depth);
 
     // Cr�ation de la Cubemap pour la couleur (1 canal 16-bit)
-    glGenTextures(1, &shadowMap.color);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, shadowMap.color);
+    glGenTextures(1, &shadowMap.cube);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, shadowMap.cube);
 
     for (int i = 0; i < 6; ++i) {
         glTexImage2D(
@@ -98,8 +98,8 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_omni(int resolution)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, shadowMap.color, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, shadowMap.color, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, shadowMap.cube, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, shadowMap.cube, 0);
 
     // D�finition des buffers actifs
     GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
@@ -156,8 +156,8 @@ void r3d_light_destroy_shadow_map(r3d_light_t* light)
     if (light->shadow.map.id != 0) {
         rlUnloadTexture(light->shadow.map.depth);
         rlUnloadFramebuffer(light->shadow.map.id);
-        if (light->shadow.map.color != 0) {
-            rlUnloadTexture(light->shadow.map.color);
+        if (light->shadow.map.cube != 0) {
+            rlUnloadTexture(light->shadow.map.cube);
         }
     }
 }
