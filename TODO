@@ -1,3 +1,12 @@
+
+--- Before first release ---
+
+- Billboard
+- Sprite3D
+- Particles
+
+--- Next version ---
+
 - Provide an easy way to define the desired number of lights in the shader (forward) (preferably configurable at runtime).
 - Review resource allocation so that it only occurs when a feature requires it, similar to how framebuffers are handled.
 - Implement a system to save loaded skyboxes along with their generated irradiance and prefiltered textures, allowing for later reloading.
