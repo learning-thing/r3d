@@ -39,8 +39,8 @@ uniform float uBloomHdrThreshold;
 
 /* === Fragments === */
 
-out vec3 FragColor;
-out vec3 FragBrightness;
+layout(location = 0) out vec3 FragColor;
+layout(location = 1) out vec3 FragBrightness;
 
 /* === Helper functions === */
 

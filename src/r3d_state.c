@@ -540,6 +540,145 @@ void r3d_shader_load_raster_geometry_inst(void)
     r3d_shader_disable();
 }
 
+void r3d_shader_load_raster_forward(void)
+{
+    R3D.shader.raster.forward.id = rlLoadShaderCode(
+        VS_RASTER_FORWARD, FS_RASTER_FORWARD
+    );
+
+    r3d_shader_raster_forward_t* shader = &R3D.shader.raster.forward;
+
+    r3d_shader_get_location(raster.forward, uMatNormal);
+    r3d_shader_get_location(raster.forward, uMatModel);
+    r3d_shader_get_location(raster.forward, uMatMVP);
+    r3d_shader_get_location(raster.forward, uTexAlbedo);
+    r3d_shader_get_location(raster.forward, uTexEmission);
+    r3d_shader_get_location(raster.forward, uTexNormal);
+    r3d_shader_get_location(raster.forward, uTexOcclusion);
+    r3d_shader_get_location(raster.forward, uTexRoughness);
+    r3d_shader_get_location(raster.forward, uTexMetalness);
+    r3d_shader_get_location(raster.forward, uValEmission);
+    r3d_shader_get_location(raster.forward, uValOcclusion);
+    r3d_shader_get_location(raster.forward, uValRoughness);
+    r3d_shader_get_location(raster.forward, uValMetalness);
+    r3d_shader_get_location(raster.forward, uColAmbient);
+    r3d_shader_get_location(raster.forward, uColAlbedo);
+    r3d_shader_get_location(raster.forward, uColEmission);
+    r3d_shader_get_location(raster.forward, uCubeIrradiance);
+    r3d_shader_get_location(raster.forward, uCubePrefilter);
+    r3d_shader_get_location(raster.forward, uTexBrdfLut);
+    r3d_shader_get_location(raster.forward, uQuatSkybox);
+    r3d_shader_get_location(raster.forward, uHasSkybox);
+    r3d_shader_get_location(raster.forward, uBloomHdrThreshold);
+    r3d_shader_get_location(raster.forward, uViewPosition);
+
+    r3d_shader_enable(raster.forward);
+
+    r3d_shader_set_sampler2D_slot(raster.forward, uTexAlbedo, 0);
+    r3d_shader_set_sampler2D_slot(raster.forward, uTexEmission, 1);
+    r3d_shader_set_sampler2D_slot(raster.forward, uTexNormal, 2);
+    r3d_shader_set_sampler2D_slot(raster.forward, uTexOcclusion, 3);
+    r3d_shader_set_sampler2D_slot(raster.forward, uTexRoughness, 4);
+    r3d_shader_set_sampler2D_slot(raster.forward, uTexMetalness, 5);
+    r3d_shader_set_samplerCube_slot(raster.forward, uCubeIrradiance, 6);
+    r3d_shader_set_samplerCube_slot(raster.forward, uCubePrefilter, 7);
+    r3d_shader_set_sampler2D_slot(raster.forward, uTexBrdfLut, 8);
+
+    int shadowMapSlot = 9;
+    for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+        shader->uMatLightMVP[i].loc = rlGetLocationUniform(shader->id, TextFormat("uMatLightMVP[%i]", i));
+        shader->uLights[i].shadowMap.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowMap", i));
+        shader->uLights[i].shadowCubemap.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowCubemap", i));
+        shader->uLights[i].color.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].color", i));
+        shader->uLights[i].position.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].position", i));
+        shader->uLights[i].direction.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].direction", i));
+        shader->uLights[i].energy.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].energy", i));
+        shader->uLights[i].range.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].range", i));
+        shader->uLights[i].attenuation.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].attenuation", i));
+        shader->uLights[i].innerCutOff.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].innerCutOff", i));
+        shader->uLights[i].outerCutOff.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].outerCutOff", i));
+        shader->uLights[i].shadowMapTxlSz.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowMapTxlSz", i));
+        shader->uLights[i].shadowBias.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowBias", i));
+        shader->uLights[i].type.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].type", i));
+        shader->uLights[i].enabled.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].enabled", i));
+        shader->uLights[i].shadow.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadow", i));
+
+        r3d_shader_set_sampler2D_slot(raster.forward, uLights[i].shadowMap, shadowMapSlot++);
+        r3d_shader_set_samplerCube_slot(raster.forward, uLights[i].shadowCubemap, shadowMapSlot++);
+    }
+
+    r3d_shader_disable();
+}
+
+void r3d_shader_load_raster_forward_inst(void)
+{
+    R3D.shader.raster.forwardInst.id = rlLoadShaderCode(
+        VS_RASTER_FORWARD_INST, FS_RASTER_FORWARD
+    );
+
+    r3d_shader_raster_forward_inst_t* shader = &R3D.shader.raster.forwardInst;
+
+    r3d_shader_get_location(raster.forwardInst, uMatModel);
+    r3d_shader_get_location(raster.forwardInst, uMatMVP);
+    r3d_shader_get_location(raster.forwardInst, uTexAlbedo);
+    r3d_shader_get_location(raster.forwardInst, uTexEmission);
+    r3d_shader_get_location(raster.forwardInst, uTexNormal);
+    r3d_shader_get_location(raster.forwardInst, uTexOcclusion);
+    r3d_shader_get_location(raster.forwardInst, uTexRoughness);
+    r3d_shader_get_location(raster.forwardInst, uTexMetalness);
+    r3d_shader_get_location(raster.forwardInst, uValEmission);
+    r3d_shader_get_location(raster.forwardInst, uValOcclusion);
+    r3d_shader_get_location(raster.forwardInst, uValRoughness);
+    r3d_shader_get_location(raster.forwardInst, uValMetalness);
+    r3d_shader_get_location(raster.forwardInst, uColAmbient);
+    r3d_shader_get_location(raster.forwardInst, uColAlbedo);
+    r3d_shader_get_location(raster.forwardInst, uColEmission);
+    r3d_shader_get_location(raster.forwardInst, uCubeIrradiance);
+    r3d_shader_get_location(raster.forwardInst, uCubePrefilter);
+    r3d_shader_get_location(raster.forwardInst, uTexBrdfLut);
+    r3d_shader_get_location(raster.forwardInst, uQuatSkybox);
+    r3d_shader_get_location(raster.forwardInst, uHasSkybox);
+    r3d_shader_get_location(raster.forwardInst, uBloomHdrThreshold);
+    r3d_shader_get_location(raster.forwardInst, uViewPosition);
+
+    r3d_shader_enable(raster.forwardInst);
+
+    r3d_shader_set_sampler2D_slot(raster.forwardInst, uTexAlbedo, 0);
+    r3d_shader_set_sampler2D_slot(raster.forwardInst, uTexEmission, 1);
+    r3d_shader_set_sampler2D_slot(raster.forwardInst, uTexNormal, 2);
+    r3d_shader_set_sampler2D_slot(raster.forwardInst, uTexOcclusion, 3);
+    r3d_shader_set_sampler2D_slot(raster.forwardInst, uTexRoughness, 4);
+    r3d_shader_set_sampler2D_slot(raster.forwardInst, uTexMetalness, 5);
+    r3d_shader_set_samplerCube_slot(raster.forwardInst, uCubeIrradiance, 6);
+    r3d_shader_set_samplerCube_slot(raster.forwardInst, uCubePrefilter, 7);
+    r3d_shader_set_sampler2D_slot(raster.forwardInst, uTexBrdfLut, 8);
+
+    int shadowMapSlot = 9;
+    for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+        shader->uMatLightMVP[i].loc = rlGetLocationUniform(shader->id, TextFormat("uMatLightMVP[%i]", i));
+        shader->uLights[i].shadowMap.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowMap", i));
+        shader->uLights[i].shadowCubemap.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowCubemap", i));
+        shader->uLights[i].color.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].color", i));
+        shader->uLights[i].position.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].position", i));
+        shader->uLights[i].direction.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].direction", i));
+        shader->uLights[i].energy.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].energy", i));
+        shader->uLights[i].range.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].range", i));
+        shader->uLights[i].attenuation.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].attenuation", i));
+        shader->uLights[i].innerCutOff.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].innerCutOff", i));
+        shader->uLights[i].outerCutOff.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].outerCutOff", i));
+        shader->uLights[i].shadowMapTxlSz.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowMapTxlSz", i));
+        shader->uLights[i].shadowBias.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowBias", i));
+        shader->uLights[i].type.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].type", i));
+        shader->uLights[i].enabled.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].enabled", i));
+        shader->uLights[i].shadow.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadow", i));
+
+        r3d_shader_set_sampler2D_slot(raster.forwardInst, uLights[i].shadowMap, shadowMapSlot++);
+        r3d_shader_set_samplerCube_slot(raster.forwardInst, uLights[i].shadowCubemap, shadowMapSlot++);
+    }
+
+    r3d_shader_disable();
+}
+
 void r3d_shader_load_raster_skybox(void)
 {
     R3D.shader.raster.skybox.id = rlLoadShaderCode(
@@ -723,68 +862,6 @@ void r3d_shader_load_screen_scene(void)
 
     r3d_shader_disable();
 }
-
-/*
-void r3d_shader_load_screen_lighting(void)
-{
-    R3D.shader.screen.lighting.id = rlLoadShaderCode(VS_COMMON_SCREEN, FS_SCREEN_LIGHTING);
-    r3d_shader_screen_lighting_t* shader = &R3D.shader.screen.lighting;
-
-    r3d_shader_get_location(screen.lighting, uTexAlbedo);
-    r3d_shader_get_location(screen.lighting, uTexEmission);
-    r3d_shader_get_location(screen.lighting, uTexNormal);
-    r3d_shader_get_location(screen.lighting, uTexDepth);
-    r3d_shader_get_location(screen.lighting, uTexSSAO);
-    r3d_shader_get_location(screen.lighting, uTexORM);
-    r3d_shader_get_location(screen.lighting, uColAmbient);
-    r3d_shader_get_location(screen.lighting, uCubeIrradiance);
-    r3d_shader_get_location(screen.lighting, uCubePrefilter);
-    r3d_shader_get_location(screen.lighting, uTexBrdfLut);
-    r3d_shader_get_location(screen.lighting, uQuatSkybox);
-    r3d_shader_get_location(screen.lighting, uHasSkybox);
-    r3d_shader_get_location(screen.lighting, uBloomHdrThreshold);
-    r3d_shader_get_location(screen.lighting, uViewPosition);
-    r3d_shader_get_location(screen.lighting, uMatInvProj);
-    r3d_shader_get_location(screen.lighting, uMatInvView);
-
-    r3d_shader_enable(screen.lighting);
-
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexAlbedo, 0);
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexEmission, 1);
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexNormal, 2);
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexDepth, 3);
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexSSAO, 4);
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexORM, 5);
-    r3d_shader_set_samplerCube_slot(screen.lighting, uCubeIrradiance, 7);
-    r3d_shader_set_samplerCube_slot(screen.lighting, uCubePrefilter, 8);
-    r3d_shader_set_sampler2D_slot(screen.lighting, uTexBrdfLut, 9);
-
-    int shadowMapSlot = 10;
-    for (int i = 0; i < R3D_SHADER_NUM_LIGHTS; i++) {
-        shader->uLights[i].matViewProj.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].matViewProj", i));
-        shader->uLights[i].shadowMap.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowMap", i));
-        shader->uLights[i].shadowCubemap.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowCubemap", i));
-        shader->uLights[i].color.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].color", i));
-        shader->uLights[i].position.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].position", i));
-        shader->uLights[i].direction.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].direction", i));
-        shader->uLights[i].energy.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].energy", i));
-        shader->uLights[i].range.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].range", i));
-        shader->uLights[i].attenuation.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].attenuation", i));
-        shader->uLights[i].innerCutOff.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].innerCutOff", i));
-        shader->uLights[i].outerCutOff.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].outerCutOff", i));
-        shader->uLights[i].shadowMapTxlSz.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowMapTxlSz", i));
-        shader->uLights[i].shadowBias.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadowBias", i));
-        shader->uLights[i].type.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].type", i));
-        shader->uLights[i].enabled.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].enabled", i));
-        shader->uLights[i].shadow.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].shadow", i));
-
-        r3d_shader_set_sampler2D_slot(screen.lighting, uLights[i].shadowMap, shadowMapSlot++);
-        r3d_shader_set_samplerCube_slot(screen.lighting, uLights[i].shadowCubemap, shadowMapSlot++);
-    }
-
-    r3d_shader_disable();
-}
-*/
 
 void r3d_shader_load_screen_bloom(void)
 {

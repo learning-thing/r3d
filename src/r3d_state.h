@@ -128,6 +128,8 @@ extern struct R3D_State {
         struct {
             r3d_shader_raster_geometry_t geometry;
             r3d_shader_raster_geometry_inst_t geometryInst;
+            r3d_shader_raster_forward_t forward;
+            r3d_shader_raster_forward_inst_t forwardInst;
             r3d_shader_raster_skybox_t skybox;
             r3d_shader_raster_depth_t depth;
             r3d_shader_raster_depth_inst_t depthInst;
@@ -227,10 +229,11 @@ extern struct R3D_State {
             float texelY;
         } resolution;
 
-        // Render config (deferred/forward -> array[2])
+        // Render config
         struct {
-            R3D_SortMode sort;
-        } render[2];
+            R3D_RenderMode mode;
+            R3D_SortMode sort[2];
+        } render;
 
         // Miscellaneous flags
         unsigned int flags;
@@ -272,6 +275,8 @@ void r3d_shader_load_generate_irradiance_convolution(void);
 void r3d_shader_load_generate_prefilter(void);
 void r3d_shader_load_raster_geometry(void);
 void r3d_shader_load_raster_geometry_inst(void);
+void r3d_shader_load_raster_forward(void);
+void r3d_shader_load_raster_forward_inst(void);
 void r3d_shader_load_raster_skybox(void);
 void r3d_shader_load_raster_depth(void);
 void r3d_shader_load_raster_depth_inst(void);

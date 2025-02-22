@@ -25,7 +25,7 @@
 
 /* === Shader defines === */
 
-#define R3D_SHADER_NUM_LIGHTS 8
+#define R3D_SHADER_FORWARD_NUM_LIGHTS 8
 
 
 /* === Shader code declarations === */
@@ -41,6 +41,9 @@ extern const char FS_GENERATE_PREFILTER[];
 extern const char VS_RASTER_GEOMETRY[];
 extern const char VS_RASTER_GEOMETRY_INST[];
 extern const char FS_RASTER_GEOMETRY[];
+extern const char VS_RASTER_FORWARD[];
+extern const char VS_RASTER_FORWARD_INST[];
+extern const char FS_RASTER_FORWARD[];
 extern const char VS_RASTER_SKYBOX[];
 extern const char FS_RASTER_SKYBOX[];
 extern const char VS_RASTER_DEPTH[];
@@ -171,6 +174,95 @@ typedef r3d_shader_raster_depth_cube_t
 
 typedef struct {
     unsigned int id;
+    struct {
+        r3d_shader_uniform_sampler2D_t shadowMap;
+        r3d_shader_uniform_samplerCube_t shadowCubemap;
+        r3d_shader_uniform_vec3_t color;
+        r3d_shader_uniform_vec3_t position;
+        r3d_shader_uniform_vec3_t direction;
+        r3d_shader_uniform_float_t energy;
+        r3d_shader_uniform_float_t range;
+        r3d_shader_uniform_float_t attenuation;
+        r3d_shader_uniform_float_t innerCutOff;
+        r3d_shader_uniform_float_t outerCutOff;
+        r3d_shader_uniform_float_t shadowMapTxlSz;
+        r3d_shader_uniform_float_t shadowBias;
+        r3d_shader_uniform_int_t type;
+        r3d_shader_uniform_int_t enabled;
+        r3d_shader_uniform_int_t shadow;
+    } uLights[R3D_SHADER_FORWARD_NUM_LIGHTS];
+    r3d_shader_uniform_mat4_t uMatLightMVP[R3D_SHADER_FORWARD_NUM_LIGHTS];
+    r3d_shader_uniform_mat4_t uMatNormal;
+    r3d_shader_uniform_mat4_t uMatModel;
+    r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_sampler2D_t uTexAlbedo;
+    r3d_shader_uniform_sampler2D_t uTexEmission;
+    r3d_shader_uniform_sampler2D_t uTexNormal;
+    r3d_shader_uniform_sampler2D_t uTexOcclusion;
+    r3d_shader_uniform_sampler2D_t uTexRoughness;
+    r3d_shader_uniform_sampler2D_t uTexMetalness;
+    r3d_shader_uniform_float_t uValEmission;
+    r3d_shader_uniform_float_t uValOcclusion;
+    r3d_shader_uniform_float_t uValRoughness;
+    r3d_shader_uniform_float_t uValMetalness;
+    r3d_shader_uniform_vec3_t uColAmbient;
+    r3d_shader_uniform_vec4_t uColAlbedo;
+    r3d_shader_uniform_vec3_t uColEmission;
+    r3d_shader_uniform_samplerCube_t uCubeIrradiance;
+    r3d_shader_uniform_samplerCube_t uCubePrefilter;
+    r3d_shader_uniform_sampler2D_t uTexBrdfLut;
+    r3d_shader_uniform_vec4_t uQuatSkybox;
+    r3d_shader_uniform_int_t uHasSkybox;
+    r3d_shader_uniform_float_t uBloomHdrThreshold;
+    r3d_shader_uniform_vec3_t uViewPosition;
+} r3d_shader_raster_forward_t;
+
+typedef struct {
+    unsigned int id;
+    struct {
+        r3d_shader_uniform_sampler2D_t shadowMap;
+        r3d_shader_uniform_samplerCube_t shadowCubemap;
+        r3d_shader_uniform_vec3_t color;
+        r3d_shader_uniform_vec3_t position;
+        r3d_shader_uniform_vec3_t direction;
+        r3d_shader_uniform_float_t energy;
+        r3d_shader_uniform_float_t range;
+        r3d_shader_uniform_float_t attenuation;
+        r3d_shader_uniform_float_t innerCutOff;
+        r3d_shader_uniform_float_t outerCutOff;
+        r3d_shader_uniform_float_t shadowMapTxlSz;
+        r3d_shader_uniform_float_t shadowBias;
+        r3d_shader_uniform_int_t type;
+        r3d_shader_uniform_int_t enabled;
+        r3d_shader_uniform_int_t shadow;
+    } uLights[R3D_SHADER_FORWARD_NUM_LIGHTS];
+    r3d_shader_uniform_mat4_t uMatLightMVP[R3D_SHADER_FORWARD_NUM_LIGHTS];
+    r3d_shader_uniform_mat4_t uMatModel;
+    r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_sampler2D_t uTexAlbedo;
+    r3d_shader_uniform_sampler2D_t uTexEmission;
+    r3d_shader_uniform_sampler2D_t uTexNormal;
+    r3d_shader_uniform_sampler2D_t uTexOcclusion;
+    r3d_shader_uniform_sampler2D_t uTexRoughness;
+    r3d_shader_uniform_sampler2D_t uTexMetalness;
+    r3d_shader_uniform_float_t uValEmission;
+    r3d_shader_uniform_float_t uValOcclusion;
+    r3d_shader_uniform_float_t uValRoughness;
+    r3d_shader_uniform_float_t uValMetalness;
+    r3d_shader_uniform_vec3_t uColAmbient;
+    r3d_shader_uniform_vec4_t uColAlbedo;
+    r3d_shader_uniform_vec3_t uColEmission;
+    r3d_shader_uniform_samplerCube_t uCubeIrradiance;
+    r3d_shader_uniform_samplerCube_t uCubePrefilter;
+    r3d_shader_uniform_sampler2D_t uTexBrdfLut;
+    r3d_shader_uniform_vec4_t uQuatSkybox;
+    r3d_shader_uniform_int_t uHasSkybox;
+    r3d_shader_uniform_float_t uBloomHdrThreshold;
+    r3d_shader_uniform_vec3_t uViewPosition;
+} r3d_shader_raster_forward_inst_t;
+
+typedef struct {
+    unsigned int id;
     r3d_shader_uniform_sampler2D_t uTexDepth;
     r3d_shader_uniform_sampler2D_t uTexNormal;
     r3d_shader_uniform_sampler1D_t uTexKernel;
@@ -240,46 +332,6 @@ typedef struct {
     r3d_shader_uniform_sampler2D_t uTexEmission;
     r3d_shader_uniform_float_t uBloomHdrThreshold;
 } r3d_shader_screen_scene_t;
-
-/*
-typedef struct {
-    unsigned int id;
-    struct {
-        r3d_shader_uniform_mat4_t matViewProj;
-        r3d_shader_uniform_sampler2D_t shadowMap;
-        r3d_shader_uniform_samplerCube_t shadowCubemap;
-        r3d_shader_uniform_vec3_t color;
-        r3d_shader_uniform_vec3_t position;
-        r3d_shader_uniform_vec3_t direction;
-        r3d_shader_uniform_float_t energy;
-        r3d_shader_uniform_float_t range;
-        r3d_shader_uniform_float_t attenuation;
-        r3d_shader_uniform_float_t innerCutOff;
-        r3d_shader_uniform_float_t outerCutOff;
-        r3d_shader_uniform_float_t shadowMapTxlSz;
-        r3d_shader_uniform_float_t shadowBias;
-        r3d_shader_uniform_int_t type;
-        r3d_shader_uniform_int_t enabled;
-        r3d_shader_uniform_int_t shadow;
-    } uLights[R3D_SHADER_NUM_LIGHTS];
-    r3d_shader_uniform_sampler2D_t uTexAlbedo;
-    r3d_shader_uniform_sampler2D_t uTexEmission;
-    r3d_shader_uniform_sampler2D_t uTexNormal;
-    r3d_shader_uniform_sampler2D_t uTexDepth;
-    r3d_shader_uniform_sampler2D_t uTexSSAO;
-    r3d_shader_uniform_sampler2D_t uTexORM;
-    r3d_shader_uniform_vec3_t uColAmbient;
-    r3d_shader_uniform_samplerCube_t uCubeIrradiance;
-    r3d_shader_uniform_samplerCube_t uCubePrefilter;
-    r3d_shader_uniform_sampler2D_t uTexBrdfLut;
-    r3d_shader_uniform_vec4_t uQuatSkybox;
-    r3d_shader_uniform_int_t uHasSkybox;
-    r3d_shader_uniform_float_t uBloomHdrThreshold;
-    r3d_shader_uniform_vec3_t uViewPosition;
-    r3d_shader_uniform_mat4_t uMatInvProj;
-    r3d_shader_uniform_mat4_t uMatInvView;
-} r3d_shader_screen_lighting_t;
-*/
 
 typedef struct {
     unsigned int id;

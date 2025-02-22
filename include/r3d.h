@@ -104,6 +104,9 @@ void R3D_UpdateResolution(int width, int height);
 void R3D_EnableCustomTarget(RenderTexture target);
 void R3D_DisableCustomTarget(void);
 
+R3D_RenderMode R3D_GetRenderMode(void);
+void R3D_SetRenderMode(R3D_RenderMode mode);
+
 R3D_SortMode R3D_GetSortMode(R3D_RenderMode renderMode);
 void R3D_SetSortMode(R3D_RenderMode renderMode, R3D_SortMode mode);
 

@@ -3,7 +3,7 @@
 #include <raymath.h>
 #include <float.h>
 
-r3d_project_point_result_t r3d_project_point_visible_test(Vector3 point, Matrix viewProj, int screenWidth, int screenHeight)
+r3d_project_point_result_t r3d_project_point(Vector3 point, Matrix viewProj, int screenWidth, int screenHeight)
 {
     r3d_project_point_result_t result = { 0 };
 
@@ -43,7 +43,7 @@ Rectangle r3d_project_sphere_bounding_box(Vector3 center, float radius, Vector3 
     // If the camera is inside the projected sphere, assume the entire screen is affected.
     // This is not entirely accurate, but the result would be the same if we performed
     // the full projection, with a potential additional margin of error.
-    if (r3d_collision_check_point_sphere(viewPos, center, radius)) {
+    if (r3d_collision_check_point_in_sphere(viewPos, center, radius)) {
         boundingBox.width = screenWidth;
         boundingBox.height = screenHeight;
         return boundingBox;
@@ -51,14 +51,14 @@ Rectangle r3d_project_sphere_bounding_box(Vector3 center, float radius, Vector3 
 
     // Create 8 points representing the corners of a cube that encloses the sphere.
     Vector3 points[8];
-    points[0] = (Vector3){ center.x - radius, center.y - radius, center.z - radius };
-    points[1] = (Vector3){ center.x + radius, center.y - radius, center.z - radius };
-    points[2] = (Vector3){ center.x - radius, center.y + radius, center.z - radius };
-    points[3] = (Vector3){ center.x + radius, center.y + radius, center.z - radius };
-    points[4] = (Vector3){ center.x - radius, center.y - radius, center.z + radius };
-    points[5] = (Vector3){ center.x + radius, center.y - radius, center.z + radius };
-    points[6] = (Vector3){ center.x - radius, center.y + radius, center.z + radius };
-    points[7] = (Vector3){ center.x + radius, center.y + radius, center.z + radius };
+    points[0] = (Vector3) { center.x - radius, center.y - radius, center.z - radius };
+    points[1] = (Vector3) { center.x + radius, center.y - radius, center.z - radius };
+    points[2] = (Vector3) { center.x - radius, center.y + radius, center.z - radius };
+    points[3] = (Vector3) { center.x + radius, center.y + radius, center.z - radius };
+    points[4] = (Vector3) { center.x - radius, center.y - radius, center.z + radius };
+    points[5] = (Vector3) { center.x + radius, center.y - radius, center.z + radius };
+    points[6] = (Vector3) { center.x - radius, center.y + radius, center.z + radius };
+    points[7] = (Vector3) { center.x + radius, center.y + radius, center.z + radius };
 
     // Initialize min/max values for computing the bounding rectangle.
     float minX = screenWidth, minY = screenHeight;
@@ -66,7 +66,7 @@ Rectangle r3d_project_sphere_bounding_box(Vector3 center, float radius, Vector3 
 
     // Project each point and determine the min/max screen coordinates.
     for (int i = 0; i < 8; i++) {
-        r3d_project_point_result_t result = r3d_project_point_visible_test(
+        r3d_project_point_result_t result = r3d_project_point(
             points[i], viewProj, screenWidth, screenHeight
         );
 
@@ -95,7 +95,7 @@ Rectangle r3d_project_cone_bounding_box(Vector3 tip, Vector3 dir, float length, 
     // If the camera is inside the projected cone, assume the entire screen is affected.
     // This is not entirely accurate, but the result would be the same if we performed
     // the full projection, with a potential additional margin of error.
-    if (r3d_collision_check_point_cone(viewPos, tip, dir, length, radius)) {
+    if (r3d_collision_check_point_in_cone(viewPos, tip, dir, length, radius)) {
         boundingBox.width = screenWidth;
         boundingBox.height = screenHeight;
         return boundingBox;
@@ -157,7 +157,7 @@ Rectangle r3d_project_cone_bounding_box(Vector3 tip, Vector3 dir, float length, 
 
     // Project each point and determine the min/max screen coordinates.
     for (int i = 0; i < 9; i++) {
-        r3d_project_point_result_t result = r3d_project_point_visible_test(
+        r3d_project_point_result_t result = r3d_project_point(
             points[i], viewProj, screenWidth, screenHeight
         );
 
