@@ -22,7 +22,7 @@
 
 /* === Varyings === */
 
-in vec3 vEmission;
+flat in vec3 vEmission;
 in vec2 vTexCoord;
 in vec3 vColor;
 in mat3 vTBN;

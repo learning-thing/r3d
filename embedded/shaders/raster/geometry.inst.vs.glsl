@@ -37,10 +37,15 @@ layout(location = 14) in vec4 iColor;
 uniform mat4 uMatModel;
 uniform mat4 uMatMVP;
 
+uniform float uValEmission;
+uniform vec3 uColEmission;
+uniform vec3 uColAlbedo;
+
 /* === Varyings === */
 
+flat out vec3 vEmission;
 out vec2 vTexCoord;
-out vec4 vColor;
+out vec3 vColor;
 out mat3 vTBN;
 
 /* === Main function === */
@@ -48,7 +53,8 @@ out mat3 vTBN;
 void main()
 {
     vTexCoord = aTexCoord;
-    vColor = aColor * iColor;
+    vEmission = uColEmission * uValEmission;        // NOTE: Calculated here, in case we add different emission modes later.
+    vColor = aColor.rgb * iColor.rgb * uColAlbedo;
 
     mat4 matInst = transpose(iMatModel);
     mat4 matModel = uMatModel * matInst;

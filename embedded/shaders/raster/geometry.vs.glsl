@@ -39,7 +39,7 @@ uniform vec3 uColAlbedo;
 
 /* === Varyings === */
 
-out vec3 vEmission;
+flat out vec3 vEmission;
 out vec2 vTexCoord;
 out vec3 vColor;
 out mat3 vTBN;
