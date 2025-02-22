@@ -31,6 +31,7 @@ typedef struct {
     Mesh mesh;
     Matrix transform;
     Material material;
+    bool castShadows;
     struct {
         const Matrix* transforms;
         const Color* colors;

@@ -232,7 +232,7 @@ extern struct R3D_State {
         // Render config
         struct {
             R3D_RenderMode mode;
-            R3D_SortMode sort[2];
+            bool shadowCasting;
         } render;
 
         // Miscellaneous flags

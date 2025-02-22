@@ -39,13 +39,6 @@ typedef enum {
 } R3D_RenderMode;
 
 typedef enum {
-    R3D_SORT_AUTO           = 0,        ///< R3D will decide what to sort for you
-    R3D_SORT_DISABLED       = 1,        ///< No sorting will be applied to draw calls
-    R3D_SORT_FRONT_TO_BACK  = 2,        ///< Can optimize the depth testing phase
-    R3D_SORT_BACK_TO_FRONT  = 3         ///< Less optimized but suitable when rendering transparency in forward mode
-} R3D_SortMode;
-
-typedef enum {
     R3D_LIGHT_DIR,
     R3D_LIGHT_SPOT,
     R3D_LIGHT_OMNI,
@@ -101,14 +94,10 @@ void R3D_ClearState(unsigned int flags);
 void R3D_GetResolution(int* width, int* height);
 void R3D_UpdateResolution(int width, int height);
 
-void R3D_EnableCustomTarget(RenderTexture target);
-void R3D_DisableCustomTarget(void);
+void R3D_SetRenderTarget(RenderTexture* target);
 
-R3D_RenderMode R3D_GetRenderMode(void);
-void R3D_SetRenderMode(R3D_RenderMode mode);
-
-R3D_SortMode R3D_GetSortMode(R3D_RenderMode renderMode);
-void R3D_SetSortMode(R3D_RenderMode renderMode, R3D_SortMode mode);
+void R3D_ApplyRenderMode(R3D_RenderMode mode);
+void R3D_ApplyShadowCasting(bool enabled);
 
 void R3D_Begin(Camera3D camera);
 void R3D_End(void);

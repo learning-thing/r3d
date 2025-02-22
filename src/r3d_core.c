@@ -150,8 +150,6 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Init rendering mode configs
     R3D.state.render.mode = R3D_RENDER_DEFERRED;
-    R3D.state.render.sort[R3D_RENDER_DEFERRED] = R3D_SORT_AUTO;
-    R3D.state.render.sort[R3D_RENDER_FORWARD] = R3D_SORT_AUTO;
 
     // Set parameter flags
     R3D.state.flags = flags;
@@ -263,34 +261,24 @@ void R3D_UpdateResolution(int width, int height)
     R3D.state.resolution.texelY = 1.0f / height;
 }
 
-void R3D_EnableCustomTarget(RenderTexture target)
+void R3D_SetRenderTarget(RenderTexture* target)
 {
-    R3D.framebuffer.customTarget = target;
+    if (target == NULL) {
+        memset(&R3D.framebuffer.customTarget, 0, sizeof(RenderTexture));
+        return;
+    }
+
+    R3D.framebuffer.customTarget = *target;
 }
 
-void R3D_DisableCustomTarget(void)
-{
-    memset(&R3D.framebuffer.customTarget, 0, sizeof(RenderTexture));
-}
-
-R3D_RenderMode R3D_GetRenderMode(void)
-{
-    return R3D.state.render.mode;
-}
-
-void R3D_SetRenderMode(R3D_RenderMode mode)
+void R3D_ApplyRenderMode(R3D_RenderMode mode)
 {
     R3D.state.render.mode = mode;
 }
 
-R3D_SortMode R3D_GetSortMode(R3D_RenderMode renderMode)
+void R3D_ApplyShadowCasting(bool enabled)
 {
-    return R3D.state.render.sort[renderMode];
-}
-
-void R3D_SetSortMode(R3D_RenderMode renderMode, R3D_SortMode mode)
-{
-    R3D.state.render.sort[renderMode] = mode;
+    R3D.state.render.shadowCasting = enabled;
 }
 
 void R3D_Begin(Camera3D camera)
@@ -413,6 +401,8 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
     drawCall.material = material;
     drawCall.mesh = mesh;
 
+    drawCall.castShadows = R3D.state.render.shadowCasting;
+
     drawCall.instanced.transforms = NULL;
     drawCall.instanced.colors = NULL;
     drawCall.instanced.count = 0;
@@ -447,6 +437,8 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Ma
     drawCall.transform = transform;
     drawCall.material = material;
     drawCall.mesh = mesh;
+
+    drawCall.castShadows = R3D.state.render.shadowCasting;
 
     drawCall.instanced.transforms = instanceTransforms;
     drawCall.instanced.colors = instanceColors;
@@ -556,38 +548,19 @@ static void r3d_gbuffer_disable_stencil(void)
 
 void r3d_prepass_sort_drawcalls(void)
 {
-    switch (R3D.state.render.sort[R3D_RENDER_DEFERRED]) {
-    case R3D_SORT_AUTO:
-    case R3D_SORT_FRONT_TO_BACK:
-        r3d_drawcall_sort_front_to_back(
-            (r3d_drawcall_t*)R3D.container.aDrawDeferred.data,
-            R3D.container.aDrawDeferred.count
-        );
-        break;
-    case R3D_SORT_BACK_TO_FRONT:
-        r3d_drawcall_sort_back_to_front(
-            (r3d_drawcall_t*)R3D.container.aDrawDeferred.data,
-            R3D.container.aDrawDeferred.count
-        );
-    case R3D_SORT_DISABLED:
-        break;
-    }
-    switch (R3D.state.render.sort[R3D_RENDER_FORWARD]) {
-    case R3D_SORT_AUTO:
-    case R3D_SORT_BACK_TO_FRONT:
-        r3d_drawcall_sort_front_to_back(
-            (r3d_drawcall_t*)R3D.container.aDrawForward.data,
-            R3D.container.aDrawForward.count
-        );
-        break;
-    case R3D_SORT_FRONT_TO_BACK:
-        r3d_drawcall_sort_back_to_front(
-            (r3d_drawcall_t*)R3D.container.aDrawForward.data,
-            R3D.container.aDrawForward.count
-        );
-    case R3D_SORT_DISABLED:
-        break;
-    }
+    // Sort front-to-back for deferred rendering
+    // This optimizes the depth test
+    r3d_drawcall_sort_front_to_back(
+        (r3d_drawcall_t*)R3D.container.aDrawDeferred.data,
+        R3D.container.aDrawDeferred.count
+    );
+
+    // Sort back-to-front for forward rendering
+    // Ensures better transparency handling
+    r3d_drawcall_sort_back_to_front(
+        (r3d_drawcall_t*)R3D.container.aDrawForward.data,
+        R3D.container.aDrawForward.count
+    );
 }
 
 void r3d_prepass_process_lights_and_batch(void)
@@ -701,19 +674,23 @@ void r3d_pass_shadow_maps(void)
                     r3d_shader_enable(raster.depthCubeInst);
                     {
                         for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
-                            r3d_drawcall_raster_depth_cube_inst((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i, light->data->position);
+                            r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i;
+                            if (call->castShadows) r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
                         }
                         for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
-                            r3d_drawcall_raster_depth_cube_inst((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i, light->data->position);
+                            r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i;
+                            if (call->castShadows) r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
                         }
                     }
                     r3d_shader_enable(raster.depthCube);
                     {
                         for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
-                            r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i, light->data->position);
+                            r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i;
+                            if (call->castShadows) r3d_drawcall_raster_depth_cube(call, light->data->position);
                         }
                         for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
-                            r3d_drawcall_raster_depth_cube((r3d_drawcall_t*)R3D.container.aDrawForward.data + i, light->data->position);
+                            r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForward.data + i;
+                            if (call->castShadows) r3d_drawcall_raster_depth_cube(call, light->data->position);
                         }
                     }
                 }
@@ -751,19 +728,23 @@ void r3d_pass_shadow_maps(void)
                 r3d_shader_enable(raster.depthInst);
                 {
                     for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
-                        r3d_drawcall_raster_depth_inst((r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i);
+                        r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i;
+                        if (call->castShadows) r3d_drawcall_raster_depth_inst(call);
                     }
                     for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
-                        r3d_drawcall_raster_depth_inst((r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i);
+                        r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i;
+                        if (call->castShadows) r3d_drawcall_raster_depth_inst(call);
                     }
                 }
                 r3d_shader_enable(raster.depth);
                 {
                     for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
-                        r3d_drawcall_raster_depth((r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i);
+                        r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i;
+                        if (call->castShadows) r3d_drawcall_raster_depth(call);
                     }
                     for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
-                        r3d_drawcall_raster_depth((r3d_drawcall_t*)R3D.container.aDrawForward.data + i);
+                        r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForward.data + i;
+                        if (call->castShadows) r3d_drawcall_raster_depth(call);
                     }
                 }
             }
