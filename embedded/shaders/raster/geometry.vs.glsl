@@ -33,10 +33,15 @@ uniform mat4 uMatNormal;
 uniform mat4 uMatModel;
 uniform mat4 uMatMVP;
 
+uniform float uValEmission;
+uniform vec3 uColEmission;
+uniform vec3 uColAlbedo;
+
 /* === Varyings === */
 
+out vec3 vEmission;
 out vec2 vTexCoord;
-out vec4 vColor;
+out vec3 vColor;
 out mat3 vTBN;
 
 /* === Main function === */
@@ -44,7 +49,8 @@ out mat3 vTBN;
 void main()
 {
     vTexCoord = aTexCoord;
-    vColor = aColor;
+    vColor = aColor.rgb * uColAlbedo;
+    vEmission = uColEmission * uValEmission; // NOTE: Calculated here, in case we add different emission modes later.
 
     // The TBN matrix is used to transform vectors from tangent space to world space
     // It is currently used to transform normals from a normal map to world space normals
