@@ -836,7 +836,9 @@ void r3d_pass_ssao(void)
         rlDisableDepthTest();
 
         // Enable gbuffer stencil test (render on geometry)
-        r3d_gbuffer_enable_stencil_test(true);
+        if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
+            r3d_gbuffer_enable_stencil_test(true);
+        }
 
         // Bind first SSAO output texture
         glFramebufferTexture2D(
@@ -917,7 +919,9 @@ void r3d_pass_lit_env(void)
         rlDisableDepthMask();
 
         // Enable gbuffer stencil test (render on geometry)
-        r3d_gbuffer_enable_stencil_test(true);
+        if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
+            r3d_gbuffer_enable_stencil_test(true);
+        }
 
         if (R3D.env.useSky)
         {
@@ -988,7 +992,9 @@ void r3d_pass_lit_obj(void)
         rlSetBlendMode(RL_BLEND_ADDITIVE);
 
         // Enable gbuffer stencil test (render on geometry)
-        r3d_gbuffer_enable_stencil_test(true);
+        if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
+            r3d_gbuffer_enable_stencil_test(true);
+        }
 
         r3d_shader_enable(screen.lighting);
         {
@@ -1083,7 +1089,9 @@ void r3d_pass_scene_deferred(void)
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Enable gbuffer stencil test (render on geometry)
-        r3d_gbuffer_enable_stencil_test(true);
+        if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
+            r3d_gbuffer_enable_stencil_test(true);
+        }
 
         r3d_shader_enable(screen.scene);
         {
