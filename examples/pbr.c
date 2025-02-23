@@ -1,4 +1,5 @@
 #include "./common.h"
+#include "r3d.h"
 
 /* === Resources === */
 
@@ -16,9 +17,24 @@ const char* Init(void)
 	R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
 	SetTargetFPS(60);
 
+	R3D_SetState(R3D_FLAG_FXAA);
+
+	R3D_SetSSAO(true);
+	R3D_SetSSAORadius(4.0f);
+
+	R3D_SetBloomMode(R3D_BLOOM_SOFT_LIGHT);
+	R3D_SetBloomHdrThreshold(0.5f);
+	R3D_SetBloomIntensity(0.5f);
+
+	R3D_SetTonemapMode(R3D_TONEMAP_ACES);
+	R3D_SetTonemapExposure(0.75f);
+	R3D_SetTonemapWhite(1.25f);
+
 	model = RES_LoadModel("pbr/musket.glb");
 	{
 		model.transform = MatrixMultiply(model.transform, MatrixRotateY(PI / 2));
+
+		//for (int i = 0; i < model.meshCount; i++)
 
 		for (int i = 0; i < model.materialCount; i++) {
 			model.materials[i].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
