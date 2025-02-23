@@ -839,6 +839,9 @@ void r3d_pass_ssao(void)
         if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
             r3d_gbuffer_enable_stencil_test(true);
         }
+        else {
+            r3d_gbuffer_disable_stencil();
+        }
 
         // Bind first SSAO output texture
         glFramebufferTexture2D(
@@ -922,6 +925,9 @@ void r3d_pass_lit_env(void)
         if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
             r3d_gbuffer_enable_stencil_test(true);
         }
+        else {
+            r3d_gbuffer_disable_stencil();
+        }
 
         if (R3D.env.useSky)
         {
@@ -994,6 +1000,9 @@ void r3d_pass_lit_obj(void)
         // Enable gbuffer stencil test (render on geometry)
         if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
             r3d_gbuffer_enable_stencil_test(true);
+        }
+        else {
+            r3d_gbuffer_disable_stencil();
         }
 
         r3d_shader_enable(screen.lighting);
@@ -1091,6 +1100,9 @@ void r3d_pass_scene_deferred(void)
         // Enable gbuffer stencil test (render on geometry)
         if (R3D.state.flags & R3D_FLAG_STENCIL_TEST) {
             r3d_gbuffer_enable_stencil_test(true);
+        }
+        else {
+            r3d_gbuffer_disable_stencil();
         }
 
         r3d_shader_enable(screen.scene);
