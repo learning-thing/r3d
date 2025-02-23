@@ -60,7 +60,7 @@ static void r3d_pass_scene_deferred(void);
 static void r3d_pass_scene_background(void);
 static void r3d_pass_scene_forward(void);
 
-static void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf);
+static void r3d_pass_post_init(unsigned int fb, unsigned srcAttach);
 static void r3d_pass_post_bloom(void);
 static void r3d_pass_post_fog(void);
 static void r3d_pass_post_tonemap(void);
@@ -379,7 +379,6 @@ void R3D_End(void)
 
     r3d_pass_post_init(
         R3D.framebuffer.scene.id,
-        GL_COLOR_ATTACHMENT0,
         GL_COLOR_ATTACHMENT0
     );
 
@@ -1387,22 +1386,22 @@ void r3d_pass_scene_forward(void)
     }
 }
 
-void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf)
+void r3d_pass_post_init(unsigned int fb, unsigned srcAttach)
 {
     r3d_gbuffer_disable_stencil();
 
-    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    glBindFramebuffer(GL_FRAMEBUFFER, R3D.framebuffer.post.id);
+
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
         R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
     );
-    rlDisableFramebuffer();
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, R3D.framebuffer.post.id);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, fb);
 
-    glReadBuffer(srcBuf);
-    glDrawBuffer(dstBuf);
+    glReadBuffer(srcAttach);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
     glBlitFramebuffer(
         0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
