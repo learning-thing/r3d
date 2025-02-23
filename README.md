@@ -67,13 +67,16 @@ git submodule update --init --recursive
    Use CMake to configure and build the library.
 
    ```bash
-   mkdir build
-   cd build
-   cmake ..
-   cmake --build .
+   cmake -B build
    ```
 
-4. **Link the library to your project**:
+   or (if you want to use a specific generator):
+   ```bash
+   cmake -B build -G "Ninja"
+   ```
+   
+
+5. **Link the library to your project**:
 
    - R3D is a CMake project, and you can include it in your own CMake-based project via `add_subdirectory()` or by linking directly to the built library.
    - If you're using it as the main project, you can build the examples using the option `R3D_BUILD_EXAMPLES` in CMake.
