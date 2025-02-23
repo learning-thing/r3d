@@ -142,11 +142,11 @@ static inline void* r3d_load_dds_from_memory_ext(
             header->ddspf.g_bit_mask == 0xFFFF0000) {
             dxgi_format = DXGI_FORMAT_R16G16_FLOAT;
         }
-        else if (header->ddspf.rgb_bit_count == 64 && 
-                 header->ddspf.r_bit_mask == 0xFFFFFFFF && 
-                 header->ddspf.g_bit_mask == 0xFFFFFFFF00000000ULL) {
-            dxgi_format = DXGI_FORMAT_R32G32_FLOAT;
-        }
+        //else if (header->ddspf.rgb_bit_count == 64 && 
+        //         header->ddspf.r_bit_mask == 0xFFFFFFFF && 
+        //         header->ddspf.g_bit_mask == 0xFFFFFFFF00000000ULL) {
+        //    dxgi_format = DXGI_FORMAT_R32G32_FLOAT;
+        //}
     }
 
     // Determine format and size

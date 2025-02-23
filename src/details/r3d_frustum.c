@@ -27,7 +27,7 @@
 static inline Vector4 r3d_frustum_normalize_plane(Vector4 plane)
 {
     float mag = sqrtf(plane.x * plane.x + plane.y * plane.y + plane.z * plane.z);
-    if (mag <= 1e-6f) (Vector4) { 0 };
+    if (mag <= 1e-6f) return (Vector4) { 0 };
 
     return Vector4Scale(plane, 1.0f / mag);
 }

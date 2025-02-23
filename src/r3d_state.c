@@ -1038,8 +1038,13 @@ void r3d_texture_load_ibl_brdf_lut(void)
 {
     Image img = { 0 };
 
-    int special_format_size = 0; // should be 4 or 8 (RG16F or RG32F)
-    img.data = r3d_load_dds_from_memory_ext(TEX_IBL_BRDF_LUT, TEX_IBL_BRDF_LUT_SIZE, &img.width, &img.height, &special_format_size);
+    uint32_t width = 0, height = 0;
+    uint32_t special_format_size = 0; // should be 4 or 8 (RG16F or RG32F)
+
+    img.data = r3d_load_dds_from_memory_ext(TEX_IBL_BRDF_LUT, TEX_IBL_BRDF_LUT_SIZE, &width, &height, &special_format_size);
+
+    img.width = (int)width;
+    img.height = (int)height;
 
     if (img.data && (special_format_size == 4 || special_format_size == 8)) {
         GLuint texId;
