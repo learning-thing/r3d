@@ -1,10 +1,4 @@
 #include "./common.h"
-#include <r3d.h>
-
-#include <raymath.h>
-#include <stdlib.h>
-#include <stddef.h>
-
 
 /* === Resources === */
 

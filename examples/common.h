@@ -1,7 +1,12 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <r3d.h>
 #include <raylib.h>
+#include <raymath.h>
+
+#include <stdlib.h>
+#include <stddef.h>
 
 #ifndef RESOURCES_PATH
 #	define RESOURCES_PATH "/"

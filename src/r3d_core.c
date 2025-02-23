@@ -681,7 +681,7 @@ void r3d_pass_shadow_maps(void)
                     // Set view matrix for the current cubemap face
                     rlMatrixMode(RL_MODELVIEW);
                     rlLoadIdentity();
-                    rlMultMatrixf(MatrixToFloat(r3d_light_get_matrix_view_omni(light, j)));
+                    rlMultMatrixf(MatrixToFloat(r3d_light_get_matrix_view_omni(light->data, j)));
 
                     // Rasterize geometries for depth rendering
                     r3d_shader_enable(raster.depthCubeInst);
@@ -853,7 +853,8 @@ void r3d_pass_ssao(void)
             r3d_shader_set_mat4(screen.ssao, uMatView, R3D.state.transform.view);
 
             r3d_shader_set_vec2(screen.ssao, uResolution, ((Vector2) {
-                R3D.state.resolution.width / 2, R3D.state.resolution.height / 2
+                (float)R3D.state.resolution.width / 2,
+                (float)R3D.state.resolution.height / 2
             }));
 
             r3d_shader_set_float(screen.ssao, uNear, rlGetCullDistanceNear());

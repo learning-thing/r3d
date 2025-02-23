@@ -1,8 +1,5 @@
 #include "./common.h"
 
-#include <r3d.h>
-#include <raymath.h>
-
 /* === Resources === */
 
 static Model		model = { 0 };

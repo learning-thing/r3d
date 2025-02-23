@@ -1,8 +1,4 @@
 #include "./common.h"
-#include <r3d.h>
-
-#include <raymath.h>
-#include <stddef.h>
 
 #define INSTANCE_COUNT 1000
 
