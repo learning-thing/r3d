@@ -51,7 +51,7 @@ void r3d_framebuffer_load_gbuffer(int width, int height)
     // Generate (albedo / orm / emission / material ID) buffers
     gBuffer->albedo = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
     gBuffer->emission = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
-    gBuffer->orm = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
+    gBuffer->orm = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R5G6B5, 1);
 
     // We generate the normal buffer here.
     // The setup for the normal buffer requires direct API calls
@@ -112,7 +112,7 @@ void r3d_framebuffer_load_pingpong_ssao(int width, int height)
     for (int i = 0; i < 2; i++) {
         glGenTextures(1, &ssao->textures[i]);
         glBindTexture(GL_TEXTURE_2D, ssao->textures[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, width, height, 0, GL_RED, GL_HALF_FLOAT, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -270,7 +270,7 @@ void r3d_framebuffer_load_pingpong_bloom(int width, int height)
 
     // Generate (color) buffers
     for (int i = 0; i < 2; i++) {
-        bloom->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16A16, 1);
+        bloom->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
         glBindTexture(GL_TEXTURE_2D, bloom->textures[i]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

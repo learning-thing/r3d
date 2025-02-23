@@ -39,7 +39,7 @@ uniform float uBloomIntensity;
 
 /* === Fragments === */
 
-out vec4 FragColor;
+out vec3 FragColor;
 
 // === Main program === //
 
@@ -60,5 +60,5 @@ void main()
     }
 
     // Final color output
-    FragColor = vec4(result, 1.0);
+    FragColor = vec3(result);
 }

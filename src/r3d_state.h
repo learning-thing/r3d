@@ -45,52 +45,52 @@ extern struct R3D_State {
         // G-Buffer
         struct r3d_fb_gbuffer_t {
             unsigned int id;
-            unsigned int albedo;            ///< (RGB - 8-bit)
-            unsigned int emission;          ///< (RGB - 8-bit)
-            unsigned int normal;            ///< (RG - 16-bit)
-            unsigned int orm;               ///< (RGB - 8-bit)
-            unsigned int depth;             ///< (DS - 24-bit)
+            unsigned int albedo;            ///< RGB[8|8|8]
+            unsigned int emission;          ///< RGB[16|16|16]  //< REVIEW: R11G11B10F ?
+            unsigned int normal;            ///< RG[16|16]
+            unsigned int orm;               ///< RGB[5|6|5]
+            unsigned int depth;             ///< DS[16|8]
         } gBuffer;
 
         // Ping-pong buffer for SSAO blur processing (half internal resolution)
         struct r3d_fb_pingpong_ssao_t {
             unsigned int id;
-            unsigned int textures[2];       ///< (RED - 16-bit) -> Used for initial SSAO rendering + blur effect
+            unsigned int textures[2];       ///< R[8] -> Used for initial SSAO rendering + blur effect
             bool targetTexIdx;
         } pingPongSSAO;
 
         // Lit environment
         struct r3d_fb_lit_env_t {
             unsigned int id;
-            unsigned int ambient;           ///< (RGB - 16-bit) -> Ambient color (sky or object irradiance)
-            unsigned int specular;          ///< (RGB - 16-bit) -> Specular reflection on objects
+            unsigned int ambient;           ///< RGB[16|16|16] -> Ambient color (sky or object irradiance)
+            unsigned int specular;          ///< RGB[16|16|16] -> Specular reflection on objects
         } litEnv;
 
         // Lit objects
         struct r3d_fb_lit_obj_t {
             unsigned int id;
-            unsigned int diffuse;           ///< (RGB - 16-bit) -> Diffuse contribution
-            unsigned int specular;          ///< (RGB - 16-bit) -> Specular contribution
+            unsigned int diffuse;           ///< RGB[16|16|16] -> Diffuse contribution
+            unsigned int specular;          ///< RGB[16|16|16] -> Specular contribution
         } litObj;
 
         // Final scene (before post process)
         struct r3d_fb_scene_t {
             unsigned int id;
-            unsigned int color;             ///< (RGB - 8-bit) -> Final color
-            unsigned int bright;            ///< (RGB - 16-bit) -> Bright areas only, used for bloom
+            unsigned int color;             ///< RGB[8|8|8] -> Final color
+            unsigned int bright;            ///< RGB[16|16|16] -> Bright areas only, used for bloom
         } scene;
 
         // Ping-pong buffer for bloom blur processing (half internal resolution)
         struct r3d_fb_pingpong_bloom_t {
             unsigned int id;
-            unsigned int textures[2];
+            unsigned int textures[2];       ///< RGB[16|16|16]
             bool targetTexIdx;
         } pingPongBloom;
 
-        // Post-processing buffer (similar to ping-pong but with a different setup)  
+        // Post-processing buffer
         struct r3d_fb_post_t {
             unsigned int id;
-            unsigned int textures[2];
+            unsigned int textures[2];       ///< RGB[8|8|8]
             bool targetTexIdx;
         } post;
 
