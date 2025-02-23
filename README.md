@@ -74,7 +74,6 @@ git submodule update --init --recursive
    ```bash
    cmake -B build -G "Ninja"
    ```
-   
 
 5. **Link the library to your project**:
 
