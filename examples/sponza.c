@@ -15,9 +15,11 @@ static bool sky = false;
 const char* Init(void)
 {
     R3D_Init(GetScreenWidth(), GetScreenHeight(), 0);
+    SetTargetFPS(60);
 
     R3D_SetSSAO(true);
     R3D_SetSSAORadius(4.0f);
+    R3D_SetBloomMode(R3D_BLOOM_SOFT_LIGHT);
 
     sponza = RES_LoadModel("sponza.glb");
 
@@ -82,6 +84,15 @@ void Update(float delta)
     if (IsKeyPressed(KEY_O)) {
         R3D_SetSSAO(!R3D_GetSSAO());
     }
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        R3D_Tonemap tonemap = R3D_GetTonemapMode();
+        R3D_SetTonemapMode((tonemap + 4 - 1) % 4);
+    }
+    if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+        R3D_Tonemap tonemap = R3D_GetTonemapMode();
+        R3D_SetTonemapMode((tonemap + 1) % 4);
+    }
 }
 
 void Draw(void)
@@ -95,6 +106,31 @@ void Draw(void)
         DrawSphere(R3D_GetLightPosition(lights[1]), 0.5f, WHITE);
     EndMode3D();
 
+    R3D_Tonemap tonemap = R3D_GetTonemapMode();
+
+    switch (tonemap) {
+    case R3D_TONEMAP_LINEAR: {
+        const char* txt = "< TONEMAP LINEAR >";
+        DrawText(txt, GetScreenWidth() - MeasureText(txt, 20) - 10, 10, 20, LIME);
+    }
+    break;
+    case R3D_TONEMAP_REINHARD: {
+        const char* txt = "< TONEMAP REINHARD >";
+        DrawText(txt, GetScreenWidth() - MeasureText(txt, 20) - 10, 10, 20, LIME);
+    }
+    break;
+    case R3D_TONEMAP_FILMIC: {
+        const char* txt = "< TONEMAP FILMIC >";
+        DrawText(txt, GetScreenWidth() - MeasureText(txt, 20) - 10, 10, 20, LIME);
+    }
+    break;
+    case R3D_TONEMAP_ACES: {
+        const char* txt = "< TONEMAP ACES >";
+        DrawText(txt, GetScreenWidth() - MeasureText(txt, 20) - 10, 10, 20, LIME);
+
+    } break;
+    }    
+        
     DrawFPS(10, 10);
 }
 
