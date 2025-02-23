@@ -197,6 +197,94 @@ void r3d_light_indicate_shadow_update(r3d_light_t* light)
     }
 }
 
+void r3d_light_get_matrix_vp_dir(r3d_light_t* light, BoundingBox sceneBounds, Matrix* view, Matrix* proj)
+{
+    // Calculating the center of the scene
+    Vector3 sceneCenter = {
+        (sceneBounds.min.x + sceneBounds.max.x) * 0.5f,
+        (sceneBounds.min.y + sceneBounds.max.y) * 0.5f,
+        (sceneBounds.min.z + sceneBounds.max.z) * 0.5f
+    };
+
+    // Calculating the half-extents of the scene with a safety margin
+    const float SCENE_MARGIN = 1.1f; // 10% margin
+    Vector3 sceneExtents = {
+        (sceneBounds.max.x - sceneBounds.min.x) * 0.5f * SCENE_MARGIN,
+        (sceneBounds.max.y - sceneBounds.min.y) * 0.5f * SCENE_MARGIN,
+        (sceneBounds.max.z - sceneBounds.min.z) * 0.5f * SCENE_MARGIN
+    };
+
+    // Normalizing the light direction
+    Vector3 lightDir = Vector3Normalize(light->direction);
+
+    // Calculating the light position (placed at a distance from the center of the scene)
+    float maxSceneExtent = fmaxf(sceneExtents.x, fmaxf(sceneExtents.y, sceneExtents.z));
+    float lightDistance = maxSceneExtent * 2.0f;
+    Vector3 lightPos = Vector3Add(sceneCenter, Vector3Scale(Vector3Negate(lightDir), lightDistance));
+
+    // Calculating the view matrix with a stable up vector
+    Vector3 upVector;
+    if (fabsf(lightDir.y) > 0.99f) {
+        // If the direction is nearly vertical, use Z as the "up" vector
+        upVector = (Vector3){ 0.0f, 0.0f, 1.0f };
+    }
+    else {
+        upVector = (Vector3){ 0.0f, 1.0f, 0.0f };
+    }
+    *view = MatrixLookAt(lightPos, sceneCenter, upVector);
+
+    // Calculating the bounding volume of the scene in light space
+    Matrix viewMatrix = *view;
+    Vector3 corners[8] = {
+        {sceneBounds.min.x, sceneBounds.min.y, sceneBounds.min.z},
+        {sceneBounds.max.x, sceneBounds.min.y, sceneBounds.min.z},
+        {sceneBounds.min.x, sceneBounds.max.y, sceneBounds.min.z},
+        {sceneBounds.max.x, sceneBounds.max.y, sceneBounds.min.z},
+        {sceneBounds.min.x, sceneBounds.min.y, sceneBounds.max.z},
+        {sceneBounds.max.x, sceneBounds.min.y, sceneBounds.max.z},
+        {sceneBounds.min.x, sceneBounds.max.y, sceneBounds.max.z},
+        {sceneBounds.max.x, sceneBounds.max.y, sceneBounds.max.z}
+    };
+
+    float minX = INFINITY, maxX = -INFINITY;
+    float minY = INFINITY, maxY = -INFINITY;
+    float minZ = INFINITY, maxZ = -INFINITY;
+
+    for (int i = 0; i < 8; i++) {
+        Vector3 transformed = Vector3Transform(corners[i], viewMatrix);
+        minX = fminf(minX, transformed.x);
+        maxX = fmaxf(maxX, transformed.x);
+        minY = fminf(minY, transformed.y);
+        maxY = fmaxf(maxY, transformed.y);
+        minZ = fminf(minZ, transformed.z);
+        maxZ = fmaxf(maxZ, transformed.z);
+    }
+
+    // Creating the orthographic projection matrix
+    // WARNING: In camera space, objects in front of the camera have negative Z values.
+    // Here, maxZ corresponds to the closest plane (less negative) and minZ to the farthest plane.
+    // To obtain positive distances for the projection, we reverse the signs:
+    // near = -maxZ and far = -minZ (which guarantees near < far).
+    *proj = MatrixOrtho(
+        minX, maxX,
+        minY, maxY,
+        -maxZ,  // near plane
+        -minZ   // far plane
+    );
+}
+
+Matrix r3d_light_get_matrix_view_spot(r3d_light_t* light)
+{
+    return MatrixLookAt(light->position,
+        Vector3Add(light->position, light->direction), (Vector3) { 0, 1, 0 }
+    );
+}
+
+Matrix r3d_light_get_matrix_proj_spot(r3d_light_t* light)
+{
+    return MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range);
+}
+
 Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face)
 {
     static const Vector3 dirs[6] = {
@@ -220,4 +308,9 @@ Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face)
     return MatrixLookAt(
         light->position, Vector3Add(light->position, dirs[face]), ups[face]
     );
+}
+
+Matrix r3d_light_get_matrix_proj_omni(r3d_light_t* light)
+{
+    return MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range);
 }

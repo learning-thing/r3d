@@ -77,6 +77,12 @@ void r3d_light_destroy_shadow_map(r3d_light_t* light);
 void r3d_light_process_shadow_update(r3d_light_t* light);
 void r3d_light_indicate_shadow_update(r3d_light_t* light);
 
+void r3d_light_get_matrix_vp_dir(r3d_light_t* light, BoundingBox sceneBounds, Matrix* view, Matrix* proj);
+
+Matrix r3d_light_get_matrix_view_spot(r3d_light_t* light);
+Matrix r3d_light_get_matrix_proj_spot(r3d_light_t* light);
+
 Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face);
+Matrix r3d_light_get_matrix_proj_omni(r3d_light_t* light);
 
 #endif // R3D_LIGHT_H

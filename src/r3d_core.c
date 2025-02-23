@@ -153,6 +153,12 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     R3D.state.render.mode = R3D_RENDER_DEFERRED;
     R3D.state.render.shadowCasting = true;
 
+    // Init scene data
+    R3D.state.scene.bounds = (BoundingBox) {
+        (Vector3) { -100, -100, -100 },
+        (Vector3) {  100,  100,  100 }
+    };
+
     // Set parameter flags
     R3D.state.flags = flags;
 
@@ -271,6 +277,11 @@ void R3D_SetRenderTarget(RenderTexture* target)
     }
 
     R3D.framebuffer.customTarget = *target;
+}
+
+void R3D_SetSceneBounds(BoundingBox sceneBounds)
+{
+    R3D.state.scene.bounds = sceneBounds;
 }
 
 void R3D_ApplyRenderMode(R3D_RenderMode mode)
@@ -513,7 +524,7 @@ void r3d_framebuffers_unload(void)
     }
 }
 
-static void r3d_gbuffer_enable_stencil_write(void)
+void r3d_gbuffer_enable_stencil_write(void)
 {
     // Re-attach the depth/stencil buffer to the framebuffer
     glFramebufferTexture2D(
@@ -528,7 +539,7 @@ static void r3d_gbuffer_enable_stencil_write(void)
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  // Replace stencil value with 1
 }
 
-static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry)
+void r3d_gbuffer_enable_stencil_test(bool passOnGeometry)
 {
     // Attach the depth/stencil texture of the G-Buffer
     glFramebufferTexture2D(
@@ -543,7 +554,7 @@ static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry)
     glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);         // Do not modify the stencil buffer
 }
 
-static void r3d_gbuffer_disable_stencil(void)
+void r3d_gbuffer_disable_stencil(void)
 {
     glDisable(GL_STENCIL_TEST);
 }
@@ -659,7 +670,7 @@ void r3d_pass_shadow_maps(void)
             if (light->data->type == R3D_LIGHT_OMNI) {
                 // Set up projection matrix for omni-directional light
                 rlMatrixMode(RL_PROJECTION);
-                rlSetMatrixProjection(MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->data->range));
+                rlSetMatrixProjection(r3d_light_get_matrix_proj_omni(light->data));
 
                 // Render geometries for each face of the cubemap
                 for (int j = 0; j < 6; j++) {
@@ -705,13 +716,11 @@ void r3d_pass_shadow_maps(void)
                 Matrix matProj = { 0 };
 
                 if (light->data->type == R3D_LIGHT_DIR) {
-                    Vector3 lightPos = Vector3Add((Vector3) { 0 }, Vector3Scale(Vector3Negate(light->data->direction), 1000.0));
-                    matView = MatrixLookAt(lightPos, (Vector3) { 0 }, (Vector3) { 0, 1, 0 });
-                    matProj = MatrixOrtho(-10, 10, -10, 10, 0.1, 2000.0);
+                    r3d_light_get_matrix_vp_dir(light->data, R3D.state.scene.bounds, &matView, &matProj);
                 }
                 else if (light->data->type == R3D_LIGHT_SPOT) {
-                    matView = MatrixLookAt(light->data->position, Vector3Add(light->data->position, light->data->direction), (Vector3) { 0, 1, 0 });
-                    matProj = MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->data->range);
+                    matView = r3d_light_get_matrix_view_spot(light->data);
+                    matProj = r3d_light_get_matrix_proj_spot(light->data);
                 }
 
                 // Store combined view and projection matrix for the shadow map

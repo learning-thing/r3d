@@ -222,6 +222,11 @@ extern struct R3D_State {
             BoundingBox aabb;
         } frustum;
 
+        // Scene data
+        struct {
+            BoundingBox bounds;
+        } scene;
+
         // Resolution
         struct {
             int width;

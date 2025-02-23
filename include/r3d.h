@@ -95,6 +95,7 @@ void R3D_GetResolution(int* width, int* height);
 void R3D_UpdateResolution(int width, int height);
 
 void R3D_SetRenderTarget(RenderTexture* target);
+void R3D_SetSceneBounds(BoundingBox sceneBounds);
 
 void R3D_ApplyRenderMode(R3D_RenderMode mode);
 void R3D_ApplyShadowCasting(bool enabled);
