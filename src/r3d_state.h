@@ -239,6 +239,7 @@ extern struct R3D_State {
         struct {
             R3D_RenderMode mode;
             bool shadowCasting;
+            R3D_BillboardMode billboardMode;
         } render;
 
         // Miscellaneous flags

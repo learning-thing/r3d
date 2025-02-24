@@ -130,8 +130,10 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
+    r3d_shader_uniform_mat4_t uMatInvView;
     r3d_shader_uniform_mat4_t uMatModel;
     r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_int_t uBillboardMode;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexNormal;
     r3d_shader_uniform_sampler2D_t uTexEmission;
@@ -160,8 +162,12 @@ typedef struct {
     r3d_shader_uniform_mat4_t uMatMVP;
 } r3d_shader_raster_depth_t;
 
-typedef r3d_shader_raster_depth_t
-    r3d_shader_raster_depth_inst_t;
+typedef struct {
+    unsigned int id;
+    r3d_shader_uniform_mat4_t uMatInvView;
+    r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_int_t uBillboardMode;
+} r3d_shader_raster_depth_inst_t;
 
 typedef struct {
     unsigned int id;
@@ -170,8 +176,14 @@ typedef struct {
     r3d_shader_uniform_mat4_t uMatMVP;
 } r3d_shader_raster_depth_cube_t;
 
-typedef r3d_shader_raster_depth_cube_t
-    r3d_shader_raster_depth_cube_inst_t;
+typedef struct {
+    unsigned int id;
+    r3d_shader_uniform_vec3_t uViewPosition;
+    r3d_shader_uniform_mat4_t uMatInvView;
+    r3d_shader_uniform_mat4_t uMatModel;
+    r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_int_t uBillboardMode;
+} r3d_shader_raster_depth_cube_inst_t;
 
 typedef struct {
     unsigned int id;
@@ -238,8 +250,10 @@ typedef struct {
         r3d_shader_uniform_int_t shadow;
     } uLights[R3D_SHADER_FORWARD_NUM_LIGHTS];
     r3d_shader_uniform_mat4_t uMatLightMVP[R3D_SHADER_FORWARD_NUM_LIGHTS];
+    r3d_shader_uniform_mat4_t uMatInvView;
     r3d_shader_uniform_mat4_t uMatModel;
     r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_int_t uBillboardMode;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexEmission;
     r3d_shader_uniform_sampler2D_t uTexNormal;

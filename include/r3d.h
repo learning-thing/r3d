@@ -52,6 +52,19 @@ typedef enum {
 } R3D_RenderMode;
 
 /**
+ * @brief Defines billboard modes for 3D objects.
+ *
+ * This enumeration defines how a 3D object aligns itself relative to the camera.
+ * It provides options to disable billboarding or to enable specific modes of alignment.
+ */
+typedef enum {
+    R3D_BILLBOARD_DISABLED,     ///< Billboarding is disabled; the object retains its original orientation.
+    R3D_BILLBOARD_FRONT,        ///< Full billboarding; the object fully faces the camera, rotating on all axes.
+    R3D_BILLBOARD_Y_AXIS        /**< Y-axis constrained billboarding; the object rotates only around the Y-axis,
+                                     keeping its "up" orientation fixed. This is suitable for upright objects like characters or signs. */
+} R3D_BillboardMode;
+
+/**
  * @brief Types of lights supported by the rendering engine.
  *
  * Each light type has different behaviors and use cases.
@@ -261,6 +274,17 @@ void R3D_ApplyRenderMode(R3D_RenderMode mode);
  */
 void R3D_ApplyShadowCasting(bool enabled);
 
+/**
+ * @brief Applies a billboard mode to sprites or meshes.
+ *
+ * This function sets the current billboard mode, determining how objects orient
+ * themselves relative to the camera. It can be called at any time, including
+ * between `R3D_Begin` and `R3D_End`. The set mode will apply to all subsequent
+ * draw calls.
+ *
+ * @param mode The billboard mode to apply.
+ */
+void R3D_ApplyBillboardMode(R3D_BillboardMode mode);
 
 
 // --------------------------------------------

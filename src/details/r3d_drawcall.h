@@ -33,6 +33,7 @@ typedef struct {
     Material material;
     bool castShadows;
     struct {
+        R3D_BillboardMode billboardMode;
         const Matrix* transforms;
         const Color* colors;
         size_t count;

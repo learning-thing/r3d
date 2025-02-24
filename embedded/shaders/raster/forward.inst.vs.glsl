@@ -23,6 +23,9 @@
 
 #define NUM_LIGHTS 8
 
+#define BILLBOARD_FRONT 1
+#define BILLBOARD_Y_AXIS 2
+
 /* === Attributes === */
 
 layout(location = 0) in vec3 aPosition;
@@ -38,10 +41,13 @@ layout(location = 14) in vec4 iColor;
 
 /* === Uniforms === */
 
+uniform mat4 uMatLightMVP[NUM_LIGHTS];
+
+uniform mat4 uMatInvView;       ///< Only for billboard modes
 uniform mat4 uMatModel;
 uniform mat4 uMatMVP;
 
-uniform mat4 uMatLightMVP[NUM_LIGHTS];
+uniform lowp int uBillboardMode;
 
 uniform vec4 uColAlbedo;
 
@@ -54,6 +60,70 @@ out mat3 vTBN;
 
 out vec4 vPosLightSpace[NUM_LIGHTS];
 
+/* === Helper functions === */
+
+void BillboardFront(inout mat4 model, inout mat3 normal)
+{
+    // Extract the original scales of the model
+    float scaleX = length(vec3(model[0]));
+    float scaleY = length(vec3(model[1]));
+    float scaleZ = length(vec3(model[2]));
+
+    // Copy the inverted view vectors for the X, Y, and Z axes
+    // while applying the original scales
+    model[0] = vec4(normalize(uMatInvView[0].xyz) * scaleX, 0.0);
+    model[1] = vec4(normalize(uMatInvView[1].xyz) * scaleY, 0.0);
+    model[2] = vec4(normalize(uMatInvView[2].xyz) * scaleZ, 0.0);
+
+    // Update the normal matrix
+    // For normals, use the inverse transpose of the scales
+    float invScaleX = 1.0 / scaleX;
+    float invScaleY = 1.0 / scaleY;
+    float invScaleZ = 1.0 / scaleZ;
+
+    normal[0] = normalize(uMatInvView[0].xyz) * invScaleX;
+    normal[1] = normalize(uMatInvView[1].xyz) * invScaleY;
+    normal[2] = normalize(uMatInvView[2].xyz) * invScaleZ;
+}
+
+void BillboardY(inout mat4 model, inout mat3 normal)
+{
+    // Extract the model position
+    vec3 position = vec3(model[3]);
+    
+    // Extract the original scales of the model
+    float scaleX = length(vec3(model[0]));
+    float scaleY = length(vec3(model[1]));
+    float scaleZ = length(vec3(model[2]));
+    
+    // Preserve the original Y-axis of the model (vertical direction)
+    vec3 upVector = normalize(vec3(model[1]));
+    
+    // Direction from the camera to the object
+    vec3 lookDirection = normalize(position - vec3(uMatInvView[3]));
+    
+    // Compute the right vector using the cross product
+    vec3 rightVector = normalize(cross(upVector, lookDirection));
+    
+    // Recalculate the front vector to ensure orthogonality
+    vec3 frontVector = normalize(cross(rightVector, upVector));
+    
+    // Construct the new model matrix while preserving the scales
+    model[0] = vec4(rightVector * scaleX, 0.0);
+    model[1] = vec4(upVector * scaleY, 0.0);
+    model[2] = vec4(frontVector * scaleZ, 0.0);
+    
+    // Update the normal matrix
+    // For normals, use the inverse transpose of the scales
+    float invScaleX = 1.0 / scaleX;
+    float invScaleY = 1.0 / scaleY;
+    float invScaleZ = 1.0 / scaleZ;
+    
+    normal[0] = rightVector * invScaleX;
+    normal[1] = upVector * invScaleY;
+    normal[2] = frontVector * invScaleZ;
+}
+
 /* === Main program === */
 
 void main()
@@ -63,7 +133,11 @@ void main()
 
     mat4 matInst = transpose(iMatModel);
     mat4 matModel = uMatModel * matInst;
-    mat3 matNormal = transpose(inverse(mat3(matModel)));
+    mat3 matNormal = mat3(0.0);
+
+    if (uBillboardMode == BILLBOARD_FRONT) BillboardFront(matModel, matNormal);
+    else if (uBillboardMode == BILLBOARD_Y_AXIS) BillboardY(matModel, matNormal);
+    else matNormal = transpose(inverse(mat3(matModel)));
 
     vPosition = vec3(matModel * vec4(aPosition, 1.0));
 

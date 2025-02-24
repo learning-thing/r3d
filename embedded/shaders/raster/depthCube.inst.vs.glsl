@@ -19,6 +19,11 @@
 
 #version 330 core
 
+/* === Defines === */
+
+#define BILLBOARD_FRONT 1
+#define BILLBOARD_Y_AXIS 2
+
 /* === Attributes === */
 
 layout(location = 0) in vec3 aPosition;
@@ -29,18 +34,70 @@ layout(location = 10) in mat4 aInstanceModel;
 
 /* === Uniforms === */
 
+uniform mat4 uMatInvView;       ///< Only for billboard modes
 uniform mat4 uMatModel;
 uniform mat4 uMatMVP;
+
+uniform lowp int uBillboardMode;
 
 /* === Varyings === */
 
 out vec3 vPosition;
 
+/* === Helper functions === */
+
+void BillboardFront(inout mat4 model)
+{
+    // Extract the original scales of the model
+    float scaleX = length(vec3(model[0]));
+    float scaleY = length(vec3(model[1]));
+    float scaleZ = length(vec3(model[2]));
+
+    // Copy the inverted view vectors for the X, Y, and Z axes
+    // while applying the original scales
+    model[0] = vec4(normalize(uMatInvView[0].xyz) * scaleX, 0.0);
+    model[1] = vec4(normalize(uMatInvView[1].xyz) * scaleY, 0.0);
+    model[2] = vec4(normalize(uMatInvView[2].xyz) * scaleZ, 0.0);
+}
+
+void BillboardY(inout mat4 model)
+{
+    // Extract the model position
+    vec3 position = vec3(model[3]);
+    
+    // Extract the original scales of the model
+    float scaleX = length(vec3(model[0]));
+    float scaleY = length(vec3(model[1]));
+    float scaleZ = length(vec3(model[2]));
+    
+    // Preserve the original Y-axis of the model (vertical direction)
+    vec3 upVector = normalize(vec3(model[1]));
+    
+    // Direction from the camera to the object
+    vec3 lookDirection = normalize(position - vec3(uMatInvView[3]));
+    
+    // Compute the right vector using the cross product
+    vec3 rightVector = normalize(cross(upVector, lookDirection));
+    
+    // Recalculate the front vector to ensure orthogonality
+    vec3 frontVector = normalize(cross(rightVector, upVector));
+    
+    // Construct the new model matrix while preserving the scales
+    model[0] = vec4(rightVector * scaleX, 0.0);
+    model[1] = vec4(upVector * scaleY, 0.0);
+    model[2] = vec4(frontVector * scaleZ, 0.0);
+}
+
 /* === Main function === */
 
 void main()
 {
-    mat4 instanceModel = transpose(aInstanceModel);
-    vPosition = vec3((uMatModel * instanceModel) * vec4(aPosition, 1.0));
-    gl_Position = uMatMVP * (instanceModel * vec4(aPosition, 1.0));
+    mat4 matInst = transpose(aInstanceModel);
+    mat4 matModel = uMatModel * matInst;
+
+    if (uBillboardMode == BILLBOARD_FRONT) BillboardFront(matModel);
+    else if (uBillboardMode == BILLBOARD_Y_AXIS) BillboardY(matModel);
+
+    vPosition = vec3(matModel * vec4(aPosition, 1.0));
+    gl_Position = uMatMVP * (matModel * vec4(aPosition, 1.0));
 }

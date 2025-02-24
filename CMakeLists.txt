@@ -68,6 +68,7 @@ endif()
 add_library(${PROJECT_NAME} ${R3D_LIB_TYPE}
     "${R3D_ROOT_PATH}/src/details/r3d_projection.c"
     "${R3D_ROOT_PATH}/src/details/r3d_primitives.c"
+    "${R3D_ROOT_PATH}/src/details/r3d_billboard.c"
     "${R3D_ROOT_PATH}/src/details/r3d_collision.c"
     "${R3D_ROOT_PATH}/src/details/r3d_drawcall.c"
     "${R3D_ROOT_PATH}/src/details/r3d_frustum.c"

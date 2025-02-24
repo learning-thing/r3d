@@ -84,6 +84,12 @@ void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call)
 
     r3d_shader_set_mat4(raster.depthInst, uMatMVP, matMVP);
 
+    r3d_shader_set_int(raster.depthInst, uBillboardMode, call->instanced.billboardMode);
+
+    if (call->instanced.billboardMode != R3D_BILLBOARD_DISABLED) {
+        r3d_shader_set_mat4(raster.depthInst, uMatInvView, R3D.state.transform.invView);
+    }
+
     if (!rlEnableVertexArray(call->mesh.vaoId)) {
         rlEnableVertexBuffer(call->mesh.vboId[0]);
         rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
@@ -135,6 +141,12 @@ void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call, Vector3 vie
     r3d_shader_set_vec3(raster.depthCubeInst, uViewPosition, viewPos);
     r3d_shader_set_mat4(raster.depthCubeInst, uMatModel, matModel);
     r3d_shader_set_mat4(raster.depthCubeInst, uMatMVP, matMVP);
+
+    r3d_shader_set_int(raster.depthCubeInst, uBillboardMode, call->instanced.billboardMode);
+
+    if (call->instanced.billboardMode != R3D_BILLBOARD_DISABLED) {
+        r3d_shader_set_mat4(raster.depthCubeInst, uMatInvView, R3D.state.transform.invView);
+    }
 
     if (!rlEnableVertexArray(call->mesh.vaoId)) {
         rlEnableVertexBuffer(call->mesh.vboId[0]);
@@ -305,6 +317,13 @@ void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call)
     // Set color material maps
     r3d_shader_set_col3(raster.geometryInst, uColAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].color);
     r3d_shader_set_col3(raster.geometryInst, uColEmission, call->material.maps[MATERIAL_MAP_EMISSION].color);
+
+    // Setup billboard mode
+    r3d_shader_set_int(raster.depthCubeInst, uBillboardMode, call->instanced.billboardMode);
+
+    if (call->instanced.billboardMode != R3D_BILLBOARD_DISABLED) {
+        r3d_shader_set_mat4(raster.depthCubeInst, uMatInvView, R3D.state.transform.invView);
+    }
 
     // Bind active texture maps
     r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].texture.id, white);
@@ -560,6 +579,13 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
     // Set color material maps
     r3d_shader_set_col4(raster.forwardInst, uColAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].color);
     r3d_shader_set_col3(raster.forwardInst, uColEmission, call->material.maps[MATERIAL_MAP_EMISSION].color);
+
+    // Setup billboard mode
+    r3d_shader_set_int(raster.forwardInst, uBillboardMode, call->instanced.billboardMode);
+
+    if (call->instanced.billboardMode != R3D_BILLBOARD_DISABLED) {
+        r3d_shader_set_mat4(raster.forwardInst, uMatInvView, R3D.state.transform.invView);
+    }
 
     // Bind active texture maps
     r3d_shader_bind_sampler2D_opt(raster.forwardInst, uTexAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].texture.id, white);

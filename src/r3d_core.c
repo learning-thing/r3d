@@ -31,6 +31,7 @@
 #include "./r3d_state.h"
 #include "./details/r3d_light.h"
 #include "./details/r3d_drawcall.h"
+#include "./details/r3d_billboard.h"
 #include "./details/r3d_collision.h"
 #include "./details/r3d_primitives.h"
 #include "./details/r3d_projection.h"
@@ -152,6 +153,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     // Init rendering mode configs
     R3D.state.render.mode = R3D_RENDER_DEFERRED;
     R3D.state.render.shadowCasting = true;
+    R3D.state.render.billboardMode = R3D_BILLBOARD_DISABLED;
 
     // Init scene data
     R3D.state.scene.bounds = (BoundingBox) {
@@ -294,6 +296,11 @@ void R3D_ApplyShadowCasting(bool enabled)
     R3D.state.render.shadowCasting = enabled;
 }
 
+void R3D_ApplyBillboardMode(R3D_BillboardMode mode)
+{
+    R3D.state.render.billboardMode = mode;
+}
+
 void R3D_Begin(Camera3D camera)
 {
     // Render the batch before proceeding
@@ -409,15 +416,18 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
 {
     r3d_drawcall_t drawCall = { 0 };
 
+    if (R3D.state.render.billboardMode == R3D_BILLBOARD_FRONT) {
+        r3d_billboard_mode_front(&transform, &R3D.state.transform.invView);
+    }
+    else if (R3D.state.render.billboardMode == R3D_BILLBOARD_Y_AXIS) {
+        r3d_billboard_mode_y(&transform, &R3D.state.transform.invView);
+    }
+
     drawCall.transform = transform;
     drawCall.material = material;
     drawCall.mesh = mesh;
 
     drawCall.castShadows = R3D.state.render.shadowCasting;
-
-    drawCall.instanced.transforms = NULL;
-    drawCall.instanced.colors = NULL;
-    drawCall.instanced.count = 0;
 
     r3d_array_t* arr = &R3D.container.aDrawDeferred;
 
@@ -452,6 +462,7 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Ma
 
     drawCall.castShadows = R3D.state.render.shadowCasting;
 
+    drawCall.instanced.billboardMode = R3D.state.render.billboardMode;
     drawCall.instanced.transforms = instanceTransforms;
     drawCall.instanced.colors = instanceColors;
     drawCall.instanced.count = instanceCount;
