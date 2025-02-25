@@ -146,6 +146,103 @@ typedef struct {
     Texture2D prefilter;     ///< The prefiltered cubemap for specular reflections with mipmaps.
 } R3D_Skybox;
 
+/**
+ * @brief Represents a keyframe in an interpolation curve.
+ *
+ * A keyframe contains two values: the time at which the keyframe occurs and the value of the interpolation at that time.
+ * The time is normalized between 0.0 and 1.0, where 0.0 represents the start of the curve and 1.0 represents the end.
+ */
+typedef struct {
+    float time;         ///< Normalized time of the keyframe, ranging from 0.0 to 1.0.
+    float value;        ///< The value of the interpolation at this keyframe.
+} R3D_Keyframe;
+
+/**
+ * @brief Represents an interpolation curve composed of keyframes.
+ *
+ * This structure contains an array of keyframes and metadata about the array, such as the current number of keyframes
+ * and the allocated capacity. The keyframes define a curve that can be used for smooth interpolation between values
+ * over a normalized time range (0.0 to 1.0).
+ */
+typedef struct {
+    R3D_Keyframe* keyframes;    ///< Dynamic array of keyframes defining the interpolation curve.
+    unsigned int capacity;      ///< Allocated size of the keyframes array.
+    unsigned int count;         ///< Current number of keyframes in the array.
+} R3D_InterpolationCurve;
+
+/**
+ * @struct R3D_Particle
+ * @brief Represents a particle in a 3D particle system, with properties
+ *        such as position, velocity, rotation, and color modulation.
+ */
+typedef struct {
+
+    float lifetime;                 ///< Duration of the particle's existence in seconds.
+
+    Matrix transform;               ///< The particle's current transformation matrix in 3D space.
+
+    Vector3 position;               ///< The current position of the particle in 3D space.
+    Vector3 rotation;               ///< The current rotation of the particle in 3D space (Euler angles).
+    Vector3 scale;                  ///< The current scale of the particle in 3D space.
+    Color color;                    ///< The current color of the particle, representing its color modulation.
+
+    Vector3 velocity;               ///< The current velocity of the particle in 3D space.
+    Vector3 angularVelocity;        ///< The current angular velocity of the particle in radians (Euler angles).
+
+    Vector3 baseScale;              ///< The initial scale of the particle in 3D space.
+    Vector3 baseVelocity;           ///< The initial velocity of the particle in 3D space.
+    Vector3 baseAngularVelocity;    ///< The initial angular velocity of the particle in radians (Euler angles).
+    unsigned char baseOpacity;      ///< The initial opacity of the particle, ranging from 0 (fully transparent) to 255 (fully opaque).
+
+} R3D_Particle;
+
+/**
+ * @brief Represents a CPU-based particle system with various properties and settings.
+ *
+ * This structure contains configuration data for a particle system, such as mesh information, initial properties,
+ * curves for controlling properties over time, and settings for shadow casting, emission rate, and more.
+ */
+typedef struct {
+
+    R3D_Particle* particles;            ///< Pointer to the array of particles in the system.
+    int capacity;                       ///< The maximum number of particles the system can manage.
+    int count;                          ///< The current number of active particles in the system.
+
+    Vector3 position;                   ///< The initial position of the particle system. Default: (0, 0, 0).
+    Vector3 gravity;                    ///< The gravity applied to the particles. Default: (0, -9.81, 0).
+
+    Vector3 initialScale;               ///< The initial scale of the particles. Default: (1, 1, 1).
+    float scaleVariance;                ///< The variance in particle scale. Default: 0.0f.
+
+    Vector3 initialRotation;            ///< The initial rotation of the particles in Euler angles (degrees). Default: (0, 0, 0).
+    Vector3 rotationVariance;           ///< The variance in particle rotation in Euler angles (degrees). Default: (0, 0, 0).
+
+    Color initialColor;                 ///< The initial color of the particles. Default: WHITE.
+    Color colorVariance;                ///< The variance in particle color. Default: BLANK.
+
+    Vector3 initialVelocity;            ///< The initial velocity of the particles. Default: (0, 0, 0).
+    Vector3 velocityVariance;           ///< The variance in particle velocity. Default: (0, 0, 0).
+
+    Vector3 initialAngularVelocity;     ///< The initial angular velocity of the particles in Euler angles (degrees). Default: (0, 0, 0).
+    Vector3 angularVelocityVariance;    ///< The variance in angular velocity. Default: (0, 0, 0).
+
+    float lifetime;                     ///< The lifetime of the particles in seconds. Default: 1.0f.
+    float lifetimeVariance;             ///< The variance in lifetime in seconds. Default: 0.0f.
+
+    float emissionTimer;                ///< Use to control automatic emission, should not be modified manually.
+    float emissionRate;                 ///< The rate of particle emission in particles per second. Default: 10.0f.
+    float spreadAngle;                  ///< The angle of propagation of the particles in a cone (degrees). Default: 0.0f.
+
+    R3D_InterpolationCurve* scaleOverLifetime;              ///< Curve controlling the scale evolution of the particles over their lifetime. Default: NULL.
+    R3D_InterpolationCurve* speedOverLifetime;              ///< Curve controlling the speed evolution of the particles over their lifetime. Default: NULL.
+    R3D_InterpolationCurve* opacityOverLifetime;            ///< Curve controlling the opacity evolution of the particles over their lifetime. Default: NULL.
+    R3D_InterpolationCurve* angularVelocityOverLifetime;    ///< Curve controlling the angular velocity evolution of the particles over their lifetime. Default: NULL.
+
+    bool autoEmission;               /**< Indicates whether particle emission is automatic when calling `R3D_UpdateParticleSystem`.
+                                      *   If false, emission is manual using `R3D_EmitParticle`. Default: true.
+                                      */
+
+} R3D_ParticleSystem;
 
 
 // --------------------------------------------
@@ -359,11 +456,16 @@ void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTrans
  * @param mesh The mesh to render.
  * @param material The material to apply to the mesh.
  * @param transform The global transformation matrix applied to all instances.
- * @param instanceTransforms Array of transformation matrices for each instance, allowing unique transformations.
- * @param instanceColors Array of colors for each instance, allowing unique colors.
+ * @param instanceTransforms Pointer to an array of transformation matrices for each instance, allowing unique transformations.
+ * @param transformsStride The stride (in bytes) between consecutive transformation matrices in the array.
+ * @param instanceColors Pointer to an array of colors for each instance, allowing unique colors.
+ * @param colorsStride The stride (in bytes) between consecutive colors in the array.
  * @param instanceCount The number of instances to render.
  */
-void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Matrix* instanceTransforms, Color* instanceColors, int instanceCount);
+void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
+                              Matrix* instanceTransforms, int transformsStride,
+                              Color* instanceColors, int colorsStride,
+                              int instanceCount);
 
 /**
  * @brief Draws a model at a specified position and scale.
@@ -390,6 +492,37 @@ void R3D_DrawModel(Model model, Vector3 position, float scale);
  * @param scale The scale factor to apply to the model.
  */
 void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale);
+
+/**
+ * @brief Renders the current state of a CPU-based particle system.
+ *
+ * This function draws the particles of a CPU-simulated particle system
+ * in their current state. It does not modify the simulation or update
+ * particle properties such as position, velocity, or lifetime.
+ *
+ * @param system A pointer to the `R3D_ParticleSystem` to be rendered.
+ *               The particle system must be properly initialized and updated
+ *               to the desired state before calling this function.
+ * @param mesh The mesh used to represent each particle.
+ * @param material The material applied to the particle mesh.
+ */
+void R3D_DrawParticleSystem(const R3D_ParticleSystem* system, Mesh mesh, Material material);
+
+/**
+ * @brief Renders the current state of a CPU-based particle system with a global transformation.
+ *
+ * This function is similar to `R3D_DrawParticleSystem`, but it applies an additional
+ * global transformation to all particles. This is useful for rendering particle effects
+ * in a transformed space (e.g., attached to a moving object).
+ *
+ * @param system A pointer to the `R3D_ParticleSystem` to be rendered.
+ *               The particle system must be properly initialized and updated
+ *               to the desired state before calling this function.
+ * @param mesh The mesh used to represent each particle.
+ * @param material The material applied to the particle mesh.
+ * @param transform A transformation matrix applied to all particles.
+ */
+void R3D_DrawParticleSystemEx(const R3D_ParticleSystem* system, Mesh mesh, Material material, Matrix transform);
 
 
 
@@ -827,6 +960,126 @@ void R3D_SetShadowBias(R3D_Light id, float value);
  * @param id The ID of the light.
  */
 void R3D_DrawLightShape(R3D_Light id);
+
+
+
+// --------------------------------------------
+// PARTICLES: Particle System Functions
+// --------------------------------------------
+
+/**
+ * @brief Loads a particle emitter system for the CPU.
+ *
+ * This function initializes a particle emitter system on the CPU with a specified maximum
+ * number of particles. It prepares the necessary data structures and allocates memory
+ * for managing the particles.
+ *
+ * @param maxParticles The maximum number of particles the system can handle at once.
+ *                     This value determines the memory allocation and performance constraints.
+ * @return A newly initialized `R3D_ParticleSystem` structure.
+ *         The caller is responsible for properly managing and freeing the system when no longer needed.
+ */
+R3D_ParticleSystem R3D_LoadParticleSystem(int maxParticles);
+
+/**
+ * @brief Unloads the particle emitter system and frees allocated memory.
+ *
+ * This function deallocates the memory used by the particle emitter system and clears the associated resources.
+ * It should be called when the particle system is no longer needed to prevent memory leaks.
+ *
+ * @param system A pointer to the `R3D_ParticleSystem` to be unloaded.
+ */
+void R3D_UnloadParticleSystem(R3D_ParticleSystem* system);
+
+/**
+ * @brief Emits a particle in the particle system.
+ *
+ * This function triggers the emission of a new particle in the particle system. It handles the logic of adding a new
+ * particle to the system and initializing its properties based on the current state of the system.
+ *
+ * @param system A pointer to the `R3D_ParticleSystemCPU` where the particle will be emitted.
+ * @return `true` if the particle was successfully emitted, `false` if the system is at full capacity and cannot emit more particles.
+ */
+bool R3D_EmitParticle(R3D_ParticleSystem* system);
+
+/**
+ * @brief Updates the particle emitter system by advancing particle positions.
+ *
+ * This function updates the positions and properties of particles in the system based on the elapsed time. It handles
+ * simulation of particle movement, gravity, and other physics-based calculations.
+ *
+ * @param system A pointer to the `R3D_ParticleSystem` to be updated.
+ * @param deltaTime The time elapsed since the last update (in seconds).
+ */
+void R3D_UpdateParticleSystem(R3D_ParticleSystem* system, float deltaTime);
+
+/**
+ * @brief Computes and returns the AABB (Axis-Aligned Bounding Box) of the particle emitter system.
+ *
+ * This function performs a simulation of the particle system to estimate the AABB of the particles. It calculates the
+ * possible positions of each particle at both half of their lifetime and at the end of their lifetime. The resulting
+ * AABB approximates the region of space the particle system occupies, which helps in determining if the system should
+ * be rendered or not based on camera frustum culling.
+ *
+ * @param system A pointer to the `R3D_ParticleSystem` whose AABB is to be computed.
+ * @return The computed `BoundingBox` of the particle system.
+ */
+BoundingBox R3D_GetParticleSystemBoundingBox(R3D_ParticleSystem* system);
+
+
+
+// --------------------------------------------
+// CURVES: Interpolation Curves Functions
+// --------------------------------------------
+
+/**
+ * @brief Loads an interpolation curve with a specified initial capacity.
+ *
+ * This function initializes an interpolation curve with the given capacity. The capacity represents the initial size of
+ * the memory allocated for the curve. You can add keyframes to the curve using `R3D_AddKeyframe`. If adding a keyframe
+ * exceeds the initial capacity, the system will automatically reallocate memory and double the initial capacity.
+ *
+ * @param capacity The initial capacity (size) of the interpolation curve. This is the number of keyframes that can be added
+ *                 before a reallocation occurs.
+ * @return An initialized interpolation curve with the specified capacity.
+ */
+R3D_InterpolationCurve R3D_LoadInterpolationCurve(int capacity);
+
+/**
+ * @brief Unloads the interpolation curve and frees the allocated memory.
+ *
+ * This function deallocates the memory associated with the interpolation curve and clears any keyframes stored in it.
+ * It should be called when the curve is no longer needed to avoid memory leaks.
+ *
+ * @param curve The interpolation curve to be unloaded.
+ */
+void R3D_UnloadInterpolationCurve(R3D_InterpolationCurve curve);
+
+/**
+ * @brief Adds a keyframe to the interpolation curve.
+ *
+ * This function adds a keyframe to the given interpolation curve at a specific time and value. If the addition of the
+ * keyframe requires reallocating memory and the reallocation fails, the previously allocated memory and keyframes are
+ * preserved, but the new keyframe is not added.
+ *
+ * @param curve A pointer to the interpolation curve to which the keyframe will be added.
+ * @param time The time at which the keyframe will be added.
+ * @param value The value associated with the keyframe.
+ * @return `true` if the keyframe was successfully added, or `false` if the reallocation failed.
+ */
+bool R3D_AddKeyframe(R3D_InterpolationCurve* curve, float time, float value);
+
+/**
+ * @brief Evaluates the interpolation curve at a specific time.
+ *
+ * This function evaluates the value of the interpolation curve at a given time. The curve will interpolate between
+ * keyframes based on the time provided.
+ *
+ * @param curve The interpolation curve to be evaluated.
+ * @param time The time at which to evaluate the curve.
+ * @return The value of the curve at the specified time.
+ */
+float R3D_EvaluateCurve(R3D_InterpolationCurve curve, float time);
 
 
 

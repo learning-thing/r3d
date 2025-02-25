@@ -711,10 +711,11 @@ void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceMode
 
     // Enable the attribute for the transformation matrix (decomposed into 4 vec4 vectors)
     if (locInstanceModel >= 0 && call->instanced.transforms) {
-        vboTransforms = rlLoadVertexBuffer(call->instanced.transforms, call->instanced.count * sizeof(Matrix), true);
+        size_t stride = (call->instanced.transStride == 0) ? sizeof(Matrix) : call->instanced.transStride;
+        vboTransforms = rlLoadVertexBuffer(call->instanced.transforms, call->instanced.count * stride, true);
         rlEnableVertexBuffer(vboTransforms);
         for (int i = 0; i < 4; i++) {
-            rlSetVertexAttribute(locInstanceModel + i, 4, RL_FLOAT, false, sizeof(Matrix), i * sizeof(Vector4));
+            rlSetVertexAttribute(locInstanceModel + i, 4, RL_FLOAT, false, stride, i * sizeof(Vector4));
             rlSetVertexAttributeDivisor(locInstanceModel + i, 1);
             rlEnableVertexAttribute(locInstanceModel + i);
         }
@@ -734,9 +735,10 @@ void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceMode
 
     // Handle per-instance colors if available
     if (locInstanceColor >= 0 && call->instanced.colors) {
-        vboColors = rlLoadVertexBuffer(call->instanced.colors, call->instanced.count * sizeof(Color), true);
+        size_t stride = (call->instanced.colStride == 0) ? sizeof(Color) : call->instanced.colStride;
+        vboColors = rlLoadVertexBuffer(call->instanced.colors, call->instanced.count * stride, true);
         rlEnableVertexBuffer(vboColors);
-        rlSetVertexAttribute(locInstanceColor, 4, RL_UNSIGNED_BYTE, true, 0, 0);
+        rlSetVertexAttribute(locInstanceColor, 4, RL_UNSIGNED_BYTE, true, call->instanced.colStride, 0);
         rlSetVertexAttributeDivisor(locInstanceColor, 1);
         rlEnableVertexAttribute(locInstanceColor);
     }

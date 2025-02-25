@@ -440,15 +440,18 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
 
 void R3D_DrawMeshInstanced(Mesh mesh, Material material, Matrix* instanceTransforms, int instanceCount)
 {
-    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, NULL, instanceCount);
+    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, 0, NULL, 0, instanceCount);
 }
 
 void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTransforms, Color* instanceColors, int instanceCount)
 {
-    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, instanceColors, instanceCount);
+    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, 0, instanceColors, 0, instanceCount);
 }
 
-void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Matrix* instanceTransforms, Color* instanceColors, int instanceCount)
+void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
+                              Matrix* instanceTransforms, int transformsStride,
+                              Color* instanceColors, int colorsStride,
+                              int instanceCount)
 {
     r3d_drawcall_t drawCall = { 0 };
 
@@ -464,6 +467,8 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Ma
 
     drawCall.instanced.billboardMode = R3D.state.render.billboardMode;
     drawCall.instanced.transforms = instanceTransforms;
+    drawCall.instanced.transStride = transformsStride;
+    drawCall.instanced.colStride = colorsStride;
     drawCall.instanced.colors = instanceColors;
     drawCall.instanced.count = instanceCount;
 
@@ -495,6 +500,21 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
     for (int i = 0; i < model.meshCount; i++) {
         R3D_DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], model.transform);
     }
+}
+
+void R3D_DrawParticleSystem(const R3D_ParticleSystem* system, Mesh mesh, Material material)
+{
+    R3D_DrawParticleSystemEx(system, mesh, material, MatrixIdentity());
+}
+
+void R3D_DrawParticleSystemEx(const R3D_ParticleSystem* system, Mesh mesh, Material material, Matrix transform)
+{
+    R3D_DrawMeshInstancedPro(
+        mesh, material, transform,
+        &system->particles->transform, sizeof(R3D_Particle),
+        &system->particles->color, sizeof(R3D_Particle),
+        system->count
+    );
 }
 
 
