@@ -319,10 +319,10 @@ void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call)
     r3d_shader_set_col3(raster.geometryInst, uColEmission, call->material.maps[MATERIAL_MAP_EMISSION].color);
 
     // Setup billboard mode
-    r3d_shader_set_int(raster.depthCubeInst, uBillboardMode, call->instanced.billboardMode);
+    r3d_shader_set_int(raster.geometryInst, uBillboardMode, call->instanced.billboardMode);
 
     if (call->instanced.billboardMode != R3D_BILLBOARD_DISABLED) {
-        r3d_shader_set_mat4(raster.depthCubeInst, uMatInvView, R3D.state.transform.invView);
+        r3d_shader_set_mat4(raster.geometryInst, uMatInvView, R3D.state.transform.invView);
     }
 
     // Bind active texture maps
