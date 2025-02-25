@@ -41,7 +41,7 @@ layout(location = 14) in vec4 iColor;
 
 uniform mat4 uMatInvView;       ///< Only for billboard modes
 uniform mat4 uMatModel;
-uniform mat4 uMatMVP;
+uniform mat4 uMatVP;
 
 uniform lowp int uBillboardMode;
 
@@ -128,8 +128,7 @@ void main()
     vEmission = uColEmission * uValEmission;        // NOTE: Calculated here, in case we add different emission modes later.
     vColor = aColor.rgb * iColor.rgb * uColAlbedo;
 
-    mat4 matInst = transpose(iMatModel);
-    mat4 matModel = uMatModel * matInst;
+    mat4 matModel = uMatModel * transpose(iMatModel);
     mat3 matNormal = mat3(0.0);
 
     if (uBillboardMode == BILLBOARD_FRONT) BillboardFront(matModel, matNormal);
@@ -143,5 +142,5 @@ void main()
     vec3 B = normalize(cross(N, T)) * aTangent.w;
     vTBN = mat3(T, B, N);
 
-    gl_Position = uMatMVP * (matInst * vec4(aPosition, 1.0));
+    gl_Position = uMatVP * (matModel * vec4(aPosition, 1.0));
 }

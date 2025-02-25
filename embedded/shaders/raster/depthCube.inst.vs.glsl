@@ -36,7 +36,7 @@ layout(location = 10) in mat4 aInstanceModel;
 
 uniform mat4 uMatInvView;       ///< Only for billboard modes
 uniform mat4 uMatModel;
-uniform mat4 uMatMVP;
+uniform mat4 uMatVP;
 
 uniform lowp int uBillboardMode;
 
@@ -92,12 +92,11 @@ void BillboardY(inout mat4 model)
 
 void main()
 {
-    mat4 matInst = transpose(aInstanceModel);
-    mat4 matModel = uMatModel * matInst;
+    mat4 matModel = uMatModel * transpose(aInstanceModel);
 
     if (uBillboardMode == BILLBOARD_FRONT) BillboardFront(matModel);
     else if (uBillboardMode == BILLBOARD_Y_AXIS) BillboardY(matModel);
 
     vPosition = vec3(matModel * vec4(aPosition, 1.0));
-    gl_Position = uMatMVP * (matModel * vec4(aPosition, 1.0));
+    gl_Position = uMatVP * (matModel * vec4(aPosition, 1.0));
 }

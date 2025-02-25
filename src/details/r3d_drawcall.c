@@ -78,11 +78,11 @@ void r3d_drawcall_raster_depth(const r3d_drawcall_t* call)
 
 void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call)
 {
-    Matrix matMVP = MatrixMultiply(call->transform, rlGetMatrixTransform());
-    matMVP = MatrixMultiply(matMVP, rlGetMatrixModelview());
-    matMVP = MatrixMultiply(matMVP, rlGetMatrixProjection());
+    Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
+    Matrix matVP = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
 
-    r3d_shader_set_mat4(raster.depthInst, uMatMVP, matMVP);
+    r3d_shader_set_mat4(raster.depthInst, uMatModel, matModel);
+    r3d_shader_set_mat4(raster.depthInst, uMatVP, matVP);
 
     r3d_shader_set_int(raster.depthInst, uBillboardMode, call->instanced.billboardMode);
 
@@ -135,12 +135,11 @@ void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos)
 void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call, Vector3 viewPos)
 {
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
-    Matrix matMVP = MatrixMultiply(matModel, rlGetMatrixModelview());
-    matMVP = MatrixMultiply(matMVP, rlGetMatrixProjection());
+    Matrix matVP = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
 
     r3d_shader_set_vec3(raster.depthCubeInst, uViewPosition, viewPos);
     r3d_shader_set_mat4(raster.depthCubeInst, uMatModel, matModel);
-    r3d_shader_set_mat4(raster.depthCubeInst, uMatMVP, matMVP);
+    r3d_shader_set_mat4(raster.depthCubeInst, uMatVP, matVP);
 
     r3d_shader_set_int(raster.depthCubeInst, uBillboardMode, call->instanced.billboardMode);
 
@@ -296,14 +295,12 @@ void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call)
         return;
     }
 
-    Matrix matModel = MatrixIdentity();
+    // Get current view / projection matrices
     Matrix matView = rlGetMatrixModelview();
-    Matrix matModelView = MatrixIdentity();
     Matrix matProjection = rlGetMatrixProjection();
 
-    // Compute model and model/view matrices
-    matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
-    matModelView = MatrixMultiply(matModel, matView);
+    // Compute model matrix
+    Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
 
     // Set additional matrix uniforms
     r3d_shader_set_mat4(raster.geometryInst, uMatModel, matModel);
@@ -391,18 +388,18 @@ void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call)
 
     for (int eye = 0; eye < eyeCount; eye++) {
         // Calculate model-view-projection matrix (MVP)
-        Matrix matModelViewProjection = MatrixIdentity();
+        Matrix matVP = MatrixIdentity();
         if (eyeCount == 1) {
-            matModelViewProjection = MatrixMultiply(matModelView, matProjection);
+            matVP = MatrixMultiply(matView, matProjection);
         }
         else {
             // Setup current eye viewport (half screen width)
             rlViewport(eye * rlGetFramebufferWidth() / 2, 0, rlGetFramebufferWidth() / 2, rlGetFramebufferHeight());
-            matModelViewProjection = MatrixMultiply(MatrixMultiply(matModelView, rlGetMatrixViewOffsetStereo(eye)), rlGetMatrixProjectionStereo(eye));
+            matVP = MatrixMultiply(MatrixMultiply(matView, rlGetMatrixViewOffsetStereo(eye)), rlGetMatrixProjectionStereo(eye));
         }
 
         // Send combined model-view-projection matrix to shader
-        r3d_shader_set_mat4(raster.geometry, uMatMVP, matModelViewProjection);
+        r3d_shader_set_mat4(raster.geometryInst, uMatVP, matVP);
 
         // Rasterisation du mesh en tenant compte du rendu instanci� si besoin
         r3d_draw_vertex_arrays_inst(call, 10, 14);
@@ -558,14 +555,12 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
         return;
     }
 
-    Matrix matModel = MatrixIdentity();
+    // Get current view / projection matrices
     Matrix matView = rlGetMatrixModelview();
-    Matrix matModelView = MatrixIdentity();
     Matrix matProjection = rlGetMatrixProjection();
 
-    // Compute model and model/view matrices
-    matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
-    matModelView = MatrixMultiply(matModel, matView);
+    // Compute model matrix
+    Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
 
     // Set additional matrix uniforms
     r3d_shader_set_mat4(raster.geometryInst, uMatModel, matModel);
@@ -653,18 +648,18 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
 
     for (int eye = 0; eye < eyeCount; eye++) {
         // Calculate model-view-projection matrix (MVP)
-        Matrix matModelViewProjection = MatrixIdentity();
+        Matrix matVP = MatrixIdentity();
         if (eyeCount == 1) {
-            matModelViewProjection = MatrixMultiply(matModelView, matProjection);
+            matVP = MatrixMultiply(matView, matProjection);
         }
         else {
             // Setup current eye viewport (half screen width)
             rlViewport(eye * rlGetFramebufferWidth() / 2, 0, rlGetFramebufferWidth() / 2, rlGetFramebufferHeight());
-            matModelViewProjection = MatrixMultiply(MatrixMultiply(matModelView, rlGetMatrixViewOffsetStereo(eye)), rlGetMatrixProjectionStereo(eye));
+            matVP = MatrixMultiply(MatrixMultiply(matView, rlGetMatrixViewOffsetStereo(eye)), rlGetMatrixProjectionStereo(eye));
         }
 
         // Send combined model-view-projection matrix to shader
-        r3d_shader_set_mat4(raster.geometry, uMatMVP, matModelViewProjection);
+        r3d_shader_set_mat4(raster.forwardInst, uMatVP, matVP);
 
         // Rasterisation du mesh en tenant compte du rendu instanci� si besoin
         r3d_draw_vertex_arrays_inst(call, 10, 14);

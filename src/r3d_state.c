@@ -517,7 +517,7 @@ void r3d_shader_load_raster_geometry_inst(void)
 
     r3d_shader_get_location(raster.geometryInst, uMatInvView);
     r3d_shader_get_location(raster.geometryInst, uMatModel);
-    r3d_shader_get_location(raster.geometryInst, uMatMVP);
+    r3d_shader_get_location(raster.geometryInst, uMatVP);
     r3d_shader_get_location(raster.geometryInst, uBillboardMode);
     r3d_shader_get_location(raster.geometryInst, uTexAlbedo);
     r3d_shader_get_location(raster.geometryInst, uTexNormal);
@@ -622,7 +622,7 @@ void r3d_shader_load_raster_forward_inst(void)
 
     r3d_shader_get_location(raster.forwardInst, uMatInvView);
     r3d_shader_get_location(raster.forwardInst, uMatModel);
-    r3d_shader_get_location(raster.forwardInst, uMatMVP);
+    r3d_shader_get_location(raster.forwardInst, uMatVP);
     r3d_shader_get_location(raster.forwardInst, uBillboardMode);
     r3d_shader_get_location(raster.forwardInst, uTexAlbedo);
     r3d_shader_get_location(raster.forwardInst, uTexEmission);
@@ -716,7 +716,8 @@ void r3d_shader_load_raster_depth_inst(void)
     );
 
     r3d_shader_get_location(raster.depthInst, uMatInvView);
-    r3d_shader_get_location(raster.depthInst, uMatMVP);
+    r3d_shader_get_location(raster.depthInst, uMatModel);
+    r3d_shader_get_location(raster.depthInst, uMatVP);
     r3d_shader_get_location(raster.depthInst, uBillboardMode);
 }
 
@@ -740,7 +741,7 @@ void r3d_shader_load_raster_depth_cube_inst(void)
     r3d_shader_get_location(raster.depthCubeInst, uViewPosition);
     r3d_shader_get_location(raster.depthCubeInst, uMatInvView);
     r3d_shader_get_location(raster.depthCubeInst, uMatModel);
-    r3d_shader_get_location(raster.depthCubeInst, uMatMVP);
+    r3d_shader_get_location(raster.depthCubeInst, uMatVP);
     r3d_shader_get_location(raster.depthCubeInst, uBillboardMode);
 }
 
