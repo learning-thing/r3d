@@ -343,6 +343,7 @@ typedef struct {
     r3d_shader_uniform_sampler2D_t uTexEnvSpecular;
     r3d_shader_uniform_sampler2D_t uTexObjDiffuse;
     r3d_shader_uniform_sampler2D_t uTexObjSpecular;
+    r3d_shader_uniform_sampler2D_t uTexORM;
     r3d_shader_uniform_sampler2D_t uTexSSAO;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexEmission;

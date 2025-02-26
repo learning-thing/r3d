@@ -1143,6 +1143,7 @@ void r3d_pass_scene_deferred(void)
             r3d_shader_bind_sampler2D(screen.scene, uTexEnvSpecular, R3D.framebuffer.litEnv.specular);
             r3d_shader_bind_sampler2D(screen.scene, uTexObjDiffuse, R3D.framebuffer.litObj.diffuse);
             r3d_shader_bind_sampler2D(screen.scene, uTexObjSpecular, R3D.framebuffer.litObj.specular);
+            r3d_shader_bind_sampler2D(screen.scene, uTexORM, R3D.framebuffer.gBuffer.orm);
             if (R3D.env.ssaoEnabled) {
                 r3d_shader_bind_sampler2D(screen.scene, uTexSSAO,
                     R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTexIdx]
@@ -1160,6 +1161,7 @@ void r3d_pass_scene_deferred(void)
             r3d_shader_unbind_sampler2D(screen.scene, uTexEnvSpecular);
             r3d_shader_unbind_sampler2D(screen.scene, uTexObjDiffuse);
             r3d_shader_unbind_sampler2D(screen.scene, uTexObjSpecular);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexORM);
             r3d_shader_unbind_sampler2D(screen.scene, uTexSSAO);
             r3d_shader_unbind_sampler2D(screen.scene, uTexAlbedo);
             r3d_shader_unbind_sampler2D(screen.scene, uTexEmission);

@@ -277,7 +277,6 @@ void main()
     
     vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
     vec3 orm = texture(uTexORM, vTexCoord).rgb;
-    float occlusion = orm.r;
     float roughness = orm.g;
     float metalness = orm.b;
 
@@ -359,7 +358,7 @@ void main()
 
     /* Apply shadow factor in addition to the SSAO if the light casts shadows */
 
-    float shadow = occlusion;
+    float shadow = 1.0;
 
     if (uLight.shadow)
     {
