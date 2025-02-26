@@ -245,6 +245,12 @@ typedef struct {
 } R3D_ParticleSystem;
 
 
+/* === Extern C guard === */
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 // --------------------------------------------
 // CORE: Init And Config Functions
 // --------------------------------------------
@@ -1888,5 +1894,8 @@ void R3D_DrawBufferBrightColors(float x, float y, float w, float h);
  */
 void R3D_DrawBufferBloom(float x, float y, float w, float h);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif // R3D_H
