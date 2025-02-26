@@ -1347,16 +1347,16 @@ static void r3d_pass_scene_forward_inst_filter_and_send_lights(const r3d_drawcal
     {
         r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
 
-        // TODO: Review this, it's not precise at all, but hard to determine without a bounding box...
-        if (light->data->type != R3D_LIGHT_DIR) {
-            if (!r3d_collision_check_point_in_sphere_sqr(
-                (Vector3) {
-                call->transform.m12, call->transform.m13, call->transform.m14
-            },
-                light->data->position, light->data->range)) {
-                continue;
-            }
-        }
+        // TODO: Determine which light should illuminate all instances seems compromised in the current state...
+        //if (light->data->type != R3D_LIGHT_DIR) {
+        //    if (!r3d_collision_check_point_in_sphere_sqr(
+        //        (Vector3) {
+        //        call->transform.m12, call->transform.m13, call->transform.m14
+        //    },
+        //        light->data->position, light->data->range)) {
+        //        continue;
+        //    }
+        //}
 
         // Send common data
         r3d_shader_set_int(raster.forwardInst, uLights[i].enabled, true);
