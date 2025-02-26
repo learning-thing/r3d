@@ -1283,7 +1283,9 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
         // TODO: Review this, it's not precise at all, but hard to determine without a bounding box...
         if (light->data->type != R3D_LIGHT_DIR) {
             if (!r3d_collision_check_point_in_sphere_sqr(
-                (Vector3) { call->transform.m12, call->transform.m13, call->transform.m14 },
+                (Vector3) {
+                call->transform.m12, call->transform.m13, call->transform.m14
+            },
                 light->data->position, light->data->range)) {
                 continue;
             }
@@ -1334,6 +1336,73 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
 
     for (int i = lightCount; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
         r3d_shader_set_int(raster.forward, uLights[i].enabled, false);
+    }
+}
+
+static void r3d_pass_scene_forward_inst_filter_and_send_lights(const r3d_drawcall_t* call)
+{
+    int lightCount = 0;
+
+    for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS && i < R3D.container.aLightBatch.count; i++, lightCount++)
+    {
+        r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
+
+        // TODO: Review this, it's not precise at all, but hard to determine without a bounding box...
+        if (light->data->type != R3D_LIGHT_DIR) {
+            if (!r3d_collision_check_point_in_sphere_sqr(
+                (Vector3) {
+                call->transform.m12, call->transform.m13, call->transform.m14
+            },
+                light->data->position, light->data->range)) {
+                continue;
+            }
+        }
+
+        // Send common data
+        r3d_shader_set_int(raster.forwardInst, uLights[i].enabled, true);
+        r3d_shader_set_int(raster.forwardInst, uLights[i].type, light->data->type);
+        r3d_shader_set_vec3(raster.forwardInst, uLights[i].color, light->data->color);
+        r3d_shader_set_float(raster.forwardInst, uLights[i].specular, light->data->specular);
+        r3d_shader_set_float(raster.forwardInst, uLights[i].energy, light->data->energy);
+
+        // Send specific data
+        if (light->data->type == R3D_LIGHT_DIR) {
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].direction, light->data->direction);
+        }
+        else if (light->data->type == R3D_LIGHT_SPOT) {
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].position, light->data->position);
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].direction, light->data->direction);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].range, light->data->range);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].attenuation, light->data->attenuation);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].innerCutOff, light->data->innerCutOff);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].outerCutOff, light->data->outerCutOff);
+        }
+        else if (light->data->type == R3D_LIGHT_OMNI) {
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].position, light->data->position);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].range, light->data->range);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].attenuation, light->data->attenuation);
+        }
+
+        // Send shadow map data
+        if (light->data->shadow.enabled) {
+            if (light->data->type == R3D_LIGHT_OMNI) {
+                r3d_shader_bind_samplerCube(raster.forwardInst, uLights[i].shadowCubemap, light->data->shadow.map.cube);
+            }
+            else {
+                r3d_shader_set_float(raster.forwardInst, uLights[i].shadowMapTxlSz, light->data->shadow.map.texelSize);
+                r3d_shader_bind_sampler2D(raster.forwardInst, uLights[i].shadowMap, light->data->shadow.map.depth);
+                r3d_shader_set_mat4(raster.forwardInst, uMatLightMVP[i], light->data->shadow.matViewProj);
+            }
+            r3d_shader_set_float(raster.forwardInst, uLights[i].shadowBias, light->data->shadow.bias);
+            r3d_shader_set_int(raster.forwardInst, uLights[i].shadow, true);
+        }
+        else {
+            r3d_shader_set_int(raster.forwardInst, uLights[i].shadow, false);
+        }
+    }
+
+    for (int i = lightCount; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+        r3d_shader_set_int(raster.forwardInst, uLights[i].enabled, false);
     }
 }
 
@@ -1388,7 +1457,7 @@ void r3d_pass_scene_forward(void)
 
             for (int i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
                 r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForwardInst, i);
-                r3d_pass_scene_forward_filter_and_send_lights(call);
+                r3d_pass_scene_forward_inst_filter_and_send_lights(call);
                 r3d_drawcall_raster_forward_inst(call);
             }
 
