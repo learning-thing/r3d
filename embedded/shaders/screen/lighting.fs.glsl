@@ -37,6 +37,7 @@ struct Light
     vec3 color;
     vec3 position;
     vec3 direction;
+    float specular;
     float energy;
     float range;
     float attenuation;
@@ -338,7 +339,6 @@ void main()
     /* Compute specular lighting */
 
     // NOTE: When roughness is 0, specular light should not be entirely disabled.
-    // TODO: Handle perfect mirror reflection when roughness is 0.
 
     vec3 specular = vec3(0.0);
 
@@ -353,7 +353,7 @@ void main()
         vec3 F = F0 + (F90 - F0) * cLdotH5;
 
         vec3 specBRDF = cNdotL * D * F * G;
-        specular = specBRDF * lightColE; // * uLight.specular
+        specular = specBRDF * lightColE * uLight.specular;
     }
 
     /* Apply shadow factor in addition to the SSAO if the light casts shadows */

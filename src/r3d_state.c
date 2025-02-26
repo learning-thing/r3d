@@ -594,6 +594,7 @@ void r3d_shader_load_raster_forward(void)
         shader->uLights[i].color.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].color", i));
         shader->uLights[i].position.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].position", i));
         shader->uLights[i].direction.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].direction", i));
+        shader->uLights[i].specular.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].specular", i));
         shader->uLights[i].energy.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].energy", i));
         shader->uLights[i].range.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].range", i));
         shader->uLights[i].attenuation.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].attenuation", i));
@@ -665,6 +666,7 @@ void r3d_shader_load_raster_forward_inst(void)
         shader->uLights[i].color.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].color", i));
         shader->uLights[i].position.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].position", i));
         shader->uLights[i].direction.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].direction", i));
+        shader->uLights[i].specular.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].specular", i));
         shader->uLights[i].energy.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].energy", i));
         shader->uLights[i].range.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].range", i));
         shader->uLights[i].attenuation.loc = rlGetLocationUniform(shader->id, TextFormat("uLights[%i].attenuation", i));
@@ -823,6 +825,7 @@ void r3d_shader_load_screen_lighting(void)
     r3d_shader_get_location(screen.lighting, uLight.color);
     r3d_shader_get_location(screen.lighting, uLight.position);
     r3d_shader_get_location(screen.lighting, uLight.direction);
+    r3d_shader_get_location(screen.lighting, uLight.specular);
     r3d_shader_get_location(screen.lighting, uLight.energy);
     r3d_shader_get_location(screen.lighting, uLight.range);
     r3d_shader_get_location(screen.lighting, uLight.attenuation);

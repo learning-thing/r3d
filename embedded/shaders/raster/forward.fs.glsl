@@ -38,6 +38,7 @@ struct Light
     vec3 color;
     vec3 position;
     vec3 direction;
+    float specular;
     float energy;
     float range;
     float attenuation;
@@ -352,7 +353,6 @@ void main()
             vec3 specLight = vec3(0.0);
 
             // NOTE: When roughness is 0, specular light should not be entirely disabled.
-            // TODO: Handle perfect mirror reflection when roughness is 0.
 
             if (roughness > 0.0)
             {
@@ -365,7 +365,7 @@ void main()
                 vec3 F = F0 + (F90 - F0) * cLdotH5;
 
                 vec3 specBRDF = cNdotL * D * F * G;
-                specLight = specBRDF * lightColE; // * uLights[i].specular
+                specLight = specBRDF * lightColE * uLights[i].specular;
             }
 
             /* Apply shadow factor if the light casts shadows */

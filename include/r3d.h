@@ -721,6 +721,28 @@ float R3D_GetLightEnergy(R3D_Light id);
 void R3D_SetLightEnergy(R3D_Light id, float energy);
 
 /**
+ * @brief Gets the specular intensity of a light.
+ *
+ * This function retrieves the current specular intensity of the specified light.
+ * Specular intensity affects how shiny surfaces appear when reflecting the light.
+ *
+ * @param id The ID of the light.
+ * @return The current specular intensity of the light.
+ */
+float R3D_GetLightSpecular(R3D_Light id);
+
+/**
+ * @brief Sets the specular intensity of a light.
+ *
+ * This function sets the specular intensity of the specified light.
+ * Higher specular values result in stronger and sharper highlights on reflective surfaces.
+ *
+ * @param id The ID of the light.
+ * @param specular The new specular intensity value to set for the light.
+ */
+void R3D_SetLightSpecular(R3D_Light id, float specular);
+
+/**
  * @brief Gets the range of a light.
  *
  * This function retrieves the range of the specified light, which determines how far the light can affect.

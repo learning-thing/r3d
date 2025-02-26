@@ -53,6 +53,7 @@ typedef struct {
     Vector3 color;
     Vector3 position;
     Vector3 direction;
+    float specular;
     float energy;
     float range;
     float attenuation;

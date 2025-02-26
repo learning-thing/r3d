@@ -1051,6 +1051,7 @@ void r3d_pass_lit_obj(void)
 
                 // Send common data
                 r3d_shader_set_vec3(screen.lighting, uLight.color, light->data->color);
+                r3d_shader_set_float(screen.lighting, uLight.specular, light->data->specular);
                 r3d_shader_set_float(screen.lighting, uLight.energy, light->data->energy);
                 r3d_shader_set_int(screen.lighting, uLight.type, light->data->type);
 
@@ -1292,6 +1293,7 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
         r3d_shader_set_int(raster.forward, uLights[i].enabled, true);
         r3d_shader_set_int(raster.forward, uLights[i].type, light->data->type);
         r3d_shader_set_vec3(raster.forward, uLights[i].color, light->data->color);
+        r3d_shader_set_float(raster.forward, uLights[i].specular, light->data->specular);
         r3d_shader_set_float(raster.forward, uLights[i].energy, light->data->energy);
 
         // Send specific data

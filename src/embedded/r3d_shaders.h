@@ -194,6 +194,7 @@ typedef struct {
         r3d_shader_uniform_vec3_t color;
         r3d_shader_uniform_vec3_t position;
         r3d_shader_uniform_vec3_t direction;
+        r3d_shader_uniform_float_t specular;
         r3d_shader_uniform_float_t energy;
         r3d_shader_uniform_float_t range;
         r3d_shader_uniform_float_t attenuation;
@@ -239,6 +240,7 @@ typedef struct {
         r3d_shader_uniform_vec3_t color;
         r3d_shader_uniform_vec3_t position;
         r3d_shader_uniform_vec3_t direction;
+        r3d_shader_uniform_float_t specular;
         r3d_shader_uniform_float_t energy;
         r3d_shader_uniform_float_t range;
         r3d_shader_uniform_float_t attenuation;
@@ -318,6 +320,7 @@ typedef struct {
         r3d_shader_uniform_vec3_t color;
         r3d_shader_uniform_vec3_t position;
         r3d_shader_uniform_vec3_t direction;
+        r3d_shader_uniform_float_t specular;
         r3d_shader_uniform_float_t energy;
         r3d_shader_uniform_float_t range;
         r3d_shader_uniform_float_t attenuation;

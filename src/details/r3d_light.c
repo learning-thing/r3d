@@ -127,6 +127,7 @@ void r3d_light_init(r3d_light_t* light)
     light->color = (Vector3){ 1, 1, 1 };
     light->position = (Vector3){ 0 };
     light->direction = (Vector3){ 0, 0, -1 };
+    light->specular = 0.5f;
     light->energy = 1.0f;
     light->range = 100.0f;
     light->attenuation = 1.0f;

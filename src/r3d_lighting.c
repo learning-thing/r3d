@@ -196,6 +196,18 @@ void R3D_SetLightEnergy(R3D_Light id, float energy)
     light->energy = energy;
 }
 
+float R3D_GetLightSpecular(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->specular;
+}
+
+void R3D_SetLightSpecular(R3D_Light id, float specular)
+{
+    r3d_get_and_check_light(light, id);
+    light->specular = specular;
+}
+
 float R3D_GetLightRange(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
