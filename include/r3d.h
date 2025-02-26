@@ -25,6 +25,31 @@
 
 
  // --------------------------------------------
+ //                   DEFINES
+ // --------------------------------------------
+
+#if defined(_WIN32)
+#   if defined(__TINYC__)
+#       define __declspec(x) __attribute__((x))
+#   endif
+#   if defined(R3D_BUILD_SHARED)
+#       define R3DAPI __declspec(dllexport)
+#   elif defined(R3D_USE_SHARED)
+#       define R3DAPI __declspec(dllimport)
+#   endif
+#else
+#   if defined(R3D_BUILD_SHARED)
+#       define R3DAPI __attribute__((visibility("default")))
+#   endif
+#endif
+
+#ifndef R3DAPI
+#   define R3DAPI extern
+#endif
+
+
+
+ // --------------------------------------------
  //                   ENUMS
  // --------------------------------------------
 
@@ -266,7 +291,7 @@ extern "C" {
  * @param resHeight Height of the internal resolution.
  * @param flags Flags indicating internal behavior (modifiable via R3D_SetState).
  */
-void R3D_Init(int resWidth, int resHeight, unsigned int flags);
+R3DAPI void R3D_Init(int resWidth, int resHeight, unsigned int flags);
 
 /**
  * @brief Closes the rendering engine and deallocates all resources.
@@ -274,7 +299,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags);
  * This function shuts down the rendering system and frees all allocated memory, 
  * including the resources associated with the created lights.
  */
-void R3D_Close(void);
+R3DAPI void R3D_Close(void);
 
 /**
  * @brief Checks if a specific internal state flag is set.
@@ -282,7 +307,7 @@ void R3D_Close(void);
  * @param flag The state flag to check.
  * @return True if the flag is set, false otherwise.
  */
-bool R3D_HasState(unsigned int flag);
+R3DAPI bool R3D_HasState(unsigned int flag);
 
 /**
  * @brief Sets internal state flags for the rendering engine.
@@ -292,7 +317,7 @@ bool R3D_HasState(unsigned int flag);
  * 
  * @param flags The flags to set.
  */
-void R3D_SetState(unsigned int flags);
+R3DAPI void R3D_SetState(unsigned int flags);
 
 /**
  * @brief Clears specific internal state flags.
@@ -302,7 +327,7 @@ void R3D_SetState(unsigned int flags);
  * 
  * @param flags The flags to clear.
  */
-void R3D_ClearState(unsigned int flags);
+R3DAPI void R3D_ClearState(unsigned int flags);
 
 /**
  * @brief Gets the current internal resolution.
@@ -313,7 +338,7 @@ void R3D_ClearState(unsigned int flags);
  * @param width Pointer to store the width of the internal resolution.
  * @param height Pointer to store the height of the internal resolution.
  */
-void R3D_GetResolution(int* width, int* height);
+R3DAPI void R3D_GetResolution(int* width, int* height);
 
 /**
  * @brief Updates the internal resolution.
@@ -326,7 +351,7 @@ void R3D_GetResolution(int* width, int* height);
  * 
  * @warning This function may be slow due to the destruction and recreation of framebuffers.
  */
-void R3D_UpdateResolution(int width, int height);
+R3DAPI void R3D_UpdateResolution(int width, int height);
 
 /**
  * @brief Sets a custom render target.
@@ -336,7 +361,7 @@ void R3D_UpdateResolution(int width, int height);
  * 
  * @param target The custom render target (can be NULL to revert to the default framebuffer).
  */
-void R3D_SetRenderTarget(RenderTexture* target);
+R3DAPI void R3D_SetRenderTarget(RenderTexture* target);
 
 /**
  * @brief Defines the bounds of the scene for directional light calculations.
@@ -347,7 +372,7 @@ void R3D_SetRenderTarget(RenderTexture* target);
  * 
  * @param sceneBounds The bounding box defining the scene's dimensions.
  */
-void R3D_SetSceneBounds(BoundingBox sceneBounds);
+R3DAPI void R3D_SetSceneBounds(BoundingBox sceneBounds);
 
 
 
@@ -364,7 +389,7 @@ void R3D_SetSceneBounds(BoundingBox sceneBounds);
  * 
  * @param mode The render mode to apply.
  */
-void R3D_ApplyRenderMode(R3D_RenderMode mode);
+R3DAPI void R3D_ApplyRenderMode(R3D_RenderMode mode);
 
 /**
  * @brief Enables or disables shadow casting for meshes.
@@ -375,7 +400,7 @@ void R3D_ApplyRenderMode(R3D_RenderMode mode);
  * 
  * @param enabled True to enable shadow casting, false to disable it.
  */
-void R3D_ApplyShadowCasting(bool enabled);
+R3DAPI void R3D_ApplyShadowCasting(bool enabled);
 
 /**
  * @brief Applies a billboard mode to sprites or meshes.
@@ -387,7 +412,7 @@ void R3D_ApplyShadowCasting(bool enabled);
  *
  * @param mode The billboard mode to apply.
  */
-void R3D_ApplyBillboardMode(R3D_BillboardMode mode);
+R3DAPI void R3D_ApplyBillboardMode(R3D_BillboardMode mode);
 
 
 // --------------------------------------------
@@ -402,7 +427,7 @@ void R3D_ApplyBillboardMode(R3D_BillboardMode mode);
  * 
  * @param camera The camera to use for rendering the scene.
  */
-void R3D_Begin(Camera3D camera);
+R3DAPI void R3D_Begin(Camera3D camera);
 
 /**
  * @brief Ends the current rendering session.
@@ -411,7 +436,7 @@ void R3D_Begin(Camera3D camera);
  * will process all necessary render passes and output the final result to the main 
  * or custom framebuffer.
  */
-void R3D_End(void);
+R3DAPI void R3D_End(void);
 
 /**
  * @brief Draws a mesh with a specified material and transformation.
@@ -422,7 +447,7 @@ void R3D_End(void);
  * @param material The material to apply to the mesh.
  * @param transform The transformation matrix to apply to the mesh.
  */
-void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform);
+R3DAPI void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform);
 
 /**
  * @brief Draws a mesh with instancing support.
@@ -435,7 +460,7 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform);
  * @param instanceTransforms Array of transformation matrices for each instance.
  * @param instanceCount The number of instances to render.
  */
-void R3D_DrawMeshInstanced(Mesh mesh, Material material, Matrix* instanceTransforms, int instanceCount);
+R3DAPI void R3D_DrawMeshInstanced(Mesh mesh, Material material, Matrix* instanceTransforms, int instanceCount);
 
 /**
  * @brief Draws a mesh with instancing support and different colors per instance.
@@ -449,7 +474,7 @@ void R3D_DrawMeshInstanced(Mesh mesh, Material material, Matrix* instanceTransfo
  * @param instanceColors Array of colors for each instance.
  * @param instanceCount The number of instances to render.
  */
-void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTransforms, Color* instanceColors, int instanceCount);
+R3DAPI void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTransforms, Color* instanceColors, int instanceCount);
 
 /**
  * @brief Draws a mesh with instancing support, a global transformation, and different colors per instance.
@@ -468,10 +493,10 @@ void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTrans
  * @param colorsStride The stride (in bytes) between consecutive colors in the array.
  * @param instanceCount The number of instances to render.
  */
-void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
-                              Matrix* instanceTransforms, int transformsStride,
-                              Color* instanceColors, int colorsStride,
-                              int instanceCount);
+R3DAPI void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
+                                     Matrix* instanceTransforms, int transformsStride,
+                                     Color* instanceColors, int colorsStride,
+                                     int instanceCount);
 
 /**
  * @brief Draws a model at a specified position and scale.
@@ -482,7 +507,7 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
  * @param position The position to place the model at.
  * @param scale The scale factor to apply to the model.
  */
-void R3D_DrawModel(Model model, Vector3 position, float scale);
+R3DAPI void R3D_DrawModel(Model model, Vector3 position, float scale);
 
 /**
  * @brief Draws a model with advanced transformation options.
@@ -497,7 +522,7 @@ void R3D_DrawModel(Model model, Vector3 position, float scale);
  * @param rotationAngle The angle to rotate the model.
  * @param scale The scale factor to apply to the model.
  */
-void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale);
+R3DAPI void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale);
 
 /**
  * @brief Renders the current state of a CPU-based particle system.
@@ -512,7 +537,7 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
  * @param mesh The mesh used to represent each particle.
  * @param material The material applied to the particle mesh.
  */
-void R3D_DrawParticleSystem(const R3D_ParticleSystem* system, Mesh mesh, Material material);
+R3DAPI void R3D_DrawParticleSystem(const R3D_ParticleSystem* system, Mesh mesh, Material material);
 
 /**
  * @brief Renders the current state of a CPU-based particle system with a global transformation.
@@ -528,7 +553,7 @@ void R3D_DrawParticleSystem(const R3D_ParticleSystem* system, Mesh mesh, Materia
  * @param material The material applied to the particle mesh.
  * @param transform A transformation matrix applied to all particles.
  */
-void R3D_DrawParticleSystemEx(const R3D_ParticleSystem* system, Mesh mesh, Material material, Matrix transform);
+R3DAPI void R3D_DrawParticleSystemEx(const R3D_ParticleSystem* system, Mesh mesh, Material material, Matrix transform);
 
 
 
@@ -545,7 +570,7 @@ void R3D_DrawParticleSystemEx(const R3D_ParticleSystem* system, Mesh mesh, Mater
  * @param type The type of light to create (directional, spot or omni-directional).
  * @return The ID of the created light.
  */
-R3D_Light R3D_CreateLight(R3D_LightType type);
+R3DAPI R3D_Light R3D_CreateLight(R3D_LightType type);
 
 /**
  * @brief Destroys the specified light.
@@ -555,7 +580,7 @@ R3D_Light R3D_CreateLight(R3D_LightType type);
  *
  * @param id The ID of the light to destroy.
  */
-void R3D_DestroyLight(R3D_Light id);
+R3DAPI void R3D_DestroyLight(R3D_Light id);
 
 /**
  * @brief Checks if a light exists.
@@ -565,7 +590,7 @@ void R3D_DestroyLight(R3D_Light id);
  * @param id The ID of the light to check.
  * @return True if the light exists, false otherwise.
  */
-bool R3D_IsLightExist(R3D_Light id);
+R3DAPI bool R3D_IsLightExist(R3D_Light id);
 
 /**
  * @brief Gets the type of a light.
@@ -575,7 +600,7 @@ bool R3D_IsLightExist(R3D_Light id);
  * @param id The ID of the light.
  * @return The type of the light.
  */
-R3D_LightType R3D_GetLightType(R3D_Light id);
+R3DAPI R3D_LightType R3D_GetLightType(R3D_Light id);
 
 /**
  * @brief Checks if a light is active.
@@ -585,7 +610,7 @@ R3D_LightType R3D_GetLightType(R3D_Light id);
  * @param id The ID of the light to check.
  * @return True if the light is active, false otherwise.
  */
-bool R3D_IsLightActive(R3D_Light id);
+R3DAPI bool R3D_IsLightActive(R3D_Light id);
 
 /**
  * @brief Toggles the state of a light (active or inactive).
@@ -595,7 +620,7 @@ bool R3D_IsLightActive(R3D_Light id);
  *
  * @param id The ID of the light to toggle.
  */
-void R3D_ToggleLight(R3D_Light id);
+R3DAPI void R3D_ToggleLight(R3D_Light id);
 
 /**
  * @brief Sets the active state of a light.
@@ -605,7 +630,7 @@ void R3D_ToggleLight(R3D_Light id);
  * @param id The ID of the light to set the active state for.
  * @param active True to activate the light, false to deactivate it.
  */
-void R3D_SetLightActive(R3D_Light id, bool active);
+R3DAPI void R3D_SetLightActive(R3D_Light id, bool active);
 
 /**
  * @brief Gets the color of a light.
@@ -615,7 +640,7 @@ void R3D_SetLightActive(R3D_Light id, bool active);
  * @param id The ID of the light.
  * @return The color of the light as a `Color` structure.
  */
-Color R3D_GetLightColor(R3D_Light id);
+R3DAPI Color R3D_GetLightColor(R3D_Light id);
 
 /**
  * @brief Gets the color of a light as a `Vector3`.
@@ -626,7 +651,7 @@ Color R3D_GetLightColor(R3D_Light id);
  * @param id The ID of the light.
  * @return The color of the light as a `Vector3`.
  */
-Vector3 R3D_GetLightColorV(R3D_Light id);
+R3DAPI Vector3 R3D_GetLightColorV(R3D_Light id);
 
 /**
  * @brief Sets the color of a light.
@@ -636,7 +661,7 @@ Vector3 R3D_GetLightColorV(R3D_Light id);
  * @param id The ID of the light.
  * @param color The new color to set for the light.
  */
-void R3D_SetLightColor(R3D_Light id, Color color);
+R3DAPI void R3D_SetLightColor(R3D_Light id, Color color);
 
 /**
  * @brief Sets the color of a light using a `Vector3`.
@@ -647,7 +672,7 @@ void R3D_SetLightColor(R3D_Light id, Color color);
  * @param id The ID of the light.
  * @param color The new color to set for the light as a `Vector3`.
  */
-void R3D_SetLightColorV(R3D_Light id, Vector3 color);
+R3DAPI void R3D_SetLightColorV(R3D_Light id, Vector3 color);
 
 /**
  * @brief Gets the position of a light.
@@ -658,7 +683,7 @@ void R3D_SetLightColorV(R3D_Light id, Vector3 color);
  * @param id The ID of the light.
  * @return The position of the light as a `Vector3`.
  */
-Vector3 R3D_GetLightPosition(R3D_Light id);
+R3DAPI Vector3 R3D_GetLightPosition(R3D_Light id);
 
 /**
  * @brief Sets the position of a light.
@@ -669,7 +694,7 @@ Vector3 R3D_GetLightPosition(R3D_Light id);
  * @param id The ID of the light.
  * @param position The new position to set for the light.
  */
-void R3D_SetLightPosition(R3D_Light id, Vector3 position);
+R3DAPI void R3D_SetLightPosition(R3D_Light id, Vector3 position);
 
 /**
  * @brief Gets the direction of a light.
@@ -680,7 +705,7 @@ void R3D_SetLightPosition(R3D_Light id, Vector3 position);
  * @param id The ID of the light.
  * @return The direction of the light as a `Vector3`.
  */
-Vector3 R3D_GetLightDirection(R3D_Light id);
+R3DAPI Vector3 R3D_GetLightDirection(R3D_Light id);
 
 /**
  * @brief Sets the direction of a light.
@@ -691,7 +716,7 @@ Vector3 R3D_GetLightDirection(R3D_Light id);
  * @param id The ID of the light.
  * @param direction The new direction to set for the light.
  */
-void R3D_SetLightDirection(R3D_Light id, Vector3 direction);
+R3DAPI void R3D_SetLightDirection(R3D_Light id, Vector3 direction);
 
 /**
  * @brief Sets the target of a directional light.
@@ -702,7 +727,7 @@ void R3D_SetLightDirection(R3D_Light id, Vector3 direction);
  * @param id The ID of the light.
  * @param target The target position the light should focus on.
  */
-void R3D_SetLightTarget(R3D_Light id, Vector3 target);
+R3DAPI void R3D_SetLightTarget(R3D_Light id, Vector3 target);
 
 /**
  * @brief Gets the energy level of a light.
@@ -713,7 +738,7 @@ void R3D_SetLightTarget(R3D_Light id, Vector3 target);
  * @param id The ID of the light.
  * @return The energy level of the light.
  */
-float R3D_GetLightEnergy(R3D_Light id);
+R3DAPI float R3D_GetLightEnergy(R3D_Light id);
 
 /**
  * @brief Sets the energy level of a light.
@@ -724,7 +749,7 @@ float R3D_GetLightEnergy(R3D_Light id);
  * @param id The ID of the light.
  * @param energy The new energy value to set for the light.
  */
-void R3D_SetLightEnergy(R3D_Light id, float energy);
+R3DAPI void R3D_SetLightEnergy(R3D_Light id, float energy);
 
 /**
  * @brief Gets the specular intensity of a light.
@@ -735,7 +760,7 @@ void R3D_SetLightEnergy(R3D_Light id, float energy);
  * @param id The ID of the light.
  * @return The current specular intensity of the light.
  */
-float R3D_GetLightSpecular(R3D_Light id);
+R3DAPI float R3D_GetLightSpecular(R3D_Light id);
 
 /**
  * @brief Sets the specular intensity of a light.
@@ -746,7 +771,7 @@ float R3D_GetLightSpecular(R3D_Light id);
  * @param id The ID of the light.
  * @param specular The new specular intensity value to set for the light.
  */
-void R3D_SetLightSpecular(R3D_Light id, float specular);
+R3DAPI void R3D_SetLightSpecular(R3D_Light id, float specular);
 
 /**
  * @brief Gets the range of a light.
@@ -757,7 +782,7 @@ void R3D_SetLightSpecular(R3D_Light id, float specular);
  * @param id The ID of the light.
  * @return The range of the light.
  */
-float R3D_GetLightRange(R3D_Light id);
+R3DAPI float R3D_GetLightRange(R3D_Light id);
 
 /**
  * @brief Sets the range of a light.
@@ -769,7 +794,7 @@ float R3D_GetLightRange(R3D_Light id);
  * @param id The ID of the light.
  * @param range The new range to set for the light.
  */
-void R3D_SetLightRange(R3D_Light id, float range);
+R3DAPI void R3D_SetLightRange(R3D_Light id, float range);
 
 /**
  * @brief Gets the attenuation factor of a light.
@@ -781,7 +806,7 @@ void R3D_SetLightRange(R3D_Light id, float range);
  * @param id The ID of the light.
  * @return The attenuation factor of the light.
  */
-float R3D_GetLightAttenuation(R3D_Light id);
+R3DAPI float R3D_GetLightAttenuation(R3D_Light id);
 
 /**
  * @brief Sets the attenuation factor of a light.
@@ -793,7 +818,7 @@ float R3D_GetLightAttenuation(R3D_Light id);
  * @param id The ID of the light.
  * @param attenuation The new attenuation factor to set for the light.
  */
-void R3D_SetLightAttenuation(R3D_Light id, float attenuation);
+R3DAPI void R3D_SetLightAttenuation(R3D_Light id, float attenuation);
 
 /**
  * @brief Gets the inner cutoff angle of a spotlight.
@@ -804,7 +829,7 @@ void R3D_SetLightAttenuation(R3D_Light id, float attenuation);
  * @param id The ID of the light.
  * @return The inner cutoff angle in degrees of the spotlight.
  */
-float R3D_GetLightInnerCutOff(R3D_Light id);
+R3DAPI float R3D_GetLightInnerCutOff(R3D_Light id);
 
 /**
  * @brief Sets the inner cutoff angle of a spotlight.
@@ -816,7 +841,7 @@ float R3D_GetLightInnerCutOff(R3D_Light id);
  * @param id The ID of the light.
  * @param degrees The new inner cutoff angle in degrees.
  */
-void R3D_SetLightInnerCutOff(R3D_Light id, float degrees);
+R3DAPI void R3D_SetLightInnerCutOff(R3D_Light id, float degrees);
 
 /**
  * @brief Gets the outer cutoff angle of a spotlight.
@@ -827,7 +852,7 @@ void R3D_SetLightInnerCutOff(R3D_Light id, float degrees);
  * @param id The ID of the light.
  * @return The outer cutoff angle in degrees of the spotlight.
  */
-float R3D_GetLightOuterCutOff(R3D_Light id);
+R3DAPI float R3D_GetLightOuterCutOff(R3D_Light id);
 
 /**
  * @brief Sets the outer cutoff angle of a spotlight.
@@ -838,7 +863,7 @@ float R3D_GetLightOuterCutOff(R3D_Light id);
  * @param id The ID of the light.
  * @param degrees The new outer cutoff angle in degrees.
  */
-void R3D_SetLightOuterCutOff(R3D_Light id, float degrees);
+R3DAPI void R3D_SetLightOuterCutOff(R3D_Light id, float degrees);
 
 
 
@@ -855,7 +880,7 @@ void R3D_SetLightOuterCutOff(R3D_Light id, float degrees);
  * @param id The ID of the light for which shadows should be enabled.
  * @param resolution The resolution of the shadow map to be used by the light.
  */
-void R3D_EnableShadow(R3D_Light id, int resolution);
+R3DAPI void R3D_EnableShadow(R3D_Light id, int resolution);
 
 /**
  * @brief Disables shadow casting for a light and optionally destroys its shadow map.
@@ -867,7 +892,7 @@ void R3D_EnableShadow(R3D_Light id, int resolution);
  * @param id The ID of the light for which shadows should be disabled.
  * @param destroyMap Whether or not to destroy the shadow map associated with the light.
  */
-void R3D_DisableShadow(R3D_Light id, bool destroyMap);
+R3DAPI void R3D_DisableShadow(R3D_Light id, bool destroyMap);
 
 /**
  * @brief Checks if shadow casting is enabled for a light.
@@ -877,7 +902,7 @@ void R3D_DisableShadow(R3D_Light id, bool destroyMap);
  * @param id The ID of the light.
  * @return True if shadow casting is enabled, false otherwise.
  */
-bool R3D_IsShadowEnabled(R3D_Light id);
+R3DAPI bool R3D_IsShadowEnabled(R3D_Light id);
 
 /**
  * @brief Checks if a light has an associated shadow map.
@@ -887,7 +912,7 @@ bool R3D_IsShadowEnabled(R3D_Light id);
  * @param id The ID of the light.
  * @return True if the light has a shadow map, false otherwise.
  */
-bool R3D_HasShadowMap(R3D_Light id);
+R3DAPI bool R3D_HasShadowMap(R3D_Light id);
 
 /**
  * @brief Gets the shadow map update mode of a light.
@@ -900,7 +925,7 @@ bool R3D_HasShadowMap(R3D_Light id);
  * @param id The ID of the light.
  * @return The shadow map update mode.
  */
-R3D_ShadowUpdateMode R3D_GetShadowUpdateMode(R3D_Light id);
+R3DAPI R3D_ShadowUpdateMode R3D_GetShadowUpdateMode(R3D_Light id);
 
 /**
  * @brief Sets the shadow map update mode of a light.
@@ -911,7 +936,7 @@ R3D_ShadowUpdateMode R3D_GetShadowUpdateMode(R3D_Light id);
  * @param id The ID of the light.
  * @param mode The update mode to set for the shadow map (Interval, Continuous, or Manual).
  */
-void R3D_SetShadowUpdateMode(R3D_Light id, R3D_ShadowUpdateMode mode);
+R3DAPI void R3D_SetShadowUpdateMode(R3D_Light id, R3D_ShadowUpdateMode mode);
 
 /**
  * @brief Gets the frequency of shadow map updates for the interval update mode.
@@ -923,7 +948,7 @@ void R3D_SetShadowUpdateMode(R3D_Light id, R3D_ShadowUpdateMode mode);
  * @param id The ID of the light.
  * @return The frequency in milliseconds at which the shadow map is updated.
  */
-int R3D_GetShadowUpdateFrequency(R3D_Light id);
+R3DAPI int R3D_GetShadowUpdateFrequency(R3D_Light id);
 
 /**
  * @brief Sets the frequency of shadow map updates for the interval update mode.
@@ -935,7 +960,7 @@ int R3D_GetShadowUpdateFrequency(R3D_Light id);
  * @param id The ID of the light.
  * @param msec The frequency in milliseconds at which to update the shadow map.
  */
-void R3D_SetShadowUpdateFrequency(R3D_Light id, int msec);
+R3DAPI void R3D_SetShadowUpdateFrequency(R3D_Light id, int msec);
 
 /**
  * @brief Forces an immediate update of the shadow map during the next rendering pass.
@@ -945,7 +970,7 @@ void R3D_SetShadowUpdateFrequency(R3D_Light id, int msec);
  *
  * @param id The ID of the light.
  */
-void R3D_UpdateShadowMap(R3D_Light id);
+R3DAPI void R3D_UpdateShadowMap(R3D_Light id);
 
 /**
  * @brief Gets the shadow bias of a light.
@@ -956,7 +981,7 @@ void R3D_UpdateShadowMap(R3D_Light id);
  * @param id The ID of the light.
  * @return The shadow bias value.
  */
-float R3D_GetShadowBias(R3D_Light id);
+R3DAPI float R3D_GetShadowBias(R3D_Light id);
 
 /**
  * @brief Sets the shadow bias of a light.
@@ -967,7 +992,7 @@ float R3D_GetShadowBias(R3D_Light id);
  * @param id The ID of the light.
  * @param value The shadow bias value to set.
  */
-void R3D_SetShadowBias(R3D_Light id, float value);
+R3DAPI void R3D_SetShadowBias(R3D_Light id, float value);
 
 
 
@@ -987,7 +1012,7 @@ void R3D_SetShadowBias(R3D_Light id, float value);
  *
  * @param id The ID of the light.
  */
-void R3D_DrawLightShape(R3D_Light id);
+R3DAPI void R3D_DrawLightShape(R3D_Light id);
 
 
 
@@ -1007,7 +1032,7 @@ void R3D_DrawLightShape(R3D_Light id);
  * @return A newly initialized `R3D_ParticleSystem` structure.
  *         The caller is responsible for properly managing and freeing the system when no longer needed.
  */
-R3D_ParticleSystem R3D_LoadParticleSystem(int maxParticles);
+R3DAPI R3D_ParticleSystem R3D_LoadParticleSystem(int maxParticles);
 
 /**
  * @brief Unloads the particle emitter system and frees allocated memory.
@@ -1017,7 +1042,7 @@ R3D_ParticleSystem R3D_LoadParticleSystem(int maxParticles);
  *
  * @param system A pointer to the `R3D_ParticleSystem` to be unloaded.
  */
-void R3D_UnloadParticleSystem(R3D_ParticleSystem* system);
+R3DAPI void R3D_UnloadParticleSystem(R3D_ParticleSystem* system);
 
 /**
  * @brief Emits a particle in the particle system.
@@ -1028,7 +1053,7 @@ void R3D_UnloadParticleSystem(R3D_ParticleSystem* system);
  * @param system A pointer to the `R3D_ParticleSystemCPU` where the particle will be emitted.
  * @return `true` if the particle was successfully emitted, `false` if the system is at full capacity and cannot emit more particles.
  */
-bool R3D_EmitParticle(R3D_ParticleSystem* system);
+R3DAPI bool R3D_EmitParticle(R3D_ParticleSystem* system);
 
 /**
  * @brief Updates the particle emitter system by advancing particle positions.
@@ -1039,7 +1064,7 @@ bool R3D_EmitParticle(R3D_ParticleSystem* system);
  * @param system A pointer to the `R3D_ParticleSystem` to be updated.
  * @param deltaTime The time elapsed since the last update (in seconds).
  */
-void R3D_UpdateParticleSystem(R3D_ParticleSystem* system, float deltaTime);
+R3DAPI void R3D_UpdateParticleSystem(R3D_ParticleSystem* system, float deltaTime);
 
 /**
  * @brief Computes and returns the AABB (Axis-Aligned Bounding Box) of the particle emitter system.
@@ -1052,7 +1077,7 @@ void R3D_UpdateParticleSystem(R3D_ParticleSystem* system, float deltaTime);
  * @param system A pointer to the `R3D_ParticleSystem` whose AABB is to be computed.
  * @return The computed `BoundingBox` of the particle system.
  */
-BoundingBox R3D_GetParticleSystemBoundingBox(R3D_ParticleSystem* system);
+R3DAPI BoundingBox R3D_GetParticleSystemBoundingBox(R3D_ParticleSystem* system);
 
 
 
@@ -1071,7 +1096,7 @@ BoundingBox R3D_GetParticleSystemBoundingBox(R3D_ParticleSystem* system);
  *                 before a reallocation occurs.
  * @return An initialized interpolation curve with the specified capacity.
  */
-R3D_InterpolationCurve R3D_LoadInterpolationCurve(int capacity);
+R3DAPI R3D_InterpolationCurve R3D_LoadInterpolationCurve(int capacity);
 
 /**
  * @brief Unloads the interpolation curve and frees the allocated memory.
@@ -1081,7 +1106,7 @@ R3D_InterpolationCurve R3D_LoadInterpolationCurve(int capacity);
  *
  * @param curve The interpolation curve to be unloaded.
  */
-void R3D_UnloadInterpolationCurve(R3D_InterpolationCurve curve);
+R3DAPI void R3D_UnloadInterpolationCurve(R3D_InterpolationCurve curve);
 
 /**
  * @brief Adds a keyframe to the interpolation curve.
@@ -1095,7 +1120,7 @@ void R3D_UnloadInterpolationCurve(R3D_InterpolationCurve curve);
  * @param value The value associated with the keyframe.
  * @return `true` if the keyframe was successfully added, or `false` if the reallocation failed.
  */
-bool R3D_AddKeyframe(R3D_InterpolationCurve* curve, float time, float value);
+R3DAPI bool R3D_AddKeyframe(R3D_InterpolationCurve* curve, float time, float value);
 
 /**
  * @brief Evaluates the interpolation curve at a specific time.
@@ -1107,7 +1132,7 @@ bool R3D_AddKeyframe(R3D_InterpolationCurve* curve, float time, float value);
  * @param time The time at which to evaluate the curve.
  * @return The value of the curve at the specified time.
  */
-float R3D_EvaluateCurve(R3D_InterpolationCurve curve, float time);
+R3DAPI float R3D_EvaluateCurve(R3D_InterpolationCurve curve, float time);
 
 
 
@@ -1123,7 +1148,7 @@ float R3D_EvaluateCurve(R3D_InterpolationCurve curve, float time);
  *
  * @param color The color to set as the background color.
  */
-void R3D_SetBackgroundColor(Color color);
+R3DAPI void R3D_SetBackgroundColor(Color color);
 
 /**
  * @brief Sets the ambient light color when no skybox is enabled.
@@ -1133,7 +1158,7 @@ void R3D_SetBackgroundColor(Color color);
  *
  * @param color The color to set for ambient light.
  */
-void R3D_SetAmbientColor(Color color);
+R3DAPI void R3D_SetAmbientColor(Color color);
 
 /**
  * @brief Enables a skybox for the scene.
@@ -1143,7 +1168,7 @@ void R3D_SetAmbientColor(Color color);
  *
  * @param skybox The skybox to enable.
  */
-void R3D_EnableSkybox(R3D_Skybox skybox);
+R3DAPI void R3D_EnableSkybox(R3D_Skybox skybox);
 
 /**
  * @brief Disables the skybox in the scene.
@@ -1152,7 +1177,7 @@ void R3D_EnableSkybox(R3D_Skybox skybox);
  * color (or no background if none is set). It should be called to remove the skybox
  * from the scene.
  */
-void R3D_DisableSkybox(void);
+R3DAPI void R3D_DisableSkybox(void);
 
 /**
  * @brief Sets the rotation of the skybox.
@@ -1164,7 +1189,7 @@ void R3D_DisableSkybox(void);
  * @param yaw The rotation angle around the Y-axis (in degrees).
  * @param roll The rotation angle around the Z-axis (in degrees).
  */
-void R3D_SetSkyboxRotation(float pitch, float yaw, float roll);
+R3DAPI void R3D_SetSkyboxRotation(float pitch, float yaw, float roll);
 
 /**
  * @brief Gets the current rotation of the skybox.
@@ -1174,7 +1199,7 @@ void R3D_SetSkyboxRotation(float pitch, float yaw, float roll);
  *
  * @return A vector containing the current pitch, yaw, and roll of the skybox.
  */
-Vector3 R3D_GetSkyboxRotation(void);
+R3DAPI Vector3 R3D_GetSkyboxRotation(void);
 
 
 
@@ -1191,7 +1216,7 @@ Vector3 R3D_GetSkyboxRotation(void);
  *
  * @param enabled Whether to enable or disable SSAO.
  */
-void R3D_SetSSAO(bool enabled);
+R3DAPI void R3D_SetSSAO(bool enabled);
 
 /**
  * @brief Gets the current state of SSAO.
@@ -1200,7 +1225,7 @@ void R3D_SetSSAO(bool enabled);
  *
  * @return True if SSAO is enabled, false otherwise.
  */
-bool R3D_GetSSAO(void);
+R3DAPI bool R3D_GetSSAO(void);
 
 /**
  * @brief Sets the radius for SSAO effect.
@@ -1211,7 +1236,7 @@ bool R3D_GetSSAO(void);
  *
  * @param value The radius value to set for SSAO.
  */
-void R3D_SetSSAORadius(float value);
+R3DAPI void R3D_SetSSAORadius(float value);
 
 /**
  * @brief Gets the current SSAO radius.
@@ -1220,7 +1245,7 @@ void R3D_SetSSAORadius(float value);
  *
  * @return The radius value for SSAO.
  */
-float R3D_GetSSAORadius(void);
+R3DAPI float R3D_GetSSAORadius(void);
 
 /**
  * @brief Sets the bias for SSAO effect.
@@ -1231,7 +1256,7 @@ float R3D_GetSSAORadius(void);
  *
  * @param value The bias value for SSAO.
  */
-void R3D_SetSSAOBias(float value);
+R3DAPI void R3D_SetSSAOBias(float value);
 
 /**
  * @brief Gets the current SSAO bias.
@@ -1240,7 +1265,7 @@ void R3D_SetSSAOBias(float value);
  *
  * @return The SSAO bias value.
  */
-float R3D_GetSSAOBias(void);
+R3DAPI float R3D_GetSSAOBias(void);
 
 /**
  * @brief Sets the number of iterations for SSAO effect.
@@ -1251,7 +1276,7 @@ float R3D_GetSSAOBias(void);
  *
  * @param value The number of iterations for SSAO.
  */
-void R3D_SetSSAOIterations(int value);
+R3DAPI void R3D_SetSSAOIterations(int value);
 
 /**
  * @brief Gets the current number of SSAO iterations.
@@ -1261,7 +1286,7 @@ void R3D_SetSSAOIterations(int value);
  *
  * @return The number of SSAO iterations.
  */
-int R3D_GetSSAOIterations(void);
+R3DAPI int R3D_GetSSAOIterations(void);
 
 
 
@@ -1277,7 +1302,7 @@ int R3D_GetSSAOIterations(void);
  *
  * @param mode The bloom mode to set.
  */
-void R3D_SetBloomMode(R3D_Bloom mode);
+R3DAPI void R3D_SetBloomMode(R3D_Bloom mode);
 
 /**
  * @brief Gets the current bloom mode.
@@ -1286,7 +1311,7 @@ void R3D_SetBloomMode(R3D_Bloom mode);
  *
  * @return The current bloom mode.
  */
-R3D_Bloom R3D_GetBloomMode(void);
+R3DAPI R3D_Bloom R3D_GetBloomMode(void);
 
 /**
  * @brief Sets the bloom intensity.
@@ -1296,7 +1321,7 @@ R3D_Bloom R3D_GetBloomMode(void);
  *
  * @param value The intensity value for bloom.
  */
-void R3D_SetBloomIntensity(float value);
+R3DAPI void R3D_SetBloomIntensity(float value);
 
 /**
  * @brief Gets the current bloom intensity.
@@ -1305,7 +1330,7 @@ void R3D_SetBloomIntensity(float value);
  *
  * @return The current bloom intensity.
  */
-float R3D_GetBloomIntensity(void);
+R3DAPI float R3D_GetBloomIntensity(void);
 
 /**
  * @brief Sets the HDR threshold for bloom.
@@ -1315,7 +1340,7 @@ float R3D_GetBloomIntensity(void);
  *
  * @param value The HDR threshold for bloom.
  */
-void R3D_SetBloomHdrThreshold(float value);
+R3DAPI void R3D_SetBloomHdrThreshold(float value);
 
 /**
  * @brief Gets the current HDR threshold for bloom.
@@ -1325,7 +1350,7 @@ void R3D_SetBloomHdrThreshold(float value);
  *
  * @return The current HDR threshold for bloom.
  */
-float R3D_GetBloomHdrThreshold(void);
+R3DAPI float R3D_GetBloomHdrThreshold(void);
 
 /**
  * @brief Sets the HDR threshold for the sky in bloom.
@@ -1335,7 +1360,7 @@ float R3D_GetBloomHdrThreshold(void);
  *
  * @param value The HDR threshold for bloom on the sky.
  */
-void R3D_SetBloomSkyHdrThreshold(float value);
+R3DAPI void R3D_SetBloomSkyHdrThreshold(float value);
 
 /**
  * @brief Gets the current HDR threshold for bloom on the sky.
@@ -1344,7 +1369,7 @@ void R3D_SetBloomSkyHdrThreshold(float value);
  *
  * @return The current HDR threshold for sky bloom.
  */
-float R3D_GetBloomSkyHdrThreshold(void);
+R3DAPI float R3D_GetBloomSkyHdrThreshold(void);
 
 /**
  * @brief Sets the number of iterations for the bloom effect.
@@ -1355,7 +1380,7 @@ float R3D_GetBloomSkyHdrThreshold(void);
  *
  * @param value The number of bloom iterations.
  */
-void R3D_SetBloomIterations(int value);
+R3DAPI void R3D_SetBloomIterations(int value);
 
 /**
  * @brief Gets the current number of bloom iterations.
@@ -1364,7 +1389,7 @@ void R3D_SetBloomIterations(int value);
  *
  * @return The current number of bloom iterations.
  */
-int R3D_GetBloomIterations(void);
+R3DAPI int R3D_GetBloomIterations(void);
 
 
 
@@ -1380,7 +1405,7 @@ int R3D_GetBloomIterations(void);
  *
  * @param mode The fog mode to set.
  */
-void R3D_SetFogMode(R3D_Fog mode);
+R3DAPI void R3D_SetFogMode(R3D_Fog mode);
 
 /**
  * @brief Gets the current fog mode.
@@ -1389,7 +1414,7 @@ void R3D_SetFogMode(R3D_Fog mode);
  *
  * @return The current fog mode.
  */
-R3D_Fog R3D_GetFogMode(void);
+R3DAPI R3D_Fog R3D_GetFogMode(void);
 
 /**
  * @brief Sets the color of the fog.
@@ -1399,7 +1424,7 @@ R3D_Fog R3D_GetFogMode(void);
  *
  * @param color The color to set for the fog.
  */
-void R3D_SetFogColor(Color color);
+R3DAPI void R3D_SetFogColor(Color color);
 
 /**
  * @brief Gets the current fog color.
@@ -1408,7 +1433,7 @@ void R3D_SetFogColor(Color color);
  *
  * @return The current fog color.
  */
-Color R3D_GetFogColor(void);
+R3DAPI Color R3D_GetFogColor(void);
 
 /**
  * @brief Sets the start distance of the fog.
@@ -1418,7 +1443,7 @@ Color R3D_GetFogColor(void);
  *
  * @param value The start distance for the fog effect.
  */
-void R3D_SetFogStart(float value);
+R3DAPI void R3D_SetFogStart(float value);
 
 /**
  * @brief Gets the current fog start distance.
@@ -1427,7 +1452,7 @@ void R3D_SetFogStart(float value);
  *
  * @return The current fog start distance.
  */
-float R3D_GetFogStart(void);
+R3DAPI float R3D_GetFogStart(void);
 
 /**
  * @brief Sets the end distance of the fog.
@@ -1437,7 +1462,7 @@ float R3D_GetFogStart(void);
  *
  * @param value The end distance for the fog effect.
  */
-void R3D_SetFogEnd(float value);
+R3DAPI void R3D_SetFogEnd(float value);
 
 /**
  * @brief Gets the current fog end distance.
@@ -1446,7 +1471,7 @@ void R3D_SetFogEnd(float value);
  *
  * @return The current fog end distance.
  */
-float R3D_GetFogEnd(void);
+R3DAPI float R3D_GetFogEnd(void);
 
 /**
  * @brief Sets the density of the fog.
@@ -1456,7 +1481,7 @@ float R3D_GetFogEnd(void);
  *
  * @param value The density of the fog (higher values increase fog thickness).
  */
-void R3D_SetFogDensity(float value);
+R3DAPI void R3D_SetFogDensity(float value);
 
 /**
  * @brief Gets the current fog density.
@@ -1465,7 +1490,7 @@ void R3D_SetFogDensity(float value);
  *
  * @return The current fog density.
  */
-float R3D_GetFogDensity(void);
+R3DAPI float R3D_GetFogDensity(void);
 
 
 
@@ -1482,7 +1507,7 @@ float R3D_GetFogDensity(void);
  *
  * @param mode The tonemap mode to set.
  */
-void R3D_SetTonemapMode(R3D_Tonemap mode);
+R3DAPI void R3D_SetTonemapMode(R3D_Tonemap mode);
 
 /**
  * @brief Gets the current tonemapping mode.
@@ -1491,7 +1516,7 @@ void R3D_SetTonemapMode(R3D_Tonemap mode);
  *
  * @return The current tonemap mode.
  */
-R3D_Tonemap R3D_GetTonemapMode(void);
+R3DAPI R3D_Tonemap R3D_GetTonemapMode(void);
 
 /**
  * @brief Sets the exposure level for tonemapping.
@@ -1501,7 +1526,7 @@ R3D_Tonemap R3D_GetTonemapMode(void);
  *
  * @param value The exposure value (higher values make the scene brighter).
  */
-void R3D_SetTonemapExposure(float value);
+R3DAPI void R3D_SetTonemapExposure(float value);
 
 /**
  * @brief Gets the current tonemap exposure level.
@@ -1510,7 +1535,7 @@ void R3D_SetTonemapExposure(float value);
  *
  * @return The current tonemap exposure value.
  */
-float R3D_GetTonemapExposure(void);
+R3DAPI float R3D_GetTonemapExposure(void);
 
 /**
  * @brief Sets the white point for tonemapping.
@@ -1520,7 +1545,7 @@ float R3D_GetTonemapExposure(void);
  *
  * @param value The white point value.
  */
-void R3D_SetTonemapWhite(float value);
+R3DAPI void R3D_SetTonemapWhite(float value);
 
 /**
  * @brief Gets the current tonemap white point.
@@ -1529,7 +1554,7 @@ void R3D_SetTonemapWhite(float value);
  *
  * @return The current tonemap white value.
  */
-float R3D_GetTonemapWhite(void);
+R3DAPI float R3D_GetTonemapWhite(void);
 
 
 
@@ -1545,7 +1570,7 @@ float R3D_GetTonemapWhite(void);
  *
  * @param value The brightness adjustment value.
  */
-void R3D_SetBrightness(float value);
+R3DAPI void R3D_SetBrightness(float value);
 
 /**
  * @brief Gets the current brightness level.
@@ -1554,7 +1579,7 @@ void R3D_SetBrightness(float value);
  *
  * @return The current brightness value.
  */
-float R3D_GetBrightness(void);
+R3DAPI float R3D_GetBrightness(void);
 
 /**
  * @brief Sets the global contrast adjustment.
@@ -1564,7 +1589,7 @@ float R3D_GetBrightness(void);
  *
  * @param value The contrast adjustment value.
  */
-void R3D_SetContrast(float value);
+R3DAPI void R3D_SetContrast(float value);
 
 /**
  * @brief Gets the current contrast level.
@@ -1573,7 +1598,7 @@ void R3D_SetContrast(float value);
  *
  * @return The current contrast value.
  */
-float R3D_GetContrast(void);
+R3DAPI float R3D_GetContrast(void);
 
 /**
  * @brief Sets the global saturation adjustment.
@@ -1583,7 +1608,7 @@ float R3D_GetContrast(void);
  *
  * @param value The saturation adjustment value.
  */
-void R3D_SetSaturation(float value);
+R3DAPI void R3D_SetSaturation(float value);
 
 /**
  * @brief Gets the current saturation level.
@@ -1592,7 +1617,7 @@ void R3D_SetSaturation(float value);
  *
  * @return The current saturation value.
  */
-float R3D_GetSaturation(void);
+R3DAPI float R3D_GetSaturation(void);
 
 
 
@@ -1610,7 +1635,7 @@ float R3D_GetSaturation(void);
  * @param layout The cubemap layout format.
  * @return The loaded skybox object.
  */
-R3D_Skybox R3D_LoadSkybox(const char* fileName, CubemapLayout layout);
+R3DAPI R3D_Skybox R3D_LoadSkybox(const char* fileName, CubemapLayout layout);
 
 /**
  * @brief Loads a skybox from a high dynamic range (HDR) image.
@@ -1622,7 +1647,7 @@ R3D_Skybox R3D_LoadSkybox(const char* fileName, CubemapLayout layout);
  * @param size The resolution of the cubemap (e.g., 512, 1024).
  * @return The loaded skybox object.
  */
-R3D_Skybox R3D_LoadSkyboxHDR(const char* fileName, int size);
+R3DAPI R3D_Skybox R3D_LoadSkyboxHDR(const char* fileName, int size);
 
 /**
  * @brief Unloads a skybox and frees its resources.
@@ -1632,7 +1657,7 @@ R3D_Skybox R3D_LoadSkyboxHDR(const char* fileName, int size);
  *
  * @param sky The skybox to unload.
  */
-void R3D_UnloadSkybox(R3D_Skybox sky);
+R3DAPI void R3D_UnloadSkybox(R3D_Skybox sky);
 
 
 
@@ -1649,7 +1674,7 @@ void R3D_UnloadSkybox(R3D_Skybox sky);
  * @param position The position of the point to check.
  * @return `true` if the point is inside the frustum, `false` otherwise.
  */
-bool R3D_IsPointInFrustum(Vector3 position);
+R3DAPI bool R3D_IsPointInFrustum(Vector3 position);
 
 /**
  * @brief Checks if a point is inside the view frustum (alternative XYZ version).
@@ -1663,7 +1688,7 @@ bool R3D_IsPointInFrustum(Vector3 position);
  * @param z The Z coordinate of the point.
  * @return `true` if the point is inside the frustum, `false` otherwise.
  */
-bool R3D_IsPointInFrustumXYZ(float x, float y, float z);
+R3DAPI bool R3D_IsPointInFrustumXYZ(float x, float y, float z);
 
 /**
  * @brief Checks if a sphere is inside the view frustum.
@@ -1676,7 +1701,7 @@ bool R3D_IsPointInFrustumXYZ(float x, float y, float z);
  * @param radius The radius of the sphere.
  * @return `true` if the sphere is at least partially inside the frustum, `false` otherwise.
  */
-bool R3D_IsSphereInFrustum(Vector3 position, float radius);
+R3DAPI bool R3D_IsSphereInFrustum(Vector3 position, float radius);
 
 /**
  * @brief Checks if an axis-aligned bounding box (AABB) is inside the view frustum.
@@ -1687,7 +1712,7 @@ bool R3D_IsSphereInFrustum(Vector3 position, float radius);
  * @param aabb The bounding box to test.
  * @return `true` if any part of the bounding box is inside the frustum, `false` otherwise.
  */
-bool R3D_IsBoundingBoxInFrustum(BoundingBox aabb);
+R3DAPI bool R3D_IsBoundingBoxInFrustum(BoundingBox aabb);
 
 
 
@@ -1706,7 +1731,7 @@ bool R3D_IsBoundingBoxInFrustum(BoundingBox aabb);
  * @param texture Optional albedo texture (set to NULL for none).
  * @param color Albedo color to apply.
  */
-void R3D_SetMaterialAlbedo(Material* material, Texture2D* texture, Color color);
+R3DAPI void R3D_SetMaterialAlbedo(Material* material, Texture2D* texture, Color color);
 
 /**
  * @brief Sets the ambient occlusion properties of a material.
@@ -1718,7 +1743,7 @@ void R3D_SetMaterialAlbedo(Material* material, Texture2D* texture, Color color);
  * @param texture Optional occlusion texture (set to NULL for none).
  * @param value Occlusion strength (0.0 to 1.0).
  */
-void R3D_SetMaterialOcclusion(Material* material, Texture2D* texture, float value);
+R3DAPI void R3D_SetMaterialOcclusion(Material* material, Texture2D* texture, float value);
 
 /**
  * @brief Sets the roughness properties of a material.
@@ -1731,7 +1756,7 @@ void R3D_SetMaterialOcclusion(Material* material, Texture2D* texture, float valu
  * @param texture Optional roughness texture (set to NULL for none).
  * @param value Roughness factor (0.0 = smooth, 1.0 = rough).
  */
-void R3D_SetMaterialRoughness(Material* material, Texture2D* texture, float value);
+R3DAPI void R3D_SetMaterialRoughness(Material* material, Texture2D* texture, float value);
 
 /**
  * @brief Sets the metalness properties of a material.
@@ -1744,7 +1769,7 @@ void R3D_SetMaterialRoughness(Material* material, Texture2D* texture, float valu
  * @param texture Optional metalness texture (set to NULL for none).
  * @param value Metalness factor (0.0 = non-metallic, 1.0 = metallic).
  */
-void R3D_SetMaterialMetalness(Material* material, Texture2D* texture, float value);
+R3DAPI void R3D_SetMaterialMetalness(Material* material, Texture2D* texture, float value);
 
 /**
  * @brief Sets the emission properties of a material.
@@ -1758,7 +1783,7 @@ void R3D_SetMaterialMetalness(Material* material, Texture2D* texture, float valu
  * @param color Emission color.
  * @param value Emission intensity.
  */
-void R3D_SetMaterialEmission(Material* material, Texture2D* texture, Color color, float value);
+R3DAPI void R3D_SetMaterialEmission(Material* material, Texture2D* texture, Color color, float value);
 
 
 
@@ -1773,7 +1798,7 @@ void R3D_SetMaterialEmission(Material* material, Texture2D* texture, Color color
  *
  * @return A white texture.
  */
-Texture2D R3D_GetWhiteTexture(void);
+R3DAPI Texture2D R3D_GetWhiteTexture(void);
 
 /**
  * @brief Retrieves a default black texture.
@@ -1782,7 +1807,7 @@ Texture2D R3D_GetWhiteTexture(void);
  *
  * @return A black texture.
  */
-Texture2D R3D_GetBlackTexture(void);
+R3DAPI Texture2D R3D_GetBlackTexture(void);
 
 /**
  * @brief Retrieves a default normal map texture.
@@ -1791,7 +1816,7 @@ Texture2D R3D_GetBlackTexture(void);
  *
  * @return A neutral normal texture.
  */
-Texture2D R3D_GetNormalTexture(void);
+R3DAPI Texture2D R3D_GetNormalTexture(void);
 
 
 
@@ -1810,7 +1835,7 @@ Texture2D R3D_GetNormalTexture(void);
  * @param w Width of the drawn buffer.
  * @param h Height of the drawn buffer.
  */
-void R3D_DrawBufferAlbedo(float x, float y, float w, float h);
+R3DAPI void R3D_DrawBufferAlbedo(float x, float y, float w, float h);
 
 /**
  * @brief Renders the internal emission buffer to the screen.
@@ -1823,7 +1848,7 @@ void R3D_DrawBufferAlbedo(float x, float y, float w, float h);
  * @param w Width of the drawn buffer.
  * @param h Height of the drawn buffer.
  */
-void R3D_DrawBufferEmission(float x, float y, float w, float h);
+R3DAPI void R3D_DrawBufferEmission(float x, float y, float w, float h);
 
 /**
  * @brief Renders the internal normal buffer to the screen.
@@ -1836,7 +1861,7 @@ void R3D_DrawBufferEmission(float x, float y, float w, float h);
  * @param w Width of the drawn buffer.
  * @param h Height of the drawn buffer.
  */
-void R3D_DrawBufferNormal(float x, float y, float w, float h);
+R3DAPI void R3D_DrawBufferNormal(float x, float y, float w, float h);
 
 /**
  * @brief Renders the ORM (Occlusion, Roughness, Metalness) buffer to the screen.
@@ -1853,7 +1878,7 @@ void R3D_DrawBufferNormal(float x, float y, float w, float h);
  * @param w Width of the drawn buffer.
  * @param h Height of the drawn buffer.
  */
-void R3D_DrawBufferORM(float x, float y, float w, float h);
+R3DAPI void R3D_DrawBufferORM(float x, float y, float w, float h);
 
 /**
  * @brief Renders the SSAO (Screen Space Ambient Occlusion) buffer to the screen.
@@ -1866,7 +1891,7 @@ void R3D_DrawBufferORM(float x, float y, float w, float h);
  * @param w Width of the drawn buffer.
  * @param h Height of the drawn buffer.
  */
-void R3D_DrawBufferSSAO(float x, float y, float w, float h);
+R3DAPI void R3D_DrawBufferSSAO(float x, float y, float w, float h);
 
 /**
  * @brief Renders the bright colors buffer to the screen.
@@ -1879,7 +1904,7 @@ void R3D_DrawBufferSSAO(float x, float y, float w, float h);
  * @param w Width of the drawn buffer.
  * @param h Height of the drawn buffer.
  */
-void R3D_DrawBufferBrightColors(float x, float y, float w, float h);
+R3DAPI void R3D_DrawBufferBrightColors(float x, float y, float w, float h);
 
 /**
  * @brief Renders the bloom buffer to the screen.
@@ -1892,7 +1917,7 @@ void R3D_DrawBufferBrightColors(float x, float y, float w, float h);
  * @param w Width of the drawn buffer.
  * @param h Height of the drawn buffer.
  */
-void R3D_DrawBufferBloom(float x, float y, float w, float h);
+R3DAPI void R3D_DrawBufferBloom(float x, float y, float w, float h);
 
 #ifdef __cplusplus
 }
