@@ -63,6 +63,7 @@ set(R3D_LIB_TYPE STATIC)
 
 if(R3D_BUILD_SHARED)
     set(R3D_LIB_TYPE SHARED)
+    add_definitions(-DR3D_BUILD_SHARED)
 endif()
 
 add_library(${PROJECT_NAME} ${R3D_LIB_TYPE}
