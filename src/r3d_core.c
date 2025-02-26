@@ -397,7 +397,7 @@ void R3D_End(void)
         r3d_pass_post_fog();
     }
 
-    if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f || R3D.env.tonemapWhite != 1.0f) {
+    if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f) {
         r3d_pass_post_tonemap();
     }
 
