@@ -154,7 +154,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Init rendering mode configs
     R3D.state.render.mode = R3D_RENDER_DEFERRED;
-    R3D.state.render.shadowCastMode= R3D_SHADOW_CAST_BACK_FACES;
+    R3D.state.render.shadowCastMode= R3D_SHADOW_CAST_FRONT_FACES;
     R3D.state.render.billboardMode = R3D_BILLBOARD_DISABLED;
 
     // Init scene data
