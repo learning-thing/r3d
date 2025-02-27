@@ -59,13 +59,13 @@ void Draw(void)
     R3D_Begin(camera);
     {
         R3D_ApplyRenderMode(R3D_RENDER_DEFERRED);
-        R3D_ApplyShadowCasting(true);
+        R3D_ApplyShadowCastMode(R3D_SHADOW_CAST_FRONT_FACES);
 
         R3D_DrawModel(plane, (Vector3) { 0, -0.5f, 0 }, 1.0f);
         R3D_DrawModel(sphere, (Vector3) { 0 }, 1.0f);
 
         R3D_ApplyRenderMode(R3D_RENDER_FORWARD);
-        R3D_ApplyShadowCasting(false);
+        R3D_ApplyShadowCastMode(R3D_SHADOW_CAST_DISABLED);
 
         R3D_DrawModel(cube, (Vector3) { 0 }, 1.0f);
     }
