@@ -12,7 +12,6 @@ R3D is ideal for developers who want to add 3D rendering to their raylib project
 
 R3D is a work in progress and may have build or shader issues on some platforms.
 You can report them in an issue if you wish, but as long as this warning is present, nothing is guaranteed.
-A release version will be published once transparency support is complete and R3D has been tested on enough platforms.
 
 ---
 
@@ -43,9 +42,10 @@ git submodule update --init --recursive
 
 ### Prerequisites
 
-- **raylib**: The library is provided as a submodule, which is optional. If **raylib 5.5** is already installed on your system, you can use R3D without cloning the submodule.
-- **CMake**: For building the library.
+- **raylib 5.5**: The library is provided as a submodule, which is optional. If **raylib 5.5** is already installed on your system, you can use R3D without cloning the submodule.
+- **Python (>= 3.6)**: Python is required for the minification of shaders, which are then integrated into the library's binary.
 - **C Compiler**: A C99 or higher compatible compiler.
+- **CMake**: For building the library.
 
 ### Installation
 
