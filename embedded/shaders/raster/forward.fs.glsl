@@ -134,123 +134,84 @@ float ShadowOmni(int i, float cNdotL)
 {
     // Calculate the direction vector from the light to the fragment
     vec3 lightToFrag = vPosition - uLights[i].position;
-    
-    // Calculate the current depth, which is the distance from the light to the fragment
-    float currentDepth = length(lightToFrag);
-    
-    // Compute the bias to reduce shadow acne, considering the angle of the surface normal
-    float bias = uLights[i].shadowBias * max(1.0 - cNdotL, 0.05);
+    float currentDepth = length(lightToFrag);  // Depth from the light to the fragment
 
-    // Normalize the light-to-fragment vector to get the sampling direction
+    // Compute bias based on normal angle and distance to avoid shadow acne
+    float bias = max(uLights[i].shadowBias * (1.0 - cNdotL), 0.00002);
+    
+    // Normalize light-to-fragment vector
     vec3 sampleDir = normalize(lightToFrag);
     
-    // Generate an orthonormal basis for the tangent and bitangent
-    // The 'up' vector is used to generate the tangent and bitangent
-    vec3 up = vec3(0, 1, 0);
-    
-    // If the sample direction is almost parallel to 'up', choose a different 'up' vector
-    if (abs(dot(sampleDir, up)) > 0.99) 
-        up = vec3(1, 0, 0);
-    
-    // Calculate the tangent and bitangent vectors, which are perpendicular to the sample direction
+    // Create orthonormal basis for tangent and bitangent
+    vec3 up = (abs(dot(sampleDir, vec3(0, 1, 0))) > 0.99) ? vec3(1, 0, 0) : vec3(0, 1, 0);
     vec3 tangent = normalize(cross(sampleDir, up));
     vec3 bitangent = cross(tangent, sampleDir);
 
+    // PCF kernel setup
+    const float radius = 0.01;
+    const int KERNEL_SIZE = 2;
+    const float SAMPLES = 25.0;
+
     float shadow = 0.0;
-    
-    // Define the number of samples for PCF and the sampling radius
-    const float SAMPLES = 25.0;     // Set the number of samples for the PCF filter
-    const float radius = 0.01;      // Sampling radius (could be made a uniform if needed)
-    const int KERNEL_SIZE = 2;      // Kernel size (controls the area sampled around each point)
 
-    // Loop through the kernel area to sample neighboring shadow texels
-    for(int x = -KERNEL_SIZE; x <= KERNEL_SIZE; x++) {
-        float xOffset = float(x) * radius;
-        
-        for(int y = -KERNEL_SIZE; y <= KERNEL_SIZE; y++) {
-            float yOffset = float(y) * radius;
+    // Vary the kernel size based on the fragment's depth
+    float shadowRadius = mix(0.01, 0.05, currentDepth / uLights[i].range);
 
-            // Calculate the offset direction using the tangent and bitangent vectors
-            vec3 offset = tangent * xOffset + bitangent * yOffset;
-            
-            // Calculate the sample vector by adding the offset to the light-to-fragment direction
+    for (int x = -KERNEL_SIZE; x <= KERNEL_SIZE; x++)
+    {
+        for (int y = -KERNEL_SIZE; y <= KERNEL_SIZE; y++)
+        {
+            vec3 offset = tangent * float(x) * shadowRadius + bitangent * float(y) * shadowRadius;
             vec3 sampleVec = lightToFrag + offset;
-            
-            // Retrieve the closest depth value from the shadow cubemap for the sample position
+
+            // Sample depth from the shadow cubemap
             float closestDepth = texture(uLights[i].shadowCubemap, sampleVec).r;
-            
-            // Compare the fragment's depth to the closest depth in the shadow map
-            // The step function returns 1.0 if the fragment is in shadow, 0.0 otherwise
             shadow += step(closestDepth, currentDepth - bias);
         }
     }
-    
-    // Return the final shadow factor, averaged over the number of samples
+
     return 1.0 - (shadow / SAMPLES);
 }
+
 
 float Shadow(int i, float cNdotL)
 {
     // Transform the world-space position into light-space using the shadow projection matrix
     vec4 p = vPosLightSpace[i];
-    
-    // Convert from homogeneous clip space to normalized device coordinates (NDC)
     vec3 projCoords = p.xyz / p.w;
-    
-    // Transform NDC coordinates from [-1,1] range to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
+    projCoords = projCoords * 0.5 + 0.5; // Map to [0,1] range
 
-    // Check if the fragment is outside the shadow map bounds
-    // If it is, return 1.0 (fully lit)
-    if (projCoords.x < 0.0 || projCoords.x > 1.0 || 
-        projCoords.y < 0.0 || projCoords.y > 1.0 || 
-        projCoords.z < 0.0 || projCoords.z > 1.0)
+    // Return 1.0 if the fragment is outside the shadow map bounds
+    if (projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0 || projCoords.z < 0.0 || projCoords.z > 1.0)
         return 1.0;
 
-    // Compute the bias to reduce shadow acne (self-shadowing artifacts)
-    float bias = max(uLights[i].shadowBias * (1.0 - cNdotL), 0.00002) + 0.00001;
-    
-    // Apply the bias to the depth value
-    projCoords.z -= bias;
+    // Compute bias to avoid self-shadowing artifacts
+    float bias = max(uLights[i].shadowBias * (1.0 - cNdotL), 0.00002);
+
+    projCoords.z -= bias; // Apply bias to avoid acne
 
     float shadow = 0.0;
 
-    // Define PCF (Percentage Closer Filtering) parameters
-    const float SAMPLES = 25.0;     // Number of samples for PCF
-    const float radius = 0.0005;    // Sampling radius (can be made a uniform for dynamic control)
-    const int KERNEL_SIZE = 2;      // Kernel size for sampling around the main shadow coordinate
+    // PCF parameters
+    const float radius = 0.0005;
+    const int KERNEL_SIZE = 2;
+    const float SAMPLES = 25.0;
 
-    // Generate an orthonormal basis for sampling around the main shadow coordinate
-    vec3 up = vec3(0, 1, 0);
-    
-    // Avoid degenerate cases where 'up' is parallel to the sampling direction
-    if (abs(dot(vec3(0, 0, 1), up)) > 0.99) 
-        up = vec3(1, 0, 0);
-    
-    // Compute the tangent and bitangent vectors
+    // Generate orthonormal basis for sampling around shadow coordinate
+    vec3 up = (abs(dot(vec3(0, 0, 1), vec3(0, 1, 0))) > 0.99) ? vec3(1, 0, 0) : vec3(0, 1, 0);
     vec3 tangent = normalize(cross(vec3(0, 0, 1), up));
     vec3 bitangent = cross(tangent, vec3(0, 0, 1));
 
-    // PCF Loop: Sample surrounding texels in the shadow map
     for (int x = -KERNEL_SIZE; x <= KERNEL_SIZE; x++)
     {
-        float xOffset = float(x) * radius;
         for (int y = -KERNEL_SIZE; y <= KERNEL_SIZE; y++)
         {
-            float yOffset = float(y) * radius;
-
-            // Compute sampling offset using the tangent and bitangent vectors
-            vec2 offset = tangent.xy * xOffset + bitangent.xy * yOffset;
-            
-            // Retrieve the closest depth value from the shadow map
+            vec2 offset = tangent.xy * float(x) * radius + bitangent.xy * float(y) * radius;
             float closestDepth = texture(uLights[i].shadowMap, projCoords.xy + offset).r;
-            
-            // Compare depth values: if the current fragment is in shadow, add to shadow factor
             shadow += step(projCoords.z, closestDepth);
         }
     }
 
-    // Return the final shadow factor (normalized over the number of samples)
     return shadow / SAMPLES;
 }
 
