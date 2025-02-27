@@ -49,7 +49,7 @@ extern struct R3D_State {
             unsigned int emission;          ///< RGB[16|16|16]  //< REVIEW: R11G11B10F ?
             unsigned int normal;            ///< RG[16|16]
             unsigned int orm;               ///< RGB[5|6|5]
-            unsigned int depth;             ///< DS[16|8]
+            unsigned int depth;             ///< DS[24|8]
         } gBuffer;
 
         // Ping-pong buffer for SSAO blur processing (half internal resolution)
