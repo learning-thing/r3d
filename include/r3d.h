@@ -77,6 +77,19 @@ typedef enum {
 } R3D_RenderMode;
 
 /**
+ * @brief Defines the shadow casting mode for objects in the scene.
+ *
+ * Determines how an object contributes to shadow mapping, which can affect
+ * performance and visual accuracy depending on the rendering technique used.
+ */
+typedef enum {
+    R3D_SHADOW_CAST_DISABLED,     ///< The object does not cast shadows.
+    R3D_SHADOW_CAST_FRONT_FACES,  ///< Only front-facing polygons cast shadows.
+    R3D_SHADOW_CAST_BACK_FACES,   ///< Only back-facing polygons cast shadows.
+    R3D_SHADOW_CAST_ALL_FACES     ///< Both front and back-facing polygons cast shadows.
+} R3D_ShadowCastMode;
+
+/**
  * @brief Defines billboard modes for 3D objects.
  *
  * This enumeration defines how a 3D object aligns itself relative to the camera.
@@ -392,15 +405,15 @@ R3DAPI void R3D_SetSceneBounds(BoundingBox sceneBounds);
 R3DAPI void R3D_ApplyRenderMode(R3D_RenderMode mode);
 
 /**
- * @brief Enables or disables shadow casting for meshes.
- * 
- * This function controls whether meshes should cast shadows in the scene. It can be 
- * called at any time, including between `R3D_Begin` and `R3D_End`. The set value 
+ * @brief Sets the shadow casting mode for meshes.
+ *
+ * This function controls how meshes cast shadows in the scene. It can be
+ * called at any time, including between `R3D_Begin` and `R3D_End`. The selected mode
  * will apply to all subsequent draw calls.
- * 
- * @param enabled True to enable shadow casting, false to disable it.
+ *
+ * @param mode The shadow casting mode to apply.
  */
-R3DAPI void R3D_ApplyShadowCasting(bool enabled);
+R3DAPI void R3D_ApplyShadowCastMode(R3D_ShadowCastMode mode);
 
 /**
  * @brief Applies a billboard mode to sprites or meshes.
@@ -413,6 +426,7 @@ R3DAPI void R3D_ApplyShadowCasting(bool enabled);
  * @param mode The billboard mode to apply.
  */
 R3DAPI void R3D_ApplyBillboardMode(R3D_BillboardMode mode);
+
 
 
 // --------------------------------------------

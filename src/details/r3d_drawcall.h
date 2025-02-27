@@ -31,7 +31,7 @@ typedef struct {
     Mesh mesh;
     Matrix transform;
     Material material;
-    bool castShadows;
+    R3D_ShadowCastMode shadowCastMode;
     struct {
         R3D_BillboardMode billboardMode;
         const Matrix* transforms;

@@ -43,6 +43,8 @@
 static void r3d_framebuffers_load(int width, int height);
 static void r3d_framebuffers_unload(void);
 
+static void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode);
+
 static void r3d_gbuffer_enable_stencil_write(void);
 static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry);
 static void r3d_gbuffer_disable_stencil(void);
@@ -152,7 +154,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Init rendering mode configs
     R3D.state.render.mode = R3D_RENDER_DEFERRED;
-    R3D.state.render.shadowCasting = true;
+    R3D.state.render.shadowCastMode= R3D_SHADOW_CAST_BACK_FACES;
     R3D.state.render.billboardMode = R3D_BILLBOARD_DISABLED;
 
     // Init scene data
@@ -291,9 +293,9 @@ void R3D_ApplyRenderMode(R3D_RenderMode mode)
     R3D.state.render.mode = mode;
 }
 
-void R3D_ApplyShadowCasting(bool enabled)
+void R3D_ApplyShadowCastMode(R3D_ShadowCastMode mode)
 {
-    R3D.state.render.shadowCasting = enabled;
+    R3D.state.render.shadowCastMode = mode;
 }
 
 void R3D_ApplyBillboardMode(R3D_BillboardMode mode)
@@ -427,7 +429,7 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
     drawCall.material = material;
     drawCall.mesh = mesh;
 
-    drawCall.castShadows = R3D.state.render.shadowCasting;
+    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     r3d_array_t* arr = &R3D.container.aDrawDeferred;
 
@@ -463,7 +465,7 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
     drawCall.material = material;
     drawCall.mesh = mesh;
 
-    drawCall.castShadows = R3D.state.render.shadowCasting;
+    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     drawCall.instanced.billboardMode = R3D.state.render.billboardMode;
     drawCall.instanced.transforms = instanceTransforms;
@@ -551,6 +553,26 @@ void r3d_framebuffers_unload(void)
 
     if (R3D.framebuffer.pingPongBloom.id != 0) {
         r3d_framebuffer_unload_pingpong_bloom();
+    }
+}
+
+void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode)
+{
+    switch (mode)
+    {
+    case R3D_SHADOW_CAST_FRONT_FACES:
+        rlEnableBackfaceCulling();
+        rlSetCullFace(RL_CULL_FACE_BACK);
+        break;
+    case R3D_SHADOW_CAST_BACK_FACES:
+        rlEnableBackfaceCulling();
+        rlSetCullFace(RL_CULL_FACE_FRONT);
+        break;
+    case R3D_SHADOW_CAST_ALL_FACES:
+        rlDisableBackfaceCulling();
+        break;
+    default:
+        break;
     }
 }
 
@@ -692,6 +714,9 @@ void r3d_pass_shadow_maps(void)
         // TODO: The lights could be sorted to avoid too frequent
         //       state changes, just like with shaders.
 
+        // TODO: The draw calls could also be sorted
+        //       according to the shadow cast mode.
+
         // Start rendering to shadow map
         rlEnableFramebuffer(light->data->shadow.map.id);
         {
@@ -718,22 +743,34 @@ void r3d_pass_shadow_maps(void)
                     {
                         for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                            }
                         }
                         for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                            }
                         }
                     }
                     r3d_shader_enable(raster.depthCube);
                     {
                         for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube(call, light->data->position);
+                            }
                         }
                         for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForward.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube(call, light->data->position);
+                            }
                         }
                     }
                 }
@@ -770,22 +807,34 @@ void r3d_pass_shadow_maps(void)
                 {
                     for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth_inst(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth_inst(call);
+                        }
                     }
                     for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth_inst(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth_inst(call);
+                        }
                     }
                 }
                 r3d_shader_enable(raster.depth);
                 {
                     for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth(call);
+                        }
                     }
                     for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForward.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth(call);
+                        }
                     }
                 }
             }
@@ -794,6 +843,9 @@ void r3d_pass_shadow_maps(void)
         }
     }
     rlDisableFramebuffer();
+
+    // Reset face to cull
+    rlSetCullFace(RL_CULL_FACE_BACK);
 
     // Pop projection matrix
     rlMatrixMode(RL_PROJECTION);
