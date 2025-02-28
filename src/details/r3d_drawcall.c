@@ -563,7 +563,7 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
 
     // Set additional matrix uniforms
-    r3d_shader_set_mat4(raster.geometryInst, uMatModel, matModel);
+    r3d_shader_set_mat4(raster.forwardInst, uMatModel, matModel);
 
     // Set factor material maps
     r3d_shader_set_float(raster.forwardInst, uValEmission, call->material.maps[MATERIAL_MAP_EMISSION].value);
@@ -661,7 +661,7 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
         // Send combined model-view-projection matrix to shader
         r3d_shader_set_mat4(raster.forwardInst, uMatVP, matVP);
 
-        // Rasterisation du mesh en tenant compte du rendu instanci� si besoin
+        // Raterization of the instantiated mesh
         r3d_draw_vertex_arrays_inst(call, 10, 14);
     }
 
