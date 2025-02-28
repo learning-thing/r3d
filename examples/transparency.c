@@ -23,19 +23,19 @@ const char* Init(void)
 
     cube = LoadModelFromMesh(GenMeshCube(1, 1, 1));
     cube.materials[0].maps[MATERIAL_MAP_ALBEDO].color = (Color){ 100, 100, 255, 100 };
-    cube.materials[0].maps[MATERIAL_MAP_OCCLUSION].value = 1;
-    cube.materials[0].maps[MATERIAL_MAP_ROUGHNESS].value = 0.2;
-    cube.materials[0].maps[MATERIAL_MAP_METALNESS].value = 0.2;
+    cube.materials[0].maps[MATERIAL_MAP_OCCLUSION].value = 1.0f;
+    cube.materials[0].maps[MATERIAL_MAP_ROUGHNESS].value = 0.2f;
+    cube.materials[0].maps[MATERIAL_MAP_METALNESS].value = 0.2f;
 
     plane = LoadModelFromMesh(GenMeshPlane(1000, 1000, 1, 1));
-    plane.materials[0].maps[MATERIAL_MAP_OCCLUSION].value = 1;
-    plane.materials[0].maps[MATERIAL_MAP_ROUGHNESS].value = 1;
-    plane.materials[0].maps[MATERIAL_MAP_METALNESS].value = 0;
+    plane.materials[0].maps[MATERIAL_MAP_OCCLUSION].value = 1.0f;
+    plane.materials[0].maps[MATERIAL_MAP_ROUGHNESS].value = 1.0f;
+    plane.materials[0].maps[MATERIAL_MAP_METALNESS].value = 0.0f;
 
     sphere = LoadModelFromMesh(GenMeshSphere(0.5f, 64, 64));
-    sphere.materials[0].maps[MATERIAL_MAP_OCCLUSION].value = 1;
-    sphere.materials[0].maps[MATERIAL_MAP_ROUGHNESS].value = 0.25;
-    sphere.materials[0].maps[MATERIAL_MAP_METALNESS].value = 0.75;
+    sphere.materials[0].maps[MATERIAL_MAP_OCCLUSION].value = 1.0f;
+    sphere.materials[0].maps[MATERIAL_MAP_ROUGHNESS].value = 0.25f;
+    sphere.materials[0].maps[MATERIAL_MAP_METALNESS].value = 0.75f;
 
     camera = (Camera3D){
         .position = (Vector3) { 0, 2, 2 },

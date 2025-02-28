@@ -211,7 +211,7 @@ void R3D_UpdateParticleSystem(R3D_ParticleSystem* system, float deltaTime)
 
         if (system->opacityOverLifetime) {
             float scale = R3D_EvaluateCurve(*system->opacityOverLifetime, t);
-            particle->color.a = Clamp(particle->baseOpacity * scale, 0.0f, 255.0f);
+            particle->color.a = (unsigned char)Clamp(particle->baseOpacity * scale, 0.0f, 255.0f);
         }
 
         if (system->speedOverLifetime) {

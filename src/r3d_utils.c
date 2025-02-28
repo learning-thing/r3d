@@ -159,7 +159,11 @@ void R3D_DrawBufferAlbedo(float x, float y, float w, float h)
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
     );
 
-    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(
+        (int)(x + 0.5f), (int)(y + 0.5f),
+        (int)(w + 0.5f), (int)(h + 0.5f),
+        (Color) { 255, 0, 0, 255 }
+    );
 }
 
 void R3D_DrawBufferEmission(float x, float y, float w, float h)
@@ -175,7 +179,11 @@ void R3D_DrawBufferEmission(float x, float y, float w, float h)
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
     );
 
-    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(
+        (int)(x + 0.5f), (int)(y + 0.5f),
+        (int)(w + 0.5f), (int)(h + 0.5f),
+        (Color) { 255, 0, 0, 255 }
+    );
 }
 
 void R3D_DrawBufferNormal(float x, float y, float w, float h)
@@ -191,7 +199,11 @@ void R3D_DrawBufferNormal(float x, float y, float w, float h)
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
     );
 
-    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(
+        (int)(x + 0.5f), (int)(y + 0.5f),
+        (int)(w + 0.5f), (int)(h + 0.5f),
+        (Color) { 255, 0, 0, 255 }
+    );
 }
 
 void R3D_DrawBufferORM(float x, float y, float w, float h)
@@ -207,7 +219,11 @@ void R3D_DrawBufferORM(float x, float y, float w, float h)
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
     );
 
-    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(
+        (int)(x + 0.5f), (int)(y + 0.5f),
+        (int)(w + 0.5f), (int)(h + 0.5f),
+        (Color) { 255, 0, 0, 255 }
+    );
 }
 
 void R3D_DrawBufferSSAO(float x, float y, float w, float h)
@@ -223,7 +239,11 @@ void R3D_DrawBufferSSAO(float x, float y, float w, float h)
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
     );
 
-    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(
+        (int)(x + 0.5f), (int)(y + 0.5f),
+        (int)(w + 0.5f), (int)(h + 0.5f),
+        (Color) { 255, 0, 0, 255 }
+    );
 }
 
 void R3D_DrawBufferBrightColors(float x, float y, float w, float h)
@@ -239,7 +259,11 @@ void R3D_DrawBufferBrightColors(float x, float y, float w, float h)
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
     );
 
-    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(
+        (int)(x + 0.5f), (int)(y + 0.5f),
+        (int)(w + 0.5f), (int)(h + 0.5f),
+        (Color) { 255, 0, 0, 255 }
+    );
 }
 
 void R3D_DrawBufferBloom(float x, float y, float w, float h)
@@ -255,5 +279,9 @@ void R3D_DrawBufferBloom(float x, float y, float w, float h)
         (Rectangle) { x, y, w, h }, (Vector2) { 0 }, 0, WHITE
     );
 
-    DrawRectangleLines(x, y, w, h, (Color) { 255, 0, 0, 255 });
+    DrawRectangleLines(
+        (int)(x + 0.5f), (int)(y + 0.5f),
+        (int)(w + 0.5f), (int)(h + 0.5f),
+        (Color) { 255, 0, 0, 255 }
+    );
 }

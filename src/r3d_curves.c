@@ -40,8 +40,8 @@ bool R3D_AddKeyframe(R3D_InterpolationCurve* curve, float time, float value)
     int result = r3d_array_push_back(&array, &keyFrame);
 
     curve->keyframes = array.data;
-    curve->capacity = array.capacity;
-    curve->count = array.count;
+    curve->capacity = (unsigned int)array.capacity;
+    curve->count = (unsigned int)array.count;
 
     return result == R3D_ARRAY_SUCCESS;
 }
@@ -53,7 +53,7 @@ float R3D_EvaluateCurve(R3D_InterpolationCurve curve, float time)
     if (time >= curve.keyframes[curve.count - 1].time) return curve.keyframes[curve.count - 1].value;
 
     // Find the two keyframes surrounding the given time
-    for (int i = 0; i < curve.count - 1; i++) {
+    for (int i = 0; i < (int)curve.count - 1; i++) {
         const R3D_Keyframe* kf1 = &curve.keyframes[i];
         const R3D_Keyframe* kf2 = &curve.keyframes[i + 1];
 

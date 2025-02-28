@@ -707,10 +707,10 @@ void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceMode
     // Enable the attribute for the transformation matrix (decomposed into 4 vec4 vectors)
     if (locInstanceModel >= 0 && call->instanced.transforms) {
         size_t stride = (call->instanced.transStride == 0) ? sizeof(Matrix) : call->instanced.transStride;
-        vboTransforms = rlLoadVertexBuffer(call->instanced.transforms, call->instanced.count * stride, true);
+        vboTransforms = rlLoadVertexBuffer(call->instanced.transforms, (int)(call->instanced.count * stride), true);
         rlEnableVertexBuffer(vboTransforms);
         for (int i = 0; i < 4; i++) {
-            rlSetVertexAttribute(locInstanceModel + i, 4, RL_FLOAT, false, stride, i * sizeof(Vector4));
+            rlSetVertexAttribute(locInstanceModel + i, 4, RL_FLOAT, false, (int)stride, i * sizeof(Vector4));
             rlSetVertexAttributeDivisor(locInstanceModel + i, 1);
             rlEnableVertexAttribute(locInstanceModel + i);
         }
@@ -731,9 +731,9 @@ void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceMode
     // Handle per-instance colors if available
     if (locInstanceColor >= 0 && call->instanced.colors) {
         size_t stride = (call->instanced.colStride == 0) ? sizeof(Color) : call->instanced.colStride;
-        vboColors = rlLoadVertexBuffer(call->instanced.colors, call->instanced.count * stride, true);
+        vboColors = rlLoadVertexBuffer(call->instanced.colors, (int)(call->instanced.count * stride), true);
         rlEnableVertexBuffer(vboColors);
-        rlSetVertexAttribute(locInstanceColor, 4, RL_UNSIGNED_BYTE, true, call->instanced.colStride, 0);
+        rlSetVertexAttribute(locInstanceColor, 4, RL_UNSIGNED_BYTE, true, (int)call->instanced.colStride, 0);
         rlSetVertexAttributeDivisor(locInstanceColor, 1);
         rlEnableVertexAttribute(locInstanceColor);
     }
@@ -745,13 +745,13 @@ void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceMode
 
     // Draw instances or a single object depending on the case
     if (call->mesh.indices != NULL) {
-        rlDrawVertexArrayElementsInstanced
-        (0, call->mesh.triangleCount * 3, 0, call->instanced.count
+        rlDrawVertexArrayElementsInstanced(
+            0, call->mesh.triangleCount * 3, 0, (int)call->instanced.count
         );
     }
     else {
         rlDrawVertexArrayInstanced(
-            0, call->mesh.vertexCount, call->instanced.count
+            0, call->mesh.vertexCount, (int)call->instanced.count
         );
     }
 

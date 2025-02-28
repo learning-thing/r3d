@@ -313,7 +313,7 @@ void R3D_SetShadowUpdateMode(R3D_Light id, R3D_ShadowUpdateMode mode)
 int R3D_GetShadowUpdateFrequency(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
-    return light->shadow.updateConf.frequencySec * 1000;
+    return (int)(light->shadow.updateConf.frequencySec * 1000);
 }
 
 void R3D_SetShadowUpdateFrequency(R3D_Light id, int msec)

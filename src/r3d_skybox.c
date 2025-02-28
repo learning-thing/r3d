@@ -197,8 +197,8 @@ static TextureCubemap r3d_skybox_generate_prefilter(TextureCubemap sky)
 
     // Process each mipmap level
     for (int mip = 0; mip < MAX_MIP_LEVELS; mip++) {
-        int mipWidth = PREFILTER_SIZE * powf(0.5, mip);
-        int mipHeight = PREFILTER_SIZE * powf(0.5, mip);
+        int mipWidth = (int)(PREFILTER_SIZE * powf(0.5, (float)mip));
+        int mipHeight = (int)(PREFILTER_SIZE * powf(0.5, (float)mip));
 
         glBindRenderbuffer(GL_RENDERBUFFER, rbo);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);

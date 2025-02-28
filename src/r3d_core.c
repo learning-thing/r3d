@@ -685,7 +685,7 @@ void r3d_prepass_process_lights_and_batch(void)
     // Compute view / projection matrix
     Matrix viewProj = MatrixMultiply(R3D.state.transform.view, R3D.state.transform.proj);
 
-    for (int id = 1; id <= r3d_registry_get_allocated_count(&R3D.container.rLights); id++) {
+    for (int id = 1; id <= (int)r3d_registry_get_allocated_count(&R3D.container.rLights); id++) {
         // Check if the light in the registry is still valid
         if (!r3d_registry_is_valid(&R3D.container.rLights, id)) continue;
 
@@ -703,8 +703,8 @@ void r3d_prepass_process_lights_and_batch(void)
         switch (light->type) {
         case R3D_LIGHT_DIR:
             dstRect.x = 0, dstRect.y = 0;
-            dstRect.width = R3D.state.resolution.width;
-            dstRect.height = R3D.state.resolution.height;
+            dstRect.width = (float)R3D.state.resolution.width;
+            dstRect.height = (float)R3D.state.resolution.height;
             break;
         case R3D_LIGHT_SPOT: {
             dstRect = r3d_project_cone_bounding_box(
@@ -723,7 +723,7 @@ void r3d_prepass_process_lights_and_batch(void)
         // Determine if the light illuminates a part visible to the screen
         int screenW = R3D.state.resolution.width;
         int screenH = R3D.state.resolution.height;
-        if (!CheckCollisionRecs(dstRect, (Rectangle) { 0, 0, screenW, screenH })) {
+        if (!CheckCollisionRecs(dstRect, (Rectangle) { 0, 0, (float)screenW, (float)screenH })) {
             continue;
         }
 
@@ -993,8 +993,8 @@ void r3d_pass_ssao(void)
                 (float)R3D.state.resolution.height / 2
             }));
 
-            r3d_shader_set_float(screen.ssao, uNear, rlGetCullDistanceNear());
-            r3d_shader_set_float(screen.ssao, uFar, rlGetCullDistanceFar());
+            r3d_shader_set_float(screen.ssao, uNear, (float)rlGetCullDistanceNear());
+            r3d_shader_set_float(screen.ssao, uFar, (float)rlGetCullDistanceFar());
 
             r3d_shader_set_float(screen.ssao, uRadius, R3D.env.ssaoRadius);
             r3d_shader_set_float(screen.ssao, uBias, R3D.env.ssaoBias);
@@ -1704,8 +1704,8 @@ void r3d_pass_post_fog(void)
             );
             R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
 
-            r3d_shader_set_float(screen.fog, uNear, rlGetCullDistanceNear());
-            r3d_shader_set_float(screen.fog, uFar, rlGetCullDistanceFar());
+            r3d_shader_set_float(screen.fog, uNear, (float)rlGetCullDistanceNear());
+            r3d_shader_set_float(screen.fog, uFar, (float)rlGetCullDistanceFar());
             r3d_shader_set_int(screen.fog, uFogMode, R3D.env.fogMode);
             r3d_shader_set_vec3(screen.fog, uFogColor, R3D.env.fogColor);
             r3d_shader_set_float(screen.fog, uFogStart, R3D.env.fogStart);
@@ -1827,12 +1827,12 @@ void r3d_pass_final_blit(void)
         float dstRatio = (float)dstW / dstH;
         if (srcRatio > dstRatio) {
             int prevH = dstH;
-            dstH = dstW * srcRatio;
+            dstH = (int)(dstW * srcRatio + 0.5f);
             dstY = (prevH - dstH) / 2;
         }
         else {
             int prevW = dstW;
-            dstW = dstH * srcRatio;
+            dstW = (int)(dstH * srcRatio + 0.5f);
             dstX = (prevW - dstW) / 2;
         }
     }

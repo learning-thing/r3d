@@ -44,8 +44,8 @@ Rectangle r3d_project_sphere_bounding_box(Vector3 center, float radius, Vector3 
     // This is not entirely accurate, but the result would be the same if we performed
     // the full projection, with a potential additional margin of error.
     if (r3d_collision_check_point_in_sphere(viewPos, center, radius)) {
-        boundingBox.width = screenWidth;
-        boundingBox.height = screenHeight;
+        boundingBox.width = (float)screenWidth;
+        boundingBox.height = (float)screenHeight;
         return boundingBox;
     }
 
@@ -61,7 +61,8 @@ Rectangle r3d_project_sphere_bounding_box(Vector3 center, float radius, Vector3 
     points[7] = (Vector3) { center.x + radius, center.y + radius, center.z + radius };
 
     // Initialize min/max values for computing the bounding rectangle.
-    float minX = screenWidth, minY = screenHeight;
+    float minX = (float)screenWidth;
+    float minY = (float)screenHeight;
     float maxX = 0, maxY = 0;
 
     // Project each point and determine the min/max screen coordinates.
@@ -96,8 +97,8 @@ Rectangle r3d_project_cone_bounding_box(Vector3 tip, Vector3 dir, float length, 
     // This is not entirely accurate, but the result would be the same if we performed
     // the full projection, with a potential additional margin of error.
     if (r3d_collision_check_point_in_cone(viewPos, tip, dir, length, radius)) {
-        boundingBox.width = screenWidth;
-        boundingBox.height = screenHeight;
+        boundingBox.width = (float)screenWidth;
+        boundingBox.height = (float)screenHeight;
         return boundingBox;
     }
 
@@ -124,7 +125,7 @@ Rectangle r3d_project_cone_bounding_box(Vector3 tip, Vector3 dir, float length, 
     }
 
     // Normalize the right vector.
-    float rightLen = sqrt(right.x * right.x + right.y * right.y + right.z * right.z);
+    float rightLen = sqrtf(right.x * right.x + right.y * right.y + right.z * right.z);
     right.x /= rightLen;
     right.y /= rightLen;
     right.z /= rightLen;
@@ -152,7 +153,8 @@ Rectangle r3d_project_cone_bounding_box(Vector3 tip, Vector3 dir, float length, 
     }
 
     // Initialize min/max values for computing the bounding rectangle.
-    float minX = screenWidth, minY = screenHeight;
+    float minX = (float)screenWidth;
+    float minY = (float)screenHeight;
     float maxX = 0, maxY = 0;
 
     // Project each point and determine the min/max screen coordinates.
