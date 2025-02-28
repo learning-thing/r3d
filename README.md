@@ -258,6 +258,6 @@ Thanks to [raylib](https://www.raylib.com/) for providing an easy-to-use framewo
 
 ## Screenshots
 
-![](examples/screenshots/sponza.png)
-![](examples/screenshots/pbr.png)
-![](examples/screenshots/bloom.png)
+![](examples/screenshots/sponza.webp)
+![](examples/screenshots/pbr.webp)
+![](examples/screenshots/skybox.webp)
