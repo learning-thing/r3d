@@ -80,6 +80,19 @@ typedef enum {
 } R3D_RenderMode;
 
 /**
+ * @brief Blend modes for rendering.
+ *
+ * Defines common blending modes used in 3D rendering to combine source and destination colors.
+ * @note The blend mode is applied only if you are in forward rendering mode or auto-detect mode.
+ */
+typedef enum {
+    R3D_BLEND_OPAQUE,          ///< No blending, the source color fully replaces the destination color.
+    R3D_BLEND_ALPHA,           ///< Alpha blending: source color is blended with the destination based on alpha value.
+    R3D_BLEND_ADDITIVE,        ///< Additive blending: source color is added to the destination, making bright effects.
+    R3D_BLEND_MULTIPLY         ///< Multiply blending: source color is multiplied with the destination, darkening the image.
+} R3D_BlendMode;
+
+/**
  * @brief Defines the shadow casting mode for objects in the scene.
  *
  * Determines how an object contributes to shadow mapping, which can affect
@@ -406,6 +419,20 @@ R3DAPI void R3D_SetSceneBounds(BoundingBox sceneBounds);
  * @param mode The render mode to apply.
  */
 R3DAPI void R3D_ApplyRenderMode(R3D_RenderMode mode);
+
+/**
+ * @brief Sets the active blend mode for rendering.
+ *
+ * This function sets the current blend mode, which determines how the colors of
+ * the current object are blended with the colors of the background or other objects
+ * in the scene. It can be called at any time, including between `R3D_Begin` and `R3D_End`.
+ * The set blend mode will apply to all subsequent draw calls.
+ * 
+ * @note The blend mode is applied only if you are in forward rendering mode or auto-detect mode.
+ *
+ * @param mode The blend mode to apply.
+ */
+R3DAPI void R3D_ApplyBlendMode(R3D_BlendMode mode);
 
 /**
  * @brief Sets the shadow casting mode for meshes.

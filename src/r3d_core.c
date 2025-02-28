@@ -44,7 +44,9 @@ static void r3d_framebuffers_load(int width, int height);
 static void r3d_framebuffers_unload(void);
 
 static void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode);
+
 static R3D_RenderMode r3d_render_auto_detect_mode(const Material* material);
+static void r3d_render_apply_blend_mode(R3D_BlendMode mode);
 
 static void r3d_gbuffer_enable_stencil_write(void);
 static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry);
@@ -155,6 +157,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 
     // Init rendering mode configs
     R3D.state.render.mode = R3D_RENDER_AUTO_DETECT;
+    R3D.state.render.blendMode = R3D_BLEND_ALPHA;
     R3D.state.render.shadowCastMode= R3D_SHADOW_CAST_FRONT_FACES;
     R3D.state.render.billboardMode = R3D_BILLBOARD_DISABLED;
 
@@ -294,6 +297,11 @@ void R3D_ApplyRenderMode(R3D_RenderMode mode)
     R3D.state.render.mode = mode;
 }
 
+void R3D_ApplyBlendMode(R3D_BlendMode mode)
+{
+    R3D.state.render.blendMode = mode;
+}
+
 void R3D_ApplyShadowCastMode(R3D_ShadowCastMode mode)
 {
     R3D.state.render.shadowCastMode = mode;
@@ -430,6 +438,7 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
     drawCall.material = material;
     drawCall.mesh = mesh;
 
+    drawCall.blendMode = R3D.state.render.blendMode;
     drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     R3D_RenderMode mode = R3D.state.render.mode;
@@ -472,6 +481,7 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
     drawCall.material = material;
     drawCall.mesh = mesh;
 
+    drawCall.blendMode = R3D.state.render.blendMode;
     drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     drawCall.instanced.billboardMode = R3D.state.render.billboardMode;
@@ -591,38 +601,84 @@ void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode)
 
 R3D_RenderMode r3d_render_auto_detect_mode(const Material* material)
 {
-    if (material->maps[MATERIAL_MAP_ALBEDO].color.a < 255) {
-        return R3D_RENDER_FORWARD;
-    }
-
-    if (material->maps[MATERIAL_MAP_ALBEDO].texture.id == 0) {
+    // If the desired mode is opaque, then there is no need to perform further tests
+    if (R3D.state.render.blendMode == R3D_BLEND_OPAQUE) {
         return R3D_RENDER_DEFERRED;
     }
 
-    if (material->maps[MATERIAL_MAP_ALBEDO].texture.id == rlGetTextureIdDefault()) {
-        return R3D_RENDER_DEFERRED;
+    // If the blend mode is not alpha but also not opaque
+    // (such as additive or multiply), then we still need the forward render mode
+    if (R3D.state.render.blendMode != R3D_BLEND_ALPHA) {
+        return R3D_RENDER_FORWARD;
     }
 
-    switch (material->maps[MATERIAL_MAP_ALBEDO].texture.format) {
-    case PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
-    case PIXELFORMAT_UNCOMPRESSED_R5G5B5A1:
-    case PIXELFORMAT_UNCOMPRESSED_R4G4B4A4:
-    case PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
-    case PIXELFORMAT_UNCOMPRESSED_R32G32B32A32:
-    case PIXELFORMAT_UNCOMPRESSED_R16G16B16A16:
-    case PIXELFORMAT_COMPRESSED_DXT1_RGBA:
-    case PIXELFORMAT_COMPRESSED_DXT3_RGBA:
-    case PIXELFORMAT_COMPRESSED_DXT5_RGBA:
-    case PIXELFORMAT_COMPRESSED_ETC2_EAC_RGBA:
-    case PIXELFORMAT_COMPRESSED_PVRT_RGBA:
-    case PIXELFORMAT_COMPRESSED_ASTC_4x4_RGBA:
-    case PIXELFORMAT_COMPRESSED_ASTC_8x8_RGBA:
+    // Obtaining the albedo texture used in the material
+    unsigned int texId = material->maps[MATERIAL_MAP_ALBEDO].texture.id;
+
+    // Detecting if it is a default texture
+    bool defaultTex = (texId == 0 || texId == rlGetTextureIdDefault());
+
+    // Detecting if a transparency value is used for the albedo
+    bool alphaColor = (material->maps[MATERIAL_MAP_ALBEDO].color.a < 255);
+
+    // Detecting if the format of the used texture supports transparency
+    // NOTE: By default, we know that default textures do not contain transparency
+    bool alphaFormat = false;
+    if (!defaultTex) {
+        switch (material->maps[MATERIAL_MAP_ALBEDO].texture.format) {
+        case PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
+        case PIXELFORMAT_UNCOMPRESSED_R5G5B5A1:
+        case PIXELFORMAT_UNCOMPRESSED_R4G4B4A4:
+        case PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
+        case PIXELFORMAT_UNCOMPRESSED_R32G32B32A32:
+        case PIXELFORMAT_UNCOMPRESSED_R16G16B16A16:
+        case PIXELFORMAT_COMPRESSED_DXT1_RGBA:
+        case PIXELFORMAT_COMPRESSED_DXT3_RGBA:
+        case PIXELFORMAT_COMPRESSED_DXT5_RGBA:
+        case PIXELFORMAT_COMPRESSED_ETC2_EAC_RGBA:
+        case PIXELFORMAT_COMPRESSED_PVRT_RGBA:
+        case PIXELFORMAT_COMPRESSED_ASTC_4x4_RGBA:
+        case PIXELFORMAT_COMPRESSED_ASTC_8x8_RGBA:
+            alphaFormat = true;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // If the color contains transparency or the texture format supports it
+    // and the current blend mode is alpha, then we will use the forward mode
+    if ((alphaColor || alphaFormat) && R3D.state.render.blendMode == R3D_BLEND_ALPHA) {
         return R3D_RENDER_FORWARD;
+    }
+
+    // Here, the alpha blend mode is requested but transparency is not possible,
+    // so we can perform the rendering in deferred mode
+    return R3D_RENDER_DEFERRED;
+}
+
+void r3d_render_apply_blend_mode(R3D_BlendMode mode)
+{
+    switch (mode)
+    {
+    case R3D_BLEND_OPAQUE:
+        glDisable(GL_BLEND);
+        break;
+    case R3D_BLEND_ALPHA:
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        break;
+    case R3D_BLEND_ADDITIVE:
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        break;
+    case R3D_BLEND_MULTIPLY:
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_DST_COLOR, GL_ZERO);
+        break;
     default:
         break;
     }
-
-    return R3D_RENDER_DEFERRED;
 }
 
 void r3d_gbuffer_enable_stencil_write(void)
@@ -1516,10 +1572,8 @@ void r3d_pass_scene_forward(void)
         rlEnableDepthTest();
         rlEnableDepthMask();
 
-        r3d_gbuffer_disable_stencil();
-
-        rlEnableColorBlend();
-        rlSetBlendMode(RL_BLEND_ALPHA);
+        // Reactivation of geometry drawing in the stencil buffer
+        r3d_gbuffer_enable_stencil_write();
 
         // Setup projection matrix
         rlMatrixMode(RL_PROJECTION);
@@ -1538,48 +1592,87 @@ void r3d_pass_scene_forward(void)
             GL_TEXTURE_2D, R3D.framebuffer.gBuffer.depth, 0
         );
 
-        r3d_shader_enable(raster.forward);
-        {
-            if (R3D.env.useSky) {
-                r3d_shader_bind_samplerCube(raster.forward, uCubeIrradiance, R3D.env.sky.irradiance.id);
-                r3d_shader_bind_samplerCube(raster.forward, uCubePrefilter, R3D.env.sky.prefilter.id);
-                r3d_shader_bind_sampler2D(raster.forward, uTexBrdfLut, R3D.texture.iblBrdfLut);
+        // Render instanced meshes
+        if (R3D.container.aDrawForwardInst.count > 0) {
+            r3d_shader_enable(raster.forwardInst);
+            {
+                if (R3D.env.useSky) {
+                    r3d_shader_bind_samplerCube(raster.forwardInst, uCubeIrradiance, R3D.env.sky.irradiance.id);
+                    r3d_shader_bind_samplerCube(raster.forwardInst, uCubePrefilter, R3D.env.sky.prefilter.id);
+                    r3d_shader_bind_sampler2D(raster.forwardInst, uTexBrdfLut, R3D.texture.iblBrdfLut);
 
-                r3d_shader_set_vec4(raster.forward, uQuatSkybox, R3D.env.quatSky);
-                r3d_shader_set_int(raster.forward, uHasSkybox, true);
-            }
-            else {
-                r3d_shader_set_vec3(raster.forward, uColAmbient, R3D.env.ambientColor);
-                r3d_shader_set_int(raster.forward, uHasSkybox, false);
-            }
+                    r3d_shader_set_vec4(raster.forwardInst, uQuatSkybox, R3D.env.quatSky);
+                    r3d_shader_set_int(raster.forwardInst, uHasSkybox, true);
+                }
+                else {
+                    r3d_shader_set_vec3(raster.forwardInst, uColAmbient, R3D.env.ambientColor);
+                    r3d_shader_set_int(raster.forwardInst, uHasSkybox, false);
+                }
 
-            r3d_shader_set_vec3(raster.forward, uViewPosition, R3D.state.transform.position);
-            r3d_shader_set_float(raster.forward, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
+                r3d_shader_set_vec3(raster.forwardInst, uViewPosition, R3D.state.transform.position);
+                r3d_shader_set_float(raster.forwardInst, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
 
-            for (int i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
-                r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForwardInst, i);
-                r3d_pass_scene_forward_inst_filter_and_send_lights(call);
-                r3d_drawcall_raster_forward_inst(call);
-            }
+                for (int i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
+                    r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForwardInst, i);
+                    r3d_pass_scene_forward_inst_filter_and_send_lights(call);
+                    r3d_render_apply_blend_mode(call->blendMode);
+                    r3d_drawcall_raster_forward_inst(call);
+                }
 
-            for (int i = 0; i < R3D.container.aDrawForward.count; i++) {
-                r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForward, i);
-                r3d_pass_scene_forward_filter_and_send_lights(call);
-                r3d_drawcall_raster_forward(call);
-            }
+                if (R3D.env.useSky) {
+                    r3d_shader_unbind_samplerCube(raster.forwardInst, uCubeIrradiance);
+                    r3d_shader_unbind_samplerCube(raster.forwardInst, uCubePrefilter);
+                    r3d_shader_unbind_sampler2D(raster.forwardInst, uTexBrdfLut);
+                }
 
-            if (R3D.env.useSky) {
-                r3d_shader_unbind_samplerCube(raster.forward, uCubeIrradiance);
-                r3d_shader_unbind_samplerCube(raster.forward, uCubePrefilter);
-                r3d_shader_unbind_sampler2D(raster.forward, uTexBrdfLut);
+                for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+                    r3d_shader_unbind_samplerCube(raster.forwardInst, uLights[i].shadowCubemap);
+                    r3d_shader_unbind_sampler2D(raster.forwardInst, uLights[i].shadowMap);
+                }
             }
-
-            for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
-                r3d_shader_unbind_samplerCube(raster.forward, uLights[i].shadowCubemap);
-                r3d_shader_unbind_sampler2D(raster.forward, uLights[i].shadowMap);
-            }
+            r3d_shader_disable();
         }
-        r3d_shader_disable();
+
+        // Render non-instanced meshes
+        if (R3D.container.aDrawForward.count > 0) {
+            r3d_shader_enable(raster.forward);
+            {
+                if (R3D.env.useSky) {
+                    r3d_shader_bind_samplerCube(raster.forward, uCubeIrradiance, R3D.env.sky.irradiance.id);
+                    r3d_shader_bind_samplerCube(raster.forward, uCubePrefilter, R3D.env.sky.prefilter.id);
+                    r3d_shader_bind_sampler2D(raster.forward, uTexBrdfLut, R3D.texture.iblBrdfLut);
+
+                    r3d_shader_set_vec4(raster.forward, uQuatSkybox, R3D.env.quatSky);
+                    r3d_shader_set_int(raster.forward, uHasSkybox, true);
+                }
+                else {
+                    r3d_shader_set_vec3(raster.forward, uColAmbient, R3D.env.ambientColor);
+                    r3d_shader_set_int(raster.forward, uHasSkybox, false);
+                }
+
+                r3d_shader_set_vec3(raster.forward, uViewPosition, R3D.state.transform.position);
+                r3d_shader_set_float(raster.forward, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
+
+                for (int i = 0; i < R3D.container.aDrawForward.count; i++) {
+                    r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForward, i);
+                    r3d_pass_scene_forward_filter_and_send_lights(call);
+                    r3d_render_apply_blend_mode(call->blendMode);
+                    r3d_drawcall_raster_forward(call);
+                }
+
+                if (R3D.env.useSky) {
+                    r3d_shader_unbind_samplerCube(raster.forward, uCubeIrradiance);
+                    r3d_shader_unbind_samplerCube(raster.forward, uCubePrefilter);
+                    r3d_shader_unbind_sampler2D(raster.forward, uTexBrdfLut);
+                }
+
+                for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+                    r3d_shader_unbind_samplerCube(raster.forward, uLights[i].shadowCubemap);
+                    r3d_shader_unbind_sampler2D(raster.forward, uLights[i].shadowMap);
+                }
+            }
+            r3d_shader_disable();
+        }
 
         // Reset projection matrix
         rlMatrixMode(RL_PROJECTION);

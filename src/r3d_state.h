@@ -238,6 +238,7 @@ extern struct R3D_State {
         // Render config
         struct {
             R3D_RenderMode mode;
+            R3D_BlendMode blendMode;
             R3D_ShadowCastMode shadowCastMode;
             R3D_BillboardMode billboardMode;
         } render;

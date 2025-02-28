@@ -31,6 +31,7 @@ typedef struct {
     Mesh mesh;
     Matrix transform;
     Material material;
+    R3D_BlendMode blendMode;
     R3D_ShadowCastMode shadowCastMode;
     struct {
         R3D_BillboardMode billboardMode;
