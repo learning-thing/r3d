@@ -72,8 +72,11 @@ typedef enum {
  * Each mode has its own advantages depending on the hardware and rendering needs.
  */
 typedef enum {
-    R3D_RENDER_DEFERRED = 0,            ///< Optimized for desktop GPUs, but does not support transparency.
-    R3D_RENDER_FORWARD = 1              ///< Works well on tile-based renderers, supports transparency.
+    R3D_RENDER_AUTO_DETECT = 0,         /**< Automatically determines the rendering mode based on the material,
+                                             for example, by analyzing the albedo texture formats or the alpha 
+                                             value of albedo colors. This is the default mode. */
+    R3D_RENDER_DEFERRED = 1,            ///< Optimized for desktop GPUs, but does not support transparency.
+    R3D_RENDER_FORWARD = 2,             ///< Works well on tile-based renderers, supports transparency.
 } R3D_RenderMode;
 
 /**

@@ -44,6 +44,7 @@ static void r3d_framebuffers_load(int width, int height);
 static void r3d_framebuffers_unload(void);
 
 static void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode);
+static R3D_RenderMode r3d_render_auto_detect_mode(const Material* material);
 
 static void r3d_gbuffer_enable_stencil_write(void);
 static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry);
@@ -153,7 +154,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     R3D.state.resolution.texelY = 1.0f / resHeight;
 
     // Init rendering mode configs
-    R3D.state.render.mode = R3D_RENDER_DEFERRED;
+    R3D.state.render.mode = R3D_RENDER_AUTO_DETECT;
     R3D.state.render.shadowCastMode= R3D_SHADOW_CAST_FRONT_FACES;
     R3D.state.render.billboardMode = R3D_BILLBOARD_DISABLED;
 
@@ -431,9 +432,15 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
 
     drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
+    R3D_RenderMode mode = R3D.state.render.mode;
+
+    if (mode == R3D_RENDER_AUTO_DETECT) {
+        mode = r3d_render_auto_detect_mode(&material);
+    }
+
     r3d_array_t* arr = &R3D.container.aDrawDeferred;
 
-    if (R3D.state.render.mode == R3D_RENDER_FORWARD) {
+    if (mode == R3D_RENDER_FORWARD) {
         arr = &R3D.container.aDrawForward;
     }
 
@@ -474,9 +481,15 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
     drawCall.instanced.colors = instanceColors;
     drawCall.instanced.count = instanceCount;
 
+    R3D_RenderMode mode = R3D.state.render.mode;
+
+    if (mode == R3D_RENDER_AUTO_DETECT) {
+        mode = r3d_render_auto_detect_mode(&material);
+    }
+
     r3d_array_t* arr = &R3D.container.aDrawDeferredInst;
 
-    if (R3D.state.render.mode == R3D_RENDER_FORWARD) {
+    if (mode == R3D_RENDER_FORWARD) {
         arr = &R3D.container.aDrawForwardInst;
     }
 
@@ -574,6 +587,42 @@ void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode)
     default:
         break;
     }
+}
+
+R3D_RenderMode r3d_render_auto_detect_mode(const Material* material)
+{
+    if (material->maps[MATERIAL_MAP_ALBEDO].color.a < 255) {
+        return R3D_RENDER_FORWARD;
+    }
+
+    if (material->maps[MATERIAL_MAP_ALBEDO].texture.id == 0) {
+        return R3D_RENDER_DEFERRED;
+    }
+
+    if (material->maps[MATERIAL_MAP_ALBEDO].texture.id == rlGetTextureIdDefault()) {
+        return R3D_RENDER_DEFERRED;
+    }
+
+    switch (material->maps[MATERIAL_MAP_ALBEDO].texture.format) {
+    case PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
+    case PIXELFORMAT_UNCOMPRESSED_R5G5B5A1:
+    case PIXELFORMAT_UNCOMPRESSED_R4G4B4A4:
+    case PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
+    case PIXELFORMAT_UNCOMPRESSED_R32G32B32A32:
+    case PIXELFORMAT_UNCOMPRESSED_R16G16B16A16:
+    case PIXELFORMAT_COMPRESSED_DXT1_RGBA:
+    case PIXELFORMAT_COMPRESSED_DXT3_RGBA:
+    case PIXELFORMAT_COMPRESSED_DXT5_RGBA:
+    case PIXELFORMAT_COMPRESSED_ETC2_EAC_RGBA:
+    case PIXELFORMAT_COMPRESSED_PVRT_RGBA:
+    case PIXELFORMAT_COMPRESSED_ASTC_4x4_RGBA:
+    case PIXELFORMAT_COMPRESSED_ASTC_8x8_RGBA:
+        return R3D_RENDER_FORWARD;
+    default:
+        break;
+    }
+
+    return R3D_RENDER_DEFERRED;
 }
 
 void r3d_gbuffer_enable_stencil_write(void)
