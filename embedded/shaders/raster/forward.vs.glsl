@@ -37,9 +37,12 @@ uniform mat4 uMatNormal;
 uniform mat4 uMatModel;
 uniform mat4 uMatMVP;
 
-uniform mat4 uMatLightMVP[NUM_LIGHTS];
+uniform mat4 uMatLightVP[NUM_LIGHTS];
 
 uniform vec4 uColAlbedo;
+
+uniform vec2 uTexCoordOffset;
+uniform vec2 uTexCoordScale;
 
 /* === Varyings === */
 
@@ -55,7 +58,7 @@ out vec4 vPosLightSpace[NUM_LIGHTS];
 void main()
 {
     vPosition = vec3(uMatModel * vec4(aPosition, 1.0));
-    vTexCoord = aTexCoord;
+    vTexCoord = uTexCoordOffset + aTexCoord * uTexCoordScale;
     vColor = aColor * uColAlbedo;
 
     // The TBN matrix is used to transform vectors from tangent space to world space
@@ -67,7 +70,7 @@ void main()
 
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
-        vPosLightSpace[i] = uMatLightMVP[i] * vec4(vPosition, 1.0);
+        vPosLightSpace[i] = uMatLightVP[i] * vec4(vPosition, 1.0);
     }
 
     gl_Position = uMatMVP * vec4(aPosition, 1.0);

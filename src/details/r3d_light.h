@@ -35,7 +35,6 @@ typedef struct {
 typedef struct {
     unsigned int id;
     unsigned int depth;
-    unsigned int cube;      ///< Color attachement used for shadow cubemaps to store distances directly instead of view depth.
     float texelSize;
     int resolution;
 } r3d_shadow_map_t;
@@ -43,7 +42,7 @@ typedef struct {
 typedef struct {
     r3d_shadow_update_conf_t updateConf;
     r3d_shadow_map_t map;
-    Matrix matViewProj;
+    Matrix matVP;
     float bias;
     bool enabled;
 } r3d_shadow_t;
@@ -56,6 +55,9 @@ typedef struct {
     float specular;
     float energy;
     float range;
+    float size;
+    float near;
+    float far;
     float attenuation;
     float innerCutOff;
     float outerCutOff;

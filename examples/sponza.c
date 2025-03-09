@@ -87,11 +87,11 @@ void Update(float delta)
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         R3D_Tonemap tonemap = R3D_GetTonemapMode();
-        R3D_SetTonemapMode((tonemap + 4 - 1) % 4);
+        R3D_SetTonemapMode((tonemap + 5 - 1) % 5);
     }
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
         R3D_Tonemap tonemap = R3D_GetTonemapMode();
-        R3D_SetTonemapMode((tonemap + 1) % 4);
+        R3D_SetTonemapMode((tonemap + 1) % 5);
     }
 }
 
@@ -126,6 +126,11 @@ void Draw(void)
     break;
     case R3D_TONEMAP_ACES: {
         const char* txt = "< TONEMAP ACES >";
+        DrawText(txt, GetScreenWidth() - MeasureText(txt, 20) - 10, 10, 20, LIME);
+
+    } break;
+    case R3D_TONEMAP_AGX: {
+        const char* txt = "< TONEMAP AGX >";
         DrawText(txt, GetScreenWidth() - MeasureText(txt, 20) - 10, 10, 20, LIME);
 
     } break;

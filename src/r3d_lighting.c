@@ -220,6 +220,18 @@ void R3D_SetLightRange(R3D_Light id, float range)
     light->range = range;
 }
 
+float R3D_GetLightSize(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->size;
+}
+
+void R3D_SetLightSize(R3D_Light id, float size)
+{
+    r3d_get_and_check_light(light, id);
+    light->size = size;
+}
+
 float R3D_GetLightAttenuation(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
@@ -356,7 +368,7 @@ void R3D_DrawLightShape(R3D_Light id)
         100
     };
 
-    DrawSphereEx(light->position, 0.1f, 4, 8, color);
+    DrawSphereEx(light->position, light->size * 0.5f, 4, 8, color);
 
     if (light->type == R3D_LIGHT_SPOT)
     {

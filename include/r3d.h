@@ -21,7 +21,6 @@
 #define R3D_H
 
 #include <raylib.h>
-#include <rlgl.h>
 
 
  // --------------------------------------------
@@ -172,7 +171,8 @@ typedef enum {
     R3D_TONEMAP_LINEAR,   ///< Simple linear mapping of HDR values.
     R3D_TONEMAP_REINHARD, ///< Reinhard tone mapping, a balanced method for compressing HDR values.
     R3D_TONEMAP_FILMIC,   ///< Filmic tone mapping, mimicking the response of photographic film.
-    R3D_TONEMAP_ACES      ///< ACES tone mapping, a high-quality cinematic rendering technique.
+    R3D_TONEMAP_ACES,     ///< ACES tone mapping, a high-quality cinematic rendering technique.
+    R3D_TONEMAP_AGX       ///< AGX tone mapping, a modern technique designed to preserve both highlight and shadow details for HDR rendering.
 } R3D_Tonemap;
 
 
@@ -199,6 +199,23 @@ typedef struct {
     Texture2D irradiance;    ///< The irradiance cubemap for diffuse ambient lighting.
     Texture2D prefilter;     ///< The prefiltered cubemap for specular reflections with mipmaps.
 } R3D_Skybox;
+
+/**
+ * @brief Represents a 3D sprite with billboard rendering and animation support.
+ *
+ * This structure defines a 3D sprite, which by default is rendered as a billboard around the Y-axis.
+ * The sprite supports frame-based animations and can be configured to use various billboard modes.
+ *
+ * @warning The shadow mode does not handle transparency. If shadows are enabled, the entire quad will be rendered in the shadow map,
+ * potentially causing undesired visual artifacts for semi-transparent sprites.
+ */
+typedef struct {
+    Material material;              ///< The material used for rendering the sprite, including its texture and shading properties.
+    float currentFrame;             ///< The current animation frame, represented as a floating-point value to allow smooth interpolation.
+    Vector2 frameSize;              ///< The size of a single animation frame, in texture coordinates (width and height).
+    int xFrameCount;                ///< The number of frames along the horizontal (X) axis of the texture.
+    int yFrameCount;                ///< The number of frames along the vertical (Y) axis of the texture.
+} R3D_Sprite;
 
 /**
  * @brief Represents a keyframe in an interpolation curve.
@@ -569,6 +586,45 @@ R3DAPI void R3D_DrawModel(Model model, Vector3 position, float scale);
 R3DAPI void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale);
 
 /**
+ * @brief Draws a sprite at a specified position.
+ *
+ * This function renders a sprite in 3D space at the given position.
+ * It supports negative scaling to flip the sprite.
+ *
+ * @param sprite The sprite to render.
+ * @param position The position to place the sprite at.
+ */
+R3DAPI void R3D_DrawSprite(R3D_Sprite sprite, Vector3 position);
+
+/**
+ * @brief Draws a sprite with size and rotation options.
+ *
+ * This function allows rendering a sprite with a specified size and rotation.
+ * It supports negative size values for flipping the sprite.
+ *
+ * @param sprite The sprite to render.
+ * @param position The position to place the sprite at.
+ * @param size The size of the sprite (negative values flip the sprite).
+ * @param rotation The rotation angle in degrees.
+ */
+R3DAPI void R3D_DrawSpriteEx(R3D_Sprite sprite, Vector3 position, Vector2 size, float rotation);
+
+/**
+ * @brief Draws a sprite with full transformation control.
+ *
+ * This function provides advanced transformation options, allowing
+ * customization of size, rotation axis, and rotation angle.
+ * It supports all billboard modes, or can be drawn without billboarding.
+ *
+ * @param sprite The sprite to render.
+ * @param position The position to place the sprite at.
+ * @param size The size of the sprite (negative values flip the sprite).
+ * @param rotationAxis The axis around which the sprite rotates.
+ * @param rotationAngle The angle to rotate the sprite around the given axis.
+ */
+R3DAPI void R3D_DrawSpritePro(R3D_Sprite sprite, Vector3 position, Vector2 size, Vector3 rotationAxis, float rotationAngle);
+
+/**
  * @brief Renders the current state of a CPU-based particle system.
  *
  * This function draws the particles of a CPU-simulated particle system
@@ -839,6 +895,28 @@ R3DAPI float R3D_GetLightRange(R3D_Light id);
  * @param range The new range to set for the light.
  */
 R3DAPI void R3D_SetLightRange(R3D_Light id, float range);
+
+/**
+ * @brief Gets the size of a light source.
+ *
+ * This function retrieves the size of the specified light source, which is used for PCSS.
+ * The size affects how shadows are computed and how soft or sharp they appear.
+ *
+ * @param id The ID of the light.
+ * @return The size of the light.
+ */
+R3DAPI float R3D_GetLightSize(R3D_Light id);
+
+/**
+ * @brief Sets the size of a light source.
+ *
+ * This function sets the size of the specified light source.
+ * The size influences how shadows are rendered, with larger sizes creating softer shadows.
+ *
+ * @param id The ID of the light.
+ * @param size The new size to set for the light.
+ */
+R3DAPI void R3D_SetLightSize(R3D_Light id, float size);
 
 /**
  * @brief Gets the attenuation factor of a light.
@@ -1122,6 +1200,91 @@ R3DAPI void R3D_UpdateParticleSystem(R3D_ParticleSystem* system, float deltaTime
  * @return The computed `BoundingBox` of the particle system.
  */
 R3DAPI BoundingBox R3D_GetParticleSystemBoundingBox(R3D_ParticleSystem* system);
+
+
+
+// --------------------------------------------
+// CURVES: Interpolation Curves Functions
+// --------------------------------------------
+
+/**
+ * @brief Load a sprite from a texture.
+ *
+ * This function creates a `R3D_Sprite` using the provided texture. The texture will be used as the albedo of the sprite's material.
+ *
+ * @warning The lifetime of the provided texture is managed by the caller.
+ *
+ * @param texture The `Texture2D` to be used for the sprite.
+ * @param xFrameCount The number of frames in the horizontal direction.
+ * @param yFrameCount The number of frames in the vertical direction.
+ *
+ * @return A `R3D_Sprite` object initialized with the given texture and frame configuration.
+ */
+R3DAPI R3D_Sprite R3D_LoadSprite(Texture2D texture, int xFrameCount, int yFrameCount);
+
+/**
+ * @brief Unload a sprite and free associated resources.
+ *
+ * This function releases the resources allocated for a `R3D_Sprite`.
+ * It should be called when the sprite is no longer needed to avoid memory leaks.
+ *
+ * @warning This function does not free the texture associated with the sprite.
+ * The caller is responsible for managing the texture's lifetime.
+ *
+ * @param sprite The `R3D_Sprite` to be unloaded.
+ */
+R3DAPI void R3D_UnloadSprite(R3D_Sprite sprite);
+
+/**
+ * @brief Updates the animation of a sprite.
+ *
+ * This function updates the current frame of the sprite's animation based on the provided speed. The animation frames are read from
+ * right to left, advancing the cursor to the next row after completing a line.
+ *
+ * @note The `speed` parameter can be calculated as the number of frames per second multiplied by `GetFrameTime()`.
+ *
+ * @param sprite A pointer to the `R3D_Sprite` to update.
+ * @param speed The speed at which the animation progresses, in frames per second.
+ */
+R3DAPI void R3D_UpdateSprite(R3D_Sprite* sprite, float speed);
+
+/**
+ * @brief Updates the animation of a sprite with specified frame boundaries.
+ *
+ * This function updates the current frame of the sprite's animation while restricting it between `firstFrame` and `lastFrame`.
+ * This is useful for spritesheets containing multiple animations.
+ *
+ * @note The frames are read from right to left, and the cursor moves to the next row after completing a line.
+ * @note The `speed` parameter can be calculated as the number of frames per second multiplied by `GetFrameTime()`.
+ *
+ * @param sprite A pointer to the `R3D_Sprite` to update.
+ * @param firstFrame The first frame of the animation loop.
+ * @param lastFrame The last frame of the animation loop.
+ * @param speed The speed at which the animation progresses, in frames per second.
+ */
+R3DAPI void R3D_UpdateSpriteEx(R3D_Sprite* sprite, int firstFrame, int lastFrame, float speed);
+
+/**
+ * @brief Retrieves the current frame's texture coordinates for a sprite.
+ *
+ * This function returns the `Vector2` representing the top-left corner of the current frame's texture coordinates.
+ *
+ * @param sprite A pointer to the `R3D_Sprite` to query.
+ *
+ * @return A `Vector2` containing the current frame's texture coordinates.
+ */
+R3DAPI Vector2 R3D_GetCurrentSpriteFrameCoord(const R3D_Sprite* sprite);
+
+/**
+ * @brief Retrieves the current frame's rectangle for a sprite.
+ *
+ * This function returns a `Rectangle` representing the dimensions and position of the current frame within the texture.
+ *
+ * @param sprite A pointer to the `R3D_Sprite` to query.
+ *
+ * @return A `Rectangle` representing the current frame's position and size.
+ */
+R3DAPI Rectangle R3D_GetCurrentSpriteFrameRect(const R3D_Sprite* sprite);
 
 
 

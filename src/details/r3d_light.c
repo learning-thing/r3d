@@ -29,6 +29,7 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_dir(int resolution)
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     shadowMap.texelSize = 1.0f / resolution;
     shadowMap.resolution = resolution;
@@ -61,6 +62,7 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_spot(int resolution)
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     shadowMap.texelSize = 1.0f / resolution;
     shadowMap.resolution = resolution;
@@ -75,20 +77,12 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_omni(int resolution)
     glGenFramebuffers(1, &shadowMap.id);
     glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.id);
 
-    // Cr�ation du Renderbuffer 2D pour la profondeur
-    glGenRenderbuffers(1, &shadowMap.depth);
-    glBindRenderbuffer(GL_RENDERBUFFER, shadowMap.depth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, resolution, resolution);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, shadowMap.depth);
-
-    // Cr�ation de la Cubemap pour la couleur (1 canal 16-bit)
-    glGenTextures(1, &shadowMap.cube);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, shadowMap.cube);
-
+    glGenTextures(1, &shadowMap.depth);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, shadowMap.depth);
     for (int i = 0; i < 6; ++i) {
         glTexImage2D(
-            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_R16F,
-            resolution, resolution, 0, GL_RED, GL_FLOAT, NULL
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT16,
+            resolution, resolution, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, NULL
         );
     }
 
@@ -98,19 +92,16 @@ static r3d_shadow_map_t r3d_light_create_shadow_map_omni(int resolution)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, shadowMap.cube, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, shadowMap.cube, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X, shadowMap.depth, 0);
 
-    // D�finition des buffers actifs
-    GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers(1, drawBuffers);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         TraceLog(LOG_ERROR, "Framebuffer creation error for the omni shadow map");
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
     shadowMap.texelSize = 1.0f / resolution;
@@ -130,6 +121,8 @@ void r3d_light_init(r3d_light_t* light)
     light->specular = 0.5f;
     light->energy = 1.0f;
     light->range = 100.0f;
+    light->size = 0.001f;
+    light->near = 0.05f;
     light->attenuation = 1.0f;
     light->innerCutOff = -1.0f;
     light->outerCutOff = -1.0f;
@@ -157,9 +150,6 @@ void r3d_light_destroy_shadow_map(r3d_light_t* light)
     if (light->shadow.map.id != 0) {
         rlUnloadTexture(light->shadow.map.depth);
         rlUnloadFramebuffer(light->shadow.map.id);
-        if (light->shadow.map.cube != 0) {
-            rlUnloadTexture(light->shadow.map.cube);
-        }
     }
 }
 
@@ -266,12 +256,10 @@ void r3d_light_get_matrix_vp_dir(r3d_light_t* light, BoundingBox sceneBounds, Ma
     // Here, maxZ corresponds to the closest plane (less negative) and minZ to the farthest plane.
     // To obtain positive distances for the projection, we reverse the signs:
     // near = -maxZ and far = -minZ (which guarantees near < far).
-    *proj = MatrixOrtho(
-        minX, maxX,
-        minY, maxY,
-        -maxZ,  // near plane
-        -minZ   // far plane
-    );
+
+    light->near = -maxZ;    // Save near plane (can be used in shaders)
+    light->far = -minZ;     // Save far plane (can be used in shaders)
+    *proj = MatrixOrtho(minX, maxX, minY, maxY, light->near, light->far);
 }
 
 Matrix r3d_light_get_matrix_view_spot(r3d_light_t* light)
@@ -283,7 +271,9 @@ Matrix r3d_light_get_matrix_view_spot(r3d_light_t* light)
 
 Matrix r3d_light_get_matrix_proj_spot(r3d_light_t* light)
 {
-    return MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range);
+    light->near = 0.05f;        // Save near plane (can be used in shaders)
+    light->far = light->range;  // Save far plane (can be used in shaders)
+    return MatrixPerspective(90 * DEG2RAD, 1.0, light->near, light->far);
 }
 
 Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face)
@@ -313,5 +303,7 @@ Matrix r3d_light_get_matrix_view_omni(r3d_light_t* light, int face)
 
 Matrix r3d_light_get_matrix_proj_omni(r3d_light_t* light)
 {
-    return MatrixPerspective(90 * DEG2RAD, 1.0, 0.05, light->range);
+    light->near = 0.05f;        // Save near plane (can be used in shaders)
+    light->far = light->range;  // Save far plane (can be used in shaders)
+    return MatrixPerspective(90 * DEG2RAD, 1.0, light->near, light->far);
 }
