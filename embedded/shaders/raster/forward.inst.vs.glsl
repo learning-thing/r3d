@@ -51,6 +51,9 @@ uniform lowp int uBillboardMode;
 
 uniform vec4 uColAlbedo;
 
+uniform vec2 uTexCoordOffset;
+uniform vec2 uTexCoordScale;
+
 /* === Varyings === */
 
 out vec3 vPosition;
@@ -128,7 +131,7 @@ void BillboardY(inout mat4 model, inout mat3 normal)
 
 void main()
 {
-    vTexCoord = aTexCoord;
+    vTexCoord = uTexCoordOffset + aTexCoord * uTexCoordScale;
     vColor = aColor * iColor * uColAlbedo;
 
     mat4 matModel = uMatModel * transpose(iMatModel);

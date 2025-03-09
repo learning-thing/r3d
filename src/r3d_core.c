@@ -43,6 +43,7 @@
 static void r3d_framebuffers_load(int width, int height);
 static void r3d_framebuffers_unload(void);
 
+static void r3d_sprite_get_uv_scale_offset(const R3D_Sprite* sprite, Vector2* uvScale, Vector2* uvOffset, float sgnX, float sgnY);
 static void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode);
 
 static R3D_RenderMode r3d_render_auto_detect_mode(const Material* material);
@@ -437,7 +438,8 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
 
     drawCall.transform = transform;
     drawCall.material = material;
-    drawCall.mesh = mesh;
+    drawCall.geometry.mesh = mesh;
+    drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_MESH;
 
     drawCall.blendMode = R3D.state.render.blendMode;
     drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
@@ -480,7 +482,8 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
 
     drawCall.transform = transform;
     drawCall.material = material;
-    drawCall.mesh = mesh;
+    drawCall.geometry.mesh = mesh;
+    drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_MESH;
 
     drawCall.blendMode = R3D.state.render.blendMode;
     drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
@@ -526,6 +529,59 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
     for (int i = 0; i < model.meshCount; i++) {
         R3D_DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], model.transform);
     }
+}
+
+void R3D_DrawSprite(R3D_Sprite sprite, Vector3 position)
+{
+    R3D_DrawSpritePro(sprite, position, (Vector2) { 1.0f, 1.0f }, (Vector3) { 0, 1, 0 }, 0.0f);
+}
+
+void R3D_DrawSpriteEx(R3D_Sprite sprite, Vector3 position, Vector2 size, float rotation)
+{
+    R3D_DrawSpritePro(sprite, position, size, (Vector3) { 0, 1, 0 }, rotation);
+}
+
+void R3D_DrawSpritePro(R3D_Sprite sprite, Vector3 position, Vector2 size, Vector3 rotationAxis, float rotationAngle)
+{
+    Matrix matScale = MatrixScale(fabsf(size.x) * 0.5f, -fabsf(size.y) * 0.5f, 1.0f);
+    Matrix matRotation = MatrixRotate(rotationAxis, rotationAngle * DEG2RAD);
+    Matrix matTranslation = MatrixTranslate(position.x, position.y, position.z);
+    Matrix matTransform = MatrixMultiply(MatrixMultiply(matScale, matRotation), matTranslation);
+
+    r3d_drawcall_t drawCall = { 0 };
+
+    if (R3D.state.render.billboardMode == R3D_BILLBOARD_FRONT) {
+        r3d_billboard_mode_front(&matTransform, &R3D.state.transform.invView);
+    }
+    else if (R3D.state.render.billboardMode == R3D_BILLBOARD_Y_AXIS) {
+        r3d_billboard_mode_y(&matTransform, &R3D.state.transform.invView);
+    }
+
+    drawCall.transform = matTransform;
+    drawCall.material = sprite.material;
+    drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_SPRITE;
+
+    r3d_sprite_get_uv_scale_offset(
+        &sprite, &drawCall.geometry.sprite.uvScale, &drawCall.geometry.sprite.uvOffset,
+        (size.x > 0) ? 1.0f : -1.0f, (size.y > 0) ? 1.0f : -1.0f
+    );
+
+    drawCall.blendMode = R3D.state.render.blendMode;
+    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
+
+    R3D_RenderMode mode = R3D.state.render.mode;
+
+    if (mode == R3D_RENDER_AUTO_DETECT) {
+        mode = r3d_render_auto_detect_mode(&sprite.material);
+    }
+
+    r3d_array_t* arr = &R3D.container.aDrawDeferred;
+
+    if (mode == R3D_RENDER_FORWARD) {
+        arr = &R3D.container.aDrawForward;
+    }
+
+    r3d_array_push_back(arr, &drawCall);
 }
 
 void R3D_DrawParticleSystem(const R3D_ParticleSystem* system, Mesh mesh, Material material)
@@ -578,6 +634,19 @@ void r3d_framebuffers_unload(void)
     if (R3D.framebuffer.pingPongBloom.id != 0) {
         r3d_framebuffer_unload_pingpong_bloom();
     }
+}
+
+void r3d_sprite_get_uv_scale_offset(const R3D_Sprite* sprite, Vector2* uvScale, Vector2* uvOffset, float sgnX, float sgnY)
+{
+    uvScale->x = sgnX / sprite->xFrameCount;
+    uvScale->y = sgnY / sprite->yFrameCount;
+
+    int frameIndex = (int)sprite->currentFrame % (sprite->xFrameCount * sprite->yFrameCount);
+    int frameX = frameIndex % sprite->xFrameCount;
+    int frameY = frameIndex / sprite->xFrameCount;
+
+    uvOffset->x = frameX * uvScale->x;
+    uvOffset->y = frameY * uvScale->y;
 }
 
 void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode)

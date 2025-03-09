@@ -49,6 +49,9 @@ uniform float uValEmission;
 uniform vec3 uColEmission;
 uniform vec3 uColAlbedo;
 
+uniform vec2 uTexCoordOffset;
+uniform vec2 uTexCoordScale;
+
 /* === Varyings === */
 
 flat out vec3 vEmission;
@@ -124,7 +127,7 @@ void BillboardY(inout mat4 model, inout mat3 normal)
 
 void main()
 {
-    vTexCoord = aTexCoord;
+    vTexCoord = uTexCoordOffset + aTexCoord * uTexCoordScale;
     vEmission = uColEmission * uValEmission;        // NOTE: Calculated here, in case we add different emission modes later.
     vColor = aColor.rgb * iColor.rgb * uColAlbedo;
 

@@ -486,6 +486,8 @@ void r3d_shader_load_raster_geometry(void)
     r3d_shader_get_location(raster.geometry, uMatNormal);
     r3d_shader_get_location(raster.geometry, uMatModel);
     r3d_shader_get_location(raster.geometry, uMatMVP);
+    r3d_shader_get_location(raster.geometry, uTexCoordOffset);
+    r3d_shader_get_location(raster.geometry, uTexCoordScale);
     r3d_shader_get_location(raster.geometry, uTexAlbedo);
     r3d_shader_get_location(raster.geometry, uTexNormal);
     r3d_shader_get_location(raster.geometry, uTexEmission);
@@ -518,6 +520,8 @@ void r3d_shader_load_raster_geometry_inst(void)
     r3d_shader_get_location(raster.geometryInst, uMatInvView);
     r3d_shader_get_location(raster.geometryInst, uMatModel);
     r3d_shader_get_location(raster.geometryInst, uMatVP);
+    r3d_shader_get_location(raster.geometryInst, uTexCoordOffset);
+    r3d_shader_get_location(raster.geometryInst, uTexCoordScale);
     r3d_shader_get_location(raster.geometryInst, uBillboardMode);
     r3d_shader_get_location(raster.geometryInst, uTexAlbedo);
     r3d_shader_get_location(raster.geometryInst, uTexNormal);
@@ -553,6 +557,8 @@ void r3d_shader_load_raster_forward(void)
     r3d_shader_get_location(raster.forward, uMatNormal);
     r3d_shader_get_location(raster.forward, uMatModel);
     r3d_shader_get_location(raster.forward, uMatMVP);
+    r3d_shader_get_location(raster.forward, uTexCoordOffset);
+    r3d_shader_get_location(raster.forward, uTexCoordScale);
     r3d_shader_get_location(raster.forward, uTexAlbedo);
     r3d_shader_get_location(raster.forward, uTexEmission);
     r3d_shader_get_location(raster.forward, uTexNormal);
@@ -629,6 +635,8 @@ void r3d_shader_load_raster_forward_inst(void)
     r3d_shader_get_location(raster.forwardInst, uMatInvView);
     r3d_shader_get_location(raster.forwardInst, uMatModel);
     r3d_shader_get_location(raster.forwardInst, uMatVP);
+    r3d_shader_get_location(raster.forwardInst, uTexCoordOffset);
+    r3d_shader_get_location(raster.forwardInst, uTexCoordScale);
     r3d_shader_get_location(raster.forwardInst, uBillboardMode);
     r3d_shader_get_location(raster.forwardInst, uTexAlbedo);
     r3d_shader_get_location(raster.forwardInst, uTexEmission);

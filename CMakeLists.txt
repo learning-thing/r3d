@@ -80,6 +80,7 @@ add_library(${PROJECT_NAME} ${R3D_LIB_TYPE}
     "${R3D_ROOT_PATH}/src/r3d_culling.c"
     "${R3D_ROOT_PATH}/src/r3d_skybox.c"
     "${R3D_ROOT_PATH}/src/r3d_curves.c"
+    "${R3D_ROOT_PATH}/src/r3d_sprite.c"
     "${R3D_ROOT_PATH}/src/r3d_utils.c"
     "${R3D_ROOT_PATH}/src/r3d_state.c"
     "${R3D_ROOT_PATH}/src/r3d_core.c"

@@ -114,6 +114,8 @@ typedef struct {
     r3d_shader_uniform_mat4_t uMatNormal;
     r3d_shader_uniform_mat4_t uMatModel;
     r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_vec2_t uTexCoordOffset;
+    r3d_shader_uniform_vec2_t uTexCoordScale;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexNormal;
     r3d_shader_uniform_sampler2D_t uTexEmission;
@@ -133,6 +135,8 @@ typedef struct {
     r3d_shader_uniform_mat4_t uMatInvView;
     r3d_shader_uniform_mat4_t uMatModel;
     r3d_shader_uniform_mat4_t uMatVP;
+    r3d_shader_uniform_vec2_t uTexCoordOffset;
+    r3d_shader_uniform_vec2_t uTexCoordScale;
     r3d_shader_uniform_int_t uBillboardMode;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexNormal;
@@ -215,6 +219,8 @@ typedef struct {
     r3d_shader_uniform_mat4_t uMatNormal;
     r3d_shader_uniform_mat4_t uMatModel;
     r3d_shader_uniform_mat4_t uMatMVP;
+    r3d_shader_uniform_vec2_t uTexCoordOffset;
+    r3d_shader_uniform_vec2_t uTexCoordScale;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexEmission;
     r3d_shader_uniform_sampler2D_t uTexNormal;
@@ -265,6 +271,8 @@ typedef struct {
     r3d_shader_uniform_mat4_t uMatInvView;
     r3d_shader_uniform_mat4_t uMatModel;
     r3d_shader_uniform_mat4_t uMatVP;
+    r3d_shader_uniform_vec2_t uTexCoordOffset;
+    r3d_shader_uniform_vec2_t uTexCoordScale;
     r3d_shader_uniform_int_t uBillboardMode;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexEmission;

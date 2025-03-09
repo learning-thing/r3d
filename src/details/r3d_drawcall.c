@@ -54,18 +54,22 @@ void r3d_drawcall_sort_back_to_front(r3d_drawcall_t* calls, size_t count)
 
 void r3d_drawcall_raster_depth(const r3d_drawcall_t* call)
 {
+    if (call->geometryType != R3D_DRAWCALL_GEOMETRY_MESH) {
+        return;
+    }
+
     Matrix matMVP = MatrixMultiply(call->transform, rlGetMatrixTransform());
     matMVP = MatrixMultiply(matMVP, rlGetMatrixModelview());
     matMVP = MatrixMultiply(matMVP, rlGetMatrixProjection());
 
     r3d_shader_set_mat4(raster.depth, uMatMVP, matMVP);
 
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        rlEnableVertexBuffer(call->mesh.vboId[0]);
+    if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+        rlEnableVertexBuffer(call->geometry.mesh.vboId[0]);
         rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
         rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
-            rlEnableVertexBufferElement(call->mesh.vboId[6]);
+        if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
+            rlEnableVertexBufferElement(call->geometry.mesh.vboId[6]);
         }
     }
 
@@ -78,6 +82,10 @@ void r3d_drawcall_raster_depth(const r3d_drawcall_t* call)
 
 void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call)
 {
+    if (call->geometryType != R3D_DRAWCALL_GEOMETRY_MESH) {
+        return;
+    }
+
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
     Matrix matVP = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
 
@@ -90,12 +98,12 @@ void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call)
         r3d_shader_set_mat4(raster.depthInst, uMatInvView, R3D.state.transform.invView);
     }
 
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        rlEnableVertexBuffer(call->mesh.vboId[0]);
+    if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+        rlEnableVertexBuffer(call->geometry.mesh.vboId[0]);
         rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
         rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
-            rlEnableVertexBufferElement(call->mesh.vboId[6]);
+        if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
+            rlEnableVertexBufferElement(call->geometry.mesh.vboId[6]);
         }
     }
 
@@ -108,6 +116,10 @@ void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call)
 
 void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call)
 {
+    if (call->geometryType != R3D_DRAWCALL_GEOMETRY_MESH) {
+        return;
+    }
+
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
     Matrix matMVP = MatrixMultiply(matModel, rlGetMatrixModelview());
     matMVP = MatrixMultiply(matMVP, rlGetMatrixProjection());
@@ -115,12 +127,12 @@ void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call)
     r3d_shader_set_mat4(raster.depthCube, uMatModel, matModel);
     r3d_shader_set_mat4(raster.depthCube, uMatMVP, matMVP);
 
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        rlEnableVertexBuffer(call->mesh.vboId[0]);
+    if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+        rlEnableVertexBuffer(call->geometry.mesh.vboId[0]);
         rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
         rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
-            rlEnableVertexBufferElement(call->mesh.vboId[6]);
+        if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
+            rlEnableVertexBufferElement(call->geometry.mesh.vboId[6]);
         }
     }
 
@@ -133,6 +145,10 @@ void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call)
 
 void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call)
 {
+    if (call->geometryType != R3D_DRAWCALL_GEOMETRY_MESH) {
+        return;
+    }
+
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
     Matrix matVP = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
 
@@ -145,12 +161,12 @@ void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call)
         r3d_shader_set_mat4(raster.depthCubeInst, uMatInvView, R3D.state.transform.invView);
     }
 
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        rlEnableVertexBuffer(call->mesh.vboId[0]);
+    if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+        rlEnableVertexBuffer(call->geometry.mesh.vboId[0]);
         rlSetVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION, 3, RL_FLOAT, 0, 0, 0);
         rlEnableVertexAttribute(RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION);
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
-            rlEnableVertexBufferElement(call->mesh.vboId[6]);
+        if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES] > 0) {
+            rlEnableVertexBufferElement(call->geometry.mesh.vboId[6]);
         }
     }
 
@@ -194,56 +210,68 @@ void r3d_drawcall_raster_geometry(const r3d_drawcall_t* call)
     r3d_shader_bind_sampler2D_opt(raster.geometry, uTexRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].texture.id, white);
     r3d_shader_bind_sampler2D_opt(raster.geometry, uTexMetalness, call->material.maps[MATERIAL_MAP_METALNESS].texture.id, black);
 
+    // Setup sprite related uniforms
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_SPRITE) {
+        r3d_shader_set_vec2(raster.geometry, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.geometry, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+    else {
+        r3d_shader_set_vec2(raster.geometry, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.geometry, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+
     // Try binding vertex array objects (VAO) or use VBOs if not possible
     // WARNING: UploadMesh() enables all vertex attributes available in mesh and sets default attribute values
     // for shader expected vertex attributes that are not provided by the mesh (i.e. colors)
     // This could be a dangerous approach because different meshes with different shaders can enable/disable some attributes
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        // Bind mesh VBO - Positions
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
-        rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(0);
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_MESH) {
+        if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+            // Bind mesh VBO - Positions
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
+            rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(0);
 
-        // Bind mesh VBO - TexCoords
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
-        rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(1);
+            // Bind mesh VBO - TexCoords
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
+            rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(1);
 
-        // Bind mesh VBO - Normals
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
-        rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(2);
+            // Bind mesh VBO - Normals
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
+            rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(2);
 
-        // Bind mesh VBO - Tagents
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
-            rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
-            rlEnableVertexAttribute(3);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-            rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(3);
-        }
+            // Bind mesh VBO - Tagents
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
+                rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
+                rlEnableVertexAttribute(3);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+                rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(3);
+            }
 
-        // Bind mesh VBO - Colors
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
-            rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
-            rlEnableVertexAttribute(4);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(4);
-        }
+            // Bind mesh VBO - Colors
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
+                rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
+                rlEnableVertexAttribute(4);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+                rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(4);
+            }
 
-        if (call->mesh.indices != NULL) {
-            rlEnableVertexBufferElement(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            if (call->geometry.mesh.indices != NULL) {
+                rlEnableVertexBufferElement(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            }
         }
     }
 
@@ -328,56 +356,68 @@ void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call)
     r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].texture.id, white);
     r3d_shader_bind_sampler2D_opt(raster.geometryInst, uTexMetalness, call->material.maps[MATERIAL_MAP_METALNESS].texture.id, black);
 
+    // Setup sprite related uniforms
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_SPRITE) {
+        r3d_shader_set_vec2(raster.geometryInst, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.geometryInst, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+    else {
+        r3d_shader_set_vec2(raster.geometryInst, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.geometryInst, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+
     // Try binding vertex array objects (VAO) or use VBOs if not possible
     // WARNING: UploadMesh() enables all vertex attributes available in mesh and sets default attribute values
     // for shader expected vertex attributes that are not provided by the mesh (i.e. colors)
     // This could be a dangerous approach because different meshes with different shaders can enable/disable some attributes
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        // Bind mesh VBO - Positions
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
-        rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(0);
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_MESH) {
+        if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+            // Bind mesh VBO - Positions
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
+            rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(0);
 
-        // Bind mesh VBO - TexCoords
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
-        rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(1);
+            // Bind mesh VBO - TexCoords
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
+            rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(1);
 
-        // Bind mesh VBO - Normals
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
-        rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(2);
+            // Bind mesh VBO - Normals
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
+            rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(2);
 
-        // Bind mesh VBO - Tagents
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
-            rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
-            rlEnableVertexAttribute(3);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-            rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(3);
-        }
+            // Bind mesh VBO - Tagents
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
+                rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
+                rlEnableVertexAttribute(3);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+                rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(3);
+            }
 
-        // Bind mesh VBO - Colors
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
-            rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
-            rlEnableVertexAttribute(4);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(4);
-        }
+            // Bind mesh VBO - Colors
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
+                rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
+                rlEnableVertexAttribute(4);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+                rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(4);
+            }
 
-        if (call->mesh.indices != NULL) {
-            rlEnableVertexBufferElement(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            if (call->geometry.mesh.indices != NULL) {
+                rlEnableVertexBufferElement(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            }
         }
     }
 
@@ -454,56 +494,68 @@ void r3d_drawcall_raster_forward(const r3d_drawcall_t* call)
     r3d_shader_bind_sampler2D_opt(raster.forward, uTexRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].texture.id, white);
     r3d_shader_bind_sampler2D_opt(raster.forward, uTexMetalness, call->material.maps[MATERIAL_MAP_METALNESS].texture.id, black);
 
+    // Setup sprite related uniforms
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_SPRITE) {
+        r3d_shader_set_vec2(raster.forward, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.forward, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+    else {
+        r3d_shader_set_vec2(raster.forward, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.forward, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+
     // Try binding vertex array objects (VAO) or use VBOs if not possible
     // WARNING: UploadMesh() enables all vertex attributes available in mesh and sets default attribute values
     // for shader expected vertex attributes that are not provided by the mesh (i.e. colors)
     // This could be a dangerous approach because different meshes with different shaders can enable/disable some attributes
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        // Bind mesh VBO - Positions
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
-        rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(0);
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_MESH) {
+        if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+            // Bind mesh VBO - Positions
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
+            rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(0);
 
-        // Bind mesh VBO - TexCoords
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
-        rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(1);
+            // Bind mesh VBO - TexCoords
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
+            rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(1);
 
-        // Bind mesh VBO - Normals
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
-        rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(2);
+            // Bind mesh VBO - Normals
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
+            rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(2);
 
-        // Bind mesh VBO - Tagents
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
-            rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
-            rlEnableVertexAttribute(3);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-            rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(3);
-        }
+            // Bind mesh VBO - Tagents
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
+                rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
+                rlEnableVertexAttribute(3);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+                rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(3);
+            }
 
-        // Bind mesh VBO - Colors
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
-            rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
-            rlEnableVertexAttribute(4);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(4);
-        }
+            // Bind mesh VBO - Colors
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
+                rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
+                rlEnableVertexAttribute(4);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+                rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(4);
+            }
 
-        if (call->mesh.indices != NULL) {
-            rlEnableVertexBufferElement(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            if (call->geometry.mesh.indices != NULL) {
+                rlEnableVertexBufferElement(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            }
         }
     }
 
@@ -588,56 +640,68 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
     r3d_shader_bind_sampler2D_opt(raster.forwardInst, uTexRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].texture.id, white);
     r3d_shader_bind_sampler2D_opt(raster.forwardInst, uTexMetalness, call->material.maps[MATERIAL_MAP_METALNESS].texture.id, black);
 
+    // Setup sprite related uniforms
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_SPRITE) {
+        r3d_shader_set_vec2(raster.forwardInst, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.forwardInst, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+    else {
+        r3d_shader_set_vec2(raster.forwardInst, uTexCoordOffset, call->geometry.sprite.uvOffset);
+        r3d_shader_set_vec2(raster.forwardInst, uTexCoordScale, call->geometry.sprite.uvScale);
+    }
+
     // Try binding vertex array objects (VAO) or use VBOs if not possible
     // WARNING: UploadMesh() enables all vertex attributes available in mesh and sets default attribute values
     // for shader expected vertex attributes that are not provided by the mesh (i.e. colors)
     // This could be a dangerous approach because different meshes with different shaders can enable/disable some attributes
-    if (!rlEnableVertexArray(call->mesh.vaoId)) {
-        // Bind mesh VBO - Positions
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
-        rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(0);
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_MESH) {
+        if (!rlEnableVertexArray(call->geometry.mesh.vaoId)) {
+            // Bind mesh VBO - Positions
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION]);
+            rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(0);
 
-        // Bind mesh VBO - TexCoords
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
-        rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(1);
+            // Bind mesh VBO - TexCoords
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TEXCOORD]);
+            rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(1);
 
-        // Bind mesh VBO - Normals
-        rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
-        rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
-        rlEnableVertexAttribute(2);
+            // Bind mesh VBO - Normals
+            rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_NORMAL]);
+            rlSetVertexAttribute(2, 3, RL_FLOAT, 0, 0, 0);
+            rlEnableVertexAttribute(2);
 
-        // Bind mesh VBO - Tagents
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
-            rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
-            rlEnableVertexAttribute(3);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-            rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(3);
-        }
+            // Bind mesh VBO - Tagents
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_TANGENT]);
+                rlSetVertexAttribute(3, 4, RL_FLOAT, 0, 0, 0);
+                rlEnableVertexAttribute(3);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+                rlSetVertexAttributeDefault(3, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(3);
+            }
 
-        // Bind mesh VBO - Colors
-        if (call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
-            rlEnableVertexBuffer(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
-            rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
-            rlEnableVertexAttribute(4);
-        }
-        else {
-            // Set default value for defined vertex attribute in shader but not provided by mesh
-            // WARNING: It could result in GPU undefined behaviour
-            float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
-            rlDisableVertexAttribute(4);
-        }
+            // Bind mesh VBO - Colors
+            if (call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR] != 0) {
+                rlEnableVertexBuffer(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_COLOR]);
+                rlSetVertexAttribute(4, 4, RL_UNSIGNED_BYTE, 1, 0, 0);
+                rlEnableVertexAttribute(4);
+            }
+            else {
+                // Set default value for defined vertex attribute in shader but not provided by mesh
+                // WARNING: It could result in GPU undefined behaviour
+                float value[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+                rlSetVertexAttributeDefault(4, value, SHADER_ATTRIB_VEC4, 4);
+                rlDisableVertexAttribute(4);
+            }
 
-        if (call->mesh.indices != NULL) {
-            rlEnableVertexBufferElement(call->mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            if (call->geometry.mesh.indices != NULL) {
+                rlEnableVertexBufferElement(call->geometry.mesh.vboId[RL_DEFAULT_SHADER_ATTRIB_LOCATION_INDICES]);
+            }
         }
     }
 
@@ -686,8 +750,13 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
 
 void r3d_draw_vertex_arrays(const r3d_drawcall_t* call)
 {
-    if (call->mesh.indices == NULL) rlDrawVertexArray(0, call->mesh.vertexCount);
-    else rlDrawVertexArrayElements(0, call->mesh.triangleCount * 3, 0);
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_MESH) {
+        if (call->geometry.mesh.indices == NULL) rlDrawVertexArray(0, call->geometry.mesh.vertexCount);
+        else rlDrawVertexArrayElements(0, call->geometry.mesh.triangleCount * 3, 0);
+    }
+    else if (call->geometryType == R3D_DRAWCALL_GEOMETRY_SPRITE) {
+        r3d_primitive_draw_quad();
+    }
 }
 
 void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceModel, int locInstanceColor)
@@ -742,15 +811,20 @@ void r3d_draw_vertex_arrays_inst(const r3d_drawcall_t* call, int locInstanceMode
     }
 
     // Draw instances or a single object depending on the case
-    if (call->mesh.indices != NULL) {
-        rlDrawVertexArrayElementsInstanced(
-            0, call->mesh.triangleCount * 3, 0, (int)call->instanced.count
-        );
+    if (call->geometryType == R3D_DRAWCALL_GEOMETRY_MESH) {
+        if (call->geometry.mesh.indices != NULL) {
+            rlDrawVertexArrayElementsInstanced(
+                0, call->geometry.mesh.triangleCount * 3, 0, (int)call->instanced.count
+            );
+        }
+        else {
+            rlDrawVertexArrayInstanced(
+                0, call->geometry.mesh.vertexCount, (int)call->instanced.count
+            );
+        }
     }
-    else {
-        rlDrawVertexArrayInstanced(
-            0, call->mesh.vertexCount, (int)call->instanced.count
-        );
+    else if (call->geometryType == R3D_DRAWCALL_GEOMETRY_SPRITE) {
+        r3d_primitive_draw_quad();
     }
 
     // Clean up resources

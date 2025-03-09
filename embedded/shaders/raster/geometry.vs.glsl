@@ -37,6 +37,9 @@ uniform float uValEmission;
 uniform vec3 uColEmission;
 uniform vec3 uColAlbedo;
 
+uniform vec2 uTexCoordOffset;
+uniform vec2 uTexCoordScale;
+
 /* === Varyings === */
 
 flat out vec3 vEmission;
@@ -48,7 +51,7 @@ out mat3 vTBN;
 
 void main()
 {
-    vTexCoord = aTexCoord;
+    vTexCoord = uTexCoordOffset + aTexCoord * uTexCoordScale;
     vColor = aColor.rgb * uColAlbedo;
     vEmission = uColEmission * uValEmission; // NOTE: Calculated here, in case we add different emission modes later.
 

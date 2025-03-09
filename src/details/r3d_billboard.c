@@ -37,7 +37,7 @@ void r3d_billboard_mode_y(Matrix* model, const Matrix* invView)
     Vector3 upVector = Vector3Normalize((Vector3) { model->m4, model->m5, model->m6 });
 
     // Compute look direction
-    Vector3 lookDirection = Vector3Normalize(Vector3Subtract(position, (Vector3) { invView->m12, invView->m13, invView->m14 }));
+    Vector3 lookDirection = Vector3Normalize(Vector3Subtract((Vector3) { invView->m12, invView->m13, invView->m14 }, position));
 
     // Compute right vector
     Vector3 rightVector = Vector3Normalize(Vector3CrossProduct(upVector, lookDirection));
