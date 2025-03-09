@@ -841,10 +841,27 @@ R3DAPI float R3D_GetLightRange(R3D_Light id);
  */
 R3DAPI void R3D_SetLightRange(R3D_Light id, float range);
 
-
+/**
+ * @brief Gets the size of a light source.
+ *
+ * This function retrieves the size of the specified light source, which is used for PCSS.
+ * The size affects how shadows are computed and how soft or sharp they appear.
+ *
+ * @param id The ID of the light.
+ * @return The size of the light.
+ */
 R3DAPI float R3D_GetLightSize(R3D_Light id);
-R3DAPI void R3D_SetLightSize(R3D_Light id, float size);
 
+/**
+ * @brief Sets the size of a light source.
+ *
+ * This function sets the size of the specified light source.
+ * The size influences how shadows are rendered, with larger sizes creating softer shadows.
+ *
+ * @param id The ID of the light.
+ * @param size The new size to set for the light.
+ */
+R3DAPI void R3D_SetLightSize(R3D_Light id, float size);
 
 /**
  * @brief Gets the attenuation factor of a light.
