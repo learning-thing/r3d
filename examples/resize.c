@@ -1,4 +1,5 @@
 #include "./common.h"
+#include <rlgl.h>
 
 /* === Resources === */
 

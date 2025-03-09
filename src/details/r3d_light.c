@@ -2,6 +2,7 @@
 
 #include <raymath.h>
 #include <stddef.h>
+#include <rlgl.h>
 #include <glad.h>
 
 /* === Internal functions === */
