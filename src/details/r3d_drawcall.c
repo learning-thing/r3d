@@ -362,8 +362,8 @@ void r3d_drawcall_raster_geometry_inst(const r3d_drawcall_t* call)
         r3d_shader_set_vec2(raster.geometryInst, uTexCoordScale, call->geometry.sprite.uvScale);
     }
     else {
-        r3d_shader_set_vec2(raster.geometry, uTexCoordOffset, ((Vector2) { 0, 0 }));
-        r3d_shader_set_vec2(raster.geometry, uTexCoordScale, ((Vector2) { 1, 1 }));
+        r3d_shader_set_vec2(raster.geometryInst, uTexCoordOffset, ((Vector2) { 0, 0 }));
+        r3d_shader_set_vec2(raster.geometryInst, uTexCoordScale, ((Vector2) { 1, 1 }));
     }
 
     // Try binding vertex array objects (VAO) or use VBOs if not possible
@@ -500,8 +500,8 @@ void r3d_drawcall_raster_forward(const r3d_drawcall_t* call)
         r3d_shader_set_vec2(raster.forward, uTexCoordScale, call->geometry.sprite.uvScale);
     }
     else {
-        r3d_shader_set_vec2(raster.geometry, uTexCoordOffset, ((Vector2) { 0, 0 }));
-        r3d_shader_set_vec2(raster.geometry, uTexCoordScale, ((Vector2) { 1, 1 }));
+        r3d_shader_set_vec2(raster.forward, uTexCoordOffset, ((Vector2) { 0, 0 }));
+        r3d_shader_set_vec2(raster.forward, uTexCoordScale, ((Vector2) { 1, 1 }));
     }
 
     // Try binding vertex array objects (VAO) or use VBOs if not possible
@@ -646,8 +646,8 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
         r3d_shader_set_vec2(raster.forwardInst, uTexCoordScale, call->geometry.sprite.uvScale);
     }
     else {
-        r3d_shader_set_vec2(raster.geometry, uTexCoordOffset, ((Vector2) { 0, 0 }));
-        r3d_shader_set_vec2(raster.geometry, uTexCoordScale, ((Vector2) { 1, 1 }));
+        r3d_shader_set_vec2(raster.forwardInst, uTexCoordOffset, ((Vector2) { 0, 0 }));
+        r3d_shader_set_vec2(raster.forwardInst, uTexCoordScale, ((Vector2) { 1, 1 }));
     }
 
     // Try binding vertex array objects (VAO) or use VBOs if not possible
