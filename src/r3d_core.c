@@ -384,14 +384,15 @@ void R3D_End(void)
         r3d_pass_ssao();
     }
 
-    r3d_pass_lit_env();
-    r3d_pass_lit_obj();
+    if (R3D.container.aDrawDeferred.count > 0 || R3D.container.aDrawDeferredInst.count > 0) {
+        r3d_pass_lit_env();
+        r3d_pass_lit_obj();
+        r3d_pass_scene_deferred();
+    }
 
-    r3d_pass_scene_deferred();
     r3d_pass_scene_background();
 
-    if (R3D.container.aDrawForward.count > 0 ||
-        R3D.container.aDrawForwardInst.count > 0) {
+    if (R3D.container.aDrawForward.count > 0 || R3D.container.aDrawForwardInst.count > 0) {
         r3d_pass_scene_forward();
     }
 
