@@ -840,6 +840,11 @@ R3DAPI float R3D_GetLightRange(R3D_Light id);
  */
 R3DAPI void R3D_SetLightRange(R3D_Light id, float range);
 
+
+R3DAPI float R3D_GetLightSize(R3D_Light id);
+R3DAPI void R3D_SetLightSize(R3D_Light id, float size);
+
+
 /**
  * @brief Gets the attenuation factor of a light.
  *

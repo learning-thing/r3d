@@ -174,7 +174,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     r3d_texture_load_white();
     r3d_texture_load_black();
     r3d_texture_load_normal();
-    r3d_texture_load_ssao_noise();
+    r3d_texture_load_rand_noise();
     r3d_texture_load_ssao_kernel();
     r3d_texture_load_ibl_brdf_lut();
 
@@ -228,7 +228,7 @@ void R3D_Close(void)
     rlUnloadTexture(R3D.texture.white);
     rlUnloadTexture(R3D.texture.black);
     rlUnloadTexture(R3D.texture.normal);
-    rlUnloadTexture(R3D.texture.ssaoNoise);
+    rlUnloadTexture(R3D.texture.randNoise);
     rlUnloadTexture(R3D.texture.ssaoKernel);
     rlUnloadTexture(R3D.texture.iblBrdfLut);
 
@@ -834,9 +834,8 @@ void r3d_pass_shadow_maps(void)
 
                 // Render geometries for each face of the cubemap
                 for (int j = 0; j < 6; j++) {
-                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->data->shadow.map.cube, 0);
-                    glClearColor(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->data->shadow.map.depth, 0);
+                    glClear(GL_DEPTH_BUFFER_BIT);
 
                     // Set view matrix for the current cubemap face
                     rlMatrixMode(RL_MODELVIEW);
@@ -846,35 +845,43 @@ void r3d_pass_shadow_maps(void)
                     // Rasterize geometries for depth rendering
                     r3d_shader_enable(raster.depthCubeInst);
                     {
+                        r3d_shader_set_vec3(raster.depthCubeInst, uViewPosition, light->data->position);
+                        r3d_shader_set_float(raster.depthCubeInst, uFar, light->data->far);
+
                         for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i;
                             if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
                                 r3d_shadow_apply_cast_mode(call->shadowCastMode);
-                                r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                                r3d_drawcall_raster_depth_cube_inst(call);
                             }
                         }
+
                         for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i;
                             if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
                                 r3d_shadow_apply_cast_mode(call->shadowCastMode);
-                                r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                                r3d_drawcall_raster_depth_cube_inst(call);
                             }
                         }
                     }
                     r3d_shader_enable(raster.depthCube);
                     {
+                        r3d_shader_set_vec3(raster.depthCube, uViewPosition, light->data->position);
+                        r3d_shader_set_float(raster.depthCube, uFar, light->data->far);
+
                         for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i;
                             if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
                                 r3d_shadow_apply_cast_mode(call->shadowCastMode);
-                                r3d_drawcall_raster_depth_cube(call, light->data->position);
+                                r3d_drawcall_raster_depth_cube(call);
                             }
                         }
+
                         for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForward.data + i;
                             if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
                                 r3d_shadow_apply_cast_mode(call->shadowCastMode);
-                                r3d_drawcall_raster_depth_cube(call, light->data->position);
+                                r3d_drawcall_raster_depth_cube(call);
                             }
                         }
                     }
@@ -896,7 +903,7 @@ void r3d_pass_shadow_maps(void)
                 }
 
                 // Store combined view and projection matrix for the shadow map
-                light->data->shadow.matViewProj = MatrixMultiply(matView, matProj);
+                light->data->shadow.matVP = MatrixMultiply(matView, matProj);
 
                 // Set up projection matrix
                 rlMatrixMode(RL_PROJECTION);
@@ -1058,7 +1065,7 @@ void r3d_pass_ssao(void)
             r3d_shader_bind_sampler2D(screen.ssao, uTexDepth, R3D.framebuffer.gBuffer.depth);
             r3d_shader_bind_sampler2D(screen.ssao, uTexNormal, R3D.framebuffer.gBuffer.normal);
             r3d_shader_bind_sampler1D(screen.ssao, uTexKernel, R3D.texture.ssaoKernel);
-            r3d_shader_bind_sampler2D(screen.ssao, uTexNoise, R3D.texture.ssaoNoise);
+            r3d_shader_bind_sampler2D(screen.ssao, uTexNoise, R3D.texture.randNoise);
 
             r3d_primitive_draw_quad();
 
@@ -1202,6 +1209,7 @@ void r3d_pass_lit_obj(void)
             r3d_shader_bind_sampler2D(screen.lighting, uTexNormal, R3D.framebuffer.gBuffer.normal);
             r3d_shader_bind_sampler2D(screen.lighting, uTexDepth, R3D.framebuffer.gBuffer.depth);
             r3d_shader_bind_sampler2D(screen.lighting, uTexORM, R3D.framebuffer.gBuffer.orm);
+            r3d_shader_bind_sampler2D(screen.lighting, uTexNoise, R3D.texture.randNoise);
 
             for (int i = 0; i < R3D.container.aLightBatch.count; i++) {
                 r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
@@ -1233,14 +1241,17 @@ void r3d_pass_lit_obj(void)
                 // Send shadow map data
                 if (light->data->shadow.enabled) {
                     if (light->data->type == R3D_LIGHT_OMNI) {
-                        r3d_shader_bind_samplerCube(screen.lighting, uLight.shadowCubemap, light->data->shadow.map.cube);
+                        r3d_shader_bind_samplerCube(screen.lighting, uLight.shadowCubemap, light->data->shadow.map.depth);
                     }
                     else {
                         r3d_shader_set_float(screen.lighting, uLight.shadowMapTxlSz, light->data->shadow.map.texelSize);
                         r3d_shader_bind_sampler2D(screen.lighting, uLight.shadowMap, light->data->shadow.map.depth);
-                        r3d_shader_set_mat4(screen.lighting, uLight.matViewProj, light->data->shadow.matViewProj);
+                        r3d_shader_set_mat4(screen.lighting, uLight.matVP, light->data->shadow.matVP);
                     }
                     r3d_shader_set_float(screen.lighting, uLight.shadowBias, light->data->shadow.bias);
+                    r3d_shader_set_float(screen.lighting, uLight.size, light->data->size);
+                    r3d_shader_set_float(screen.lighting, uLight.near, light->data->near);
+                    r3d_shader_set_float(screen.lighting, uLight.far, light->data->far);
                     r3d_shader_set_int(screen.lighting, uLight.shadow, true);
                 }
                 else {
@@ -1266,6 +1277,7 @@ void r3d_pass_lit_obj(void)
             r3d_shader_unbind_sampler2D(screen.lighting, uTexNormal);
             r3d_shader_unbind_sampler2D(screen.lighting, uTexDepth);
             r3d_shader_unbind_sampler2D(screen.lighting, uTexORM);
+            r3d_shader_unbind_sampler2D(screen.lighting, uTexNoise);
 
             r3d_shader_unbind_samplerCube(screen.lighting, uLight.shadowCubemap);
             r3d_shader_unbind_sampler2D(screen.lighting, uLight.shadowMap);
@@ -1476,14 +1488,17 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
         // Send shadow map data
         if (light->data->shadow.enabled) {
             if (light->data->type == R3D_LIGHT_OMNI) {
-                r3d_shader_bind_samplerCube(raster.forward, uLights[i].shadowCubemap, light->data->shadow.map.cube);
+                r3d_shader_bind_samplerCube(raster.forward, uLights[i].shadowCubemap, light->data->shadow.map.depth);
             }
             else {
                 r3d_shader_set_float(raster.forward, uLights[i].shadowMapTxlSz, light->data->shadow.map.texelSize);
                 r3d_shader_bind_sampler2D(raster.forward, uLights[i].shadowMap, light->data->shadow.map.depth);
-                r3d_shader_set_mat4(raster.forward, uMatLightMVP[i], light->data->shadow.matViewProj);
+                r3d_shader_set_mat4(raster.forward, uMatLightVP[i], light->data->shadow.matVP);
             }
             r3d_shader_set_float(raster.forward, uLights[i].shadowBias, light->data->shadow.bias);
+            r3d_shader_set_float(raster.forward, uLights[i].size, light->data->size);
+            r3d_shader_set_float(raster.forward, uLights[i].near, light->data->near);
+            r3d_shader_set_float(raster.forward, uLights[i].far, light->data->far);
             r3d_shader_set_int(raster.forward, uLights[i].shadow, true);
         }
         else {
@@ -1543,14 +1558,17 @@ static void r3d_pass_scene_forward_inst_filter_and_send_lights(const r3d_drawcal
         // Send shadow map data
         if (light->data->shadow.enabled) {
             if (light->data->type == R3D_LIGHT_OMNI) {
-                r3d_shader_bind_samplerCube(raster.forwardInst, uLights[i].shadowCubemap, light->data->shadow.map.cube);
+                r3d_shader_bind_samplerCube(raster.forwardInst, uLights[i].shadowCubemap, light->data->shadow.map.depth);
             }
             else {
                 r3d_shader_set_float(raster.forwardInst, uLights[i].shadowMapTxlSz, light->data->shadow.map.texelSize);
                 r3d_shader_bind_sampler2D(raster.forwardInst, uLights[i].shadowMap, light->data->shadow.map.depth);
-                r3d_shader_set_mat4(raster.forwardInst, uMatLightMVP[i], light->data->shadow.matViewProj);
+                r3d_shader_set_mat4(raster.forwardInst, uMatLightVP[i], light->data->shadow.matVP);
             }
             r3d_shader_set_float(raster.forwardInst, uLights[i].shadowBias, light->data->shadow.bias);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].size, light->data->size);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].near, light->data->near);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].far, light->data->far);
             r3d_shader_set_int(raster.forwardInst, uLights[i].shadow, true);
         }
         else {
@@ -1596,6 +1614,8 @@ void r3d_pass_scene_forward(void)
         if (R3D.container.aDrawForwardInst.count > 0) {
             r3d_shader_enable(raster.forwardInst);
             {
+                r3d_shader_bind_sampler2D(raster.forwardInst, uTexNoise, R3D.texture.randNoise);
+
                 if (R3D.env.useSky) {
                     r3d_shader_bind_samplerCube(raster.forwardInst, uCubeIrradiance, R3D.env.sky.irradiance.id);
                     r3d_shader_bind_samplerCube(raster.forwardInst, uCubePrefilter, R3D.env.sky.prefilter.id);
@@ -1619,6 +1639,8 @@ void r3d_pass_scene_forward(void)
                     r3d_drawcall_raster_forward_inst(call);
                 }
 
+                r3d_shader_unbind_sampler2D(raster.forwardInst, uTexNoise);
+
                 if (R3D.env.useSky) {
                     r3d_shader_unbind_samplerCube(raster.forwardInst, uCubeIrradiance);
                     r3d_shader_unbind_samplerCube(raster.forwardInst, uCubePrefilter);
@@ -1637,6 +1659,8 @@ void r3d_pass_scene_forward(void)
         if (R3D.container.aDrawForward.count > 0) {
             r3d_shader_enable(raster.forward);
             {
+                r3d_shader_bind_sampler2D(raster.forward, uTexNoise, R3D.texture.randNoise);
+
                 if (R3D.env.useSky) {
                     r3d_shader_bind_samplerCube(raster.forward, uCubeIrradiance, R3D.env.sky.irradiance.id);
                     r3d_shader_bind_samplerCube(raster.forward, uCubePrefilter, R3D.env.sky.prefilter.id);
@@ -1659,6 +1683,8 @@ void r3d_pass_scene_forward(void)
                     r3d_render_apply_blend_mode(call->blendMode);
                     r3d_drawcall_raster_forward(call);
                 }
+
+                r3d_shader_unbind_sampler2D(raster.forward, uTexNoise);
 
                 if (R3D.env.useSky) {
                     r3d_shader_unbind_samplerCube(raster.forward, uCubeIrradiance);

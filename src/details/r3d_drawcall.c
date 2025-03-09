@@ -106,13 +106,12 @@ void r3d_drawcall_raster_depth_inst(const r3d_drawcall_t* call)
     rlDisableVertexBufferElement();
 }
 
-void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos)
+void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call)
 {
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
     Matrix matMVP = MatrixMultiply(matModel, rlGetMatrixModelview());
     matMVP = MatrixMultiply(matMVP, rlGetMatrixProjection());
 
-    r3d_shader_set_vec3(raster.depthCube, uViewPosition, viewPos);
     r3d_shader_set_mat4(raster.depthCube, uMatModel, matModel);
     r3d_shader_set_mat4(raster.depthCube, uMatMVP, matMVP);
 
@@ -132,12 +131,11 @@ void r3d_drawcall_raster_depth_cube(const r3d_drawcall_t* call, Vector3 viewPos)
     rlDisableVertexBufferElement();
 }
 
-void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call, Vector3 viewPos)
+void r3d_drawcall_raster_depth_cube_inst(const r3d_drawcall_t* call)
 {
     Matrix matModel = MatrixMultiply(call->transform, rlGetMatrixTransform());
     Matrix matVP = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
 
-    r3d_shader_set_vec3(raster.depthCubeInst, uViewPosition, viewPos);
     r3d_shader_set_mat4(raster.depthCubeInst, uMatModel, matModel);
     r3d_shader_set_mat4(raster.depthCubeInst, uMatVP, matVP);
 

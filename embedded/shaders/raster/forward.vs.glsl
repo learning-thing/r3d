@@ -37,7 +37,7 @@ uniform mat4 uMatNormal;
 uniform mat4 uMatModel;
 uniform mat4 uMatMVP;
 
-uniform mat4 uMatLightMVP[NUM_LIGHTS];
+uniform mat4 uMatLightVP[NUM_LIGHTS];
 
 uniform vec4 uColAlbedo;
 
@@ -67,7 +67,7 @@ void main()
 
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
-        vPosLightSpace[i] = uMatLightMVP[i] * vec4(vPosition, 1.0);
+        vPosLightSpace[i] = uMatLightVP[i] * vec4(vPosition, 1.0);
     }
 
     gl_Position = uMatMVP * vec4(aPosition, 1.0);

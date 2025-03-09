@@ -41,7 +41,7 @@ layout(location = 14) in vec4 iColor;
 
 /* === Uniforms === */
 
-uniform mat4 uMatLightMVP[NUM_LIGHTS];
+uniform mat4 uMatLightVP[NUM_LIGHTS];
 
 uniform mat4 uMatInvView;       ///< Only for billboard modes
 uniform mat4 uMatModel;
@@ -149,7 +149,7 @@ void main()
 
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
-        vPosLightSpace[i] = uMatLightMVP[i] * vec4(vPosition, 1.0);
+        vPosLightSpace[i] = uMatLightVP[i] * vec4(vPosition, 1.0);
     }
 
     gl_Position = uMatVP * (matModel * vec4(aPosition, 1.0));
