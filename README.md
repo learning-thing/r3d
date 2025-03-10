@@ -109,7 +109,7 @@ int main()
     R3D_Init(800, 600, 0);
 
     // Load a model to render
-    Model model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+    Model model = LoadModelFromMesh(GenMeshSphere(1.0f, 16, 32));
 
     // Setup material with default values
     R3D_SetMaterialOcclusion(&model.materials[0], NULL, 1.0f);
@@ -117,12 +117,14 @@ int main()
     R3D_SetMaterialMetalness(&model.materials[0], NULL, 0.0f);
 
     // Create a directional light
+    // NOTE: The direction will be normalized
     R3D_Light light = R3D_CreateLight(R3D_LIGHT_DIR);
-    R3D_SetLightDirection(light, Vector3Normalize((Vector3) { -1, -1, -1 }));
+    R3D_SetLightDirection(light, (Vector3) { -1, -1, -1 });
+    R3D_SetLightActive(light, true);
 
     // Init a Camera3D
     Camera3D camera = {
-        .position = (Vector3) { 0, 0, 5 },
+        .position = (Vector3) { -3, 3, 3 },
         .target = (Vector3) { 0, 0, 0 },
         .up = (Vector3) { 0, 1, 0 },
         .fovy = 60.0f,
@@ -132,13 +134,14 @@ int main()
     // Main rendering loop
     while (!WindowShouldClose()) {
         BeginDrawing();
-            R3D_Begin(camera);
-                R3D_DrawModel(model, (Vector3) { 0 }, 1.0f);
-            R3D_End();
+        R3D_Begin(camera);
+        R3D_DrawModel(model, (Vector3) { 0 }, 1.0f);
+        R3D_End();
         EndDrawing();
     }
 
     // Close R3D renderer and raylib
+    UnloadModel(model);
     R3D_Close();
     CloseWindow();
 
