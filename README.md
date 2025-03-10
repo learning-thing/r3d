@@ -126,8 +126,8 @@ int main()
     R3D_SetMaterialMetalness(&model.materials[0], NULL, 0.0f);
 
     // Create a directional light
-    R3D_Light light = R3D_CreateLight(R3D_DIRLIGHT);
-    R3D_SetLightDirection(light, Vector3Normalize((vector3) { -1, -1, -1 }));
+    R3D_Light light = R3D_CreateLight(R3D_LIGHT_DIR);
+    R3D_SetLightDirection(light, Vector3Normalize((Vector3) { -1, -1, -1 }));
 
     // Init a Camera3D
     Camera3D camera = {
