@@ -8,13 +8,6 @@ R3D is ideal for developers who want to add 3D rendering to their raylib project
 
 ---
 
-## WARNING
-
-R3D is a work in progress and may have build or shader issues on some platforms.
-You can report them in an issue if you wish, but as long as this warning is present, nothing is guaranteed.
-
----
-
 ## Features
 
 - **Material**: Uses raylib’s material system, just load a model and set its material maps, R3D handles the rest.  
@@ -42,22 +35,20 @@ git submodule update --init --recursive
 
 ### Prerequisites
 
-To build and use R3D, ensure you have the following dependencies installed:  
+To build and use R3D, ensure you have the following dependencies installed:
 
-- **raylib 5.5 or later**  
-  The library is included as an optional submodule. If **raylib 5.5** is already installed on your system, you can use R3D without cloning the submodule.  
-  🔹 *Note:* It is recommended to use **raylib 5.6-dev** ([commit c647d337](c647d337034585251d3d76d32093ac88a4c4ab82)), as it includes a fix for a default issue affecting normal maps.  
+- **raylib 5.5 or later**
+  The library is included as an optional submodule. If **raylib 5.5** is already installed on your system, you can use R3D without cloning the submodule.
+  🔹 *Note:* It is recommended to use **raylib 5.6-dev** ([commit c647d337](https://github.com/raysan5/raylib/commit/c647d337034585251d3d76d32093ac88a4c4ab82)), as it includes a fix for an issue affecting the default normal maps.
 
-- **Python (>= 3.6)**  
-  Required for shader minification, which integrates optimized shaders into the library's binary.  
+- **Python (>= 3.6)**
+  Required for shader minification, which integrates optimized shaders into the library's binary.
 
-- **C Compiler**  
-  A compiler supporting C99 or later is necessary for building the project.  
+- **C Compiler**
+  A compiler supporting C99 or later is necessary for building the project.
 
-- **CMake**  
-  Used to configure and build the library.  
-
----
+- **CMake**
+  Used to configure and build the library.
 
 ### Compatibility  
 
