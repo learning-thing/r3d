@@ -71,7 +71,7 @@ R3D requires an OpenGL 3.3+ compatible driver. OpenGL ES support is not yet avai
 
    ```bash
    git clone https://github.com/Bigfoot71/r3d
-   cd R3D
+   cd r3d
    ```
 
 2. **Optional: Clone raylib submodule**:
