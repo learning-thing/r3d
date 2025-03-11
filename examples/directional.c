@@ -48,7 +48,7 @@ const char* Init(void)
     R3D_Light light = R3D_CreateLight(R3D_LIGHT_DIR);
     {
         R3D_SetLightDirection(light, (Vector3) { 0, -1, -1 });
-        R3D_GetShadowUpdateMode(R3D_SHADOW_UPDATE_MANUAL);
+        R3D_SetShadowUpdateMode(light, R3D_SHADOW_UPDATE_MANUAL);
         R3D_SetShadowBias(light, 0.005f);
         R3D_EnableShadow(light, 4096);
 
