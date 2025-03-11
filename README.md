@@ -76,10 +76,8 @@ R3D requires an OpenGL 3.3+ compatible driver. OpenGL ES support is not yet avai
    Use CMake to configure and build the library.
 
    ```bash
-   mkdir build
-   cd build
-   cmake ..
-   cmake --build .
+   cmake -B build
+   cmake --build build
    ```
 
 4. **Link the library to your project**:
