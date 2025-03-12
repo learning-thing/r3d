@@ -8,14 +8,6 @@ R3D is ideal for developers who want to add 3D rendering to their raylib project
 
 ---
 
-## WARNING
-
-R3D is a work in progress and may have build or shader issues on some platforms.
-You can report them in an issue if you wish, but as long as this warning is present, nothing is guaranteed.
-A release version will be published once transparency support is complete and R3D has been tested on enough platforms.
-
----
-
 ## Features
 
 - **Material**: Uses raylib’s material system, just load a model and set its material maps, R3D handles the rest.  
@@ -43,9 +35,26 @@ git submodule update --init --recursive
 
 ### Prerequisites
 
-- **raylib**: The library is provided as a submodule, which is optional. If **raylib 5.5** is already installed on your system, you can use R3D without cloning the submodule.
-- **CMake**: For building the library.
-- **C Compiler**: A C99 or higher compatible compiler.
+To build and use R3D, ensure you have the following dependencies installed:
+
+- **raylib 5.5 or later**
+  The library is included as an optional submodule. If **raylib 5.5** is already installed on your system, you can use R3D without cloning the submodule.
+  🔹 *Note:* It is recommended to use **raylib 5.6-dev** ([commit c647d337](https://github.com/raysan5/raylib/commit/c647d337034585251d3d76d32093ac88a4c4ab82)), as it includes a fix for an issue affecting the default normal maps.
+
+- **Python (>= 3.6)**
+  Required for shader minification, which integrates optimized shaders into the library's binary.
+
+- **C Compiler**
+  A compiler supporting C99 or later is necessary for building the project.
+
+- **CMake**
+  Used to configure and build the library.
+
+### Compatibility  
+
+R3D requires an OpenGL 3.3+ compatible driver. OpenGL ES support is not yet available but is planned for future updates.
+
+---
 
 ### Installation
 
@@ -53,7 +62,7 @@ git submodule update --init --recursive
 
    ```bash
    git clone https://github.com/Bigfoot71/r3d
-   cd R3D
+   cd r3d
    ```
 
 2. **Optional: Clone raylib submodule**:
@@ -102,7 +111,7 @@ int main()
     R3D_Init(800, 600, 0);
 
     // Load a model to render
-    Model model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+    Model model = LoadModelFromMesh(GenMeshSphere(1.0f, 16, 32));
 
     // Setup material with default values
     R3D_SetMaterialOcclusion(&model.materials[0], NULL, 1.0f);
@@ -110,12 +119,14 @@ int main()
     R3D_SetMaterialMetalness(&model.materials[0], NULL, 0.0f);
 
     // Create a directional light
-    R3D_Light light = R3D_CreateLight(R3D_DIRLIGHT);
-    R3D_SetLightDirection(light, Vector3Normalize((vector3) { -1, -1, -1 }));
+    // NOTE: The direction will be normalized
+    R3D_Light light = R3D_CreateLight(R3D_LIGHT_DIR);
+    R3D_SetLightDirection(light, (Vector3) { -1, -1, -1 });
+    R3D_SetLightActive(light, true);
 
     // Init a Camera3D
     Camera3D camera = {
-        .position = (Vector3) { 0, 0, 5 },
+        .position = (Vector3) { -3, 3, 3 },
         .target = (Vector3) { 0, 0, 0 },
         .up = (Vector3) { 0, 1, 0 },
         .fovy = 60.0f,
@@ -125,13 +136,14 @@ int main()
     // Main rendering loop
     while (!WindowShouldClose()) {
         BeginDrawing();
-            R3D_Begin(camera);
-                R3D_DrawModel(model, (Vector3) { 0 }, 1.0f);
-            R3D_End();
+        R3D_Begin(camera);
+        R3D_DrawModel(model, (Vector3) { 0 }, 1.0f);
+        R3D_End();
         EndDrawing();
     }
 
     // Close R3D renderer and raylib
+    UnloadModel(model);
     R3D_Close();
     CloseWindow();
 
@@ -260,6 +272,6 @@ Thanks to [raylib](https://www.raylib.com/) for providing an easy-to-use framewo
 
 ## Screenshots
 
-![](examples/screenshots/sponza.png)
-![](examples/screenshots/pbr.png)
-![](examples/screenshots/bloom.png)
+![](examples/screenshots/sponza.webp)
+![](examples/screenshots/pbr.webp)
+![](examples/screenshots/skybox.webp)

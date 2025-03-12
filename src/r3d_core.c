@@ -31,6 +31,7 @@
 #include "./r3d_state.h"
 #include "./details/r3d_light.h"
 #include "./details/r3d_drawcall.h"
+#include "./details/r3d_billboard.h"
 #include "./details/r3d_collision.h"
 #include "./details/r3d_primitives.h"
 #include "./details/r3d_projection.h"
@@ -41,6 +42,12 @@
 
 static void r3d_framebuffers_load(int width, int height);
 static void r3d_framebuffers_unload(void);
+
+static void r3d_sprite_get_uv_scale_offset(const R3D_Sprite* sprite, Vector2* uvScale, Vector2* uvOffset, float sgnX, float sgnY);
+static void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode);
+
+static R3D_RenderMode r3d_render_auto_detect_mode(const Material* material);
+static void r3d_render_apply_blend_mode(R3D_BlendMode mode);
 
 static void r3d_gbuffer_enable_stencil_write(void);
 static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry);
@@ -60,7 +67,7 @@ static void r3d_pass_scene_deferred(void);
 static void r3d_pass_scene_background(void);
 static void r3d_pass_scene_forward(void);
 
-static void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf);
+static void r3d_pass_post_init(unsigned int fb, unsigned srcAttach);
 static void r3d_pass_post_bloom(void);
 static void r3d_pass_post_fog(void);
 static void r3d_pass_post_tonemap(void);
@@ -150,8 +157,10 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     R3D.state.resolution.texelY = 1.0f / resHeight;
 
     // Init rendering mode configs
-    R3D.state.render.mode = R3D_RENDER_DEFERRED;
-    R3D.state.render.shadowCasting = true;
+    R3D.state.render.mode = R3D_RENDER_AUTO_DETECT;
+    R3D.state.render.blendMode = R3D_BLEND_ALPHA;
+    R3D.state.render.shadowCastMode= R3D_SHADOW_CAST_FRONT_FACES;
+    R3D.state.render.billboardMode = R3D_BILLBOARD_DISABLED;
 
     // Init scene data
     R3D.state.scene.bounds = (BoundingBox) {
@@ -166,7 +175,7 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     r3d_texture_load_white();
     r3d_texture_load_black();
     r3d_texture_load_normal();
-    r3d_texture_load_ssao_noise();
+    r3d_texture_load_rand_noise();
     r3d_texture_load_ssao_kernel();
     r3d_texture_load_ibl_brdf_lut();
 
@@ -220,7 +229,7 @@ void R3D_Close(void)
     rlUnloadTexture(R3D.texture.white);
     rlUnloadTexture(R3D.texture.black);
     rlUnloadTexture(R3D.texture.normal);
-    rlUnloadTexture(R3D.texture.ssaoNoise);
+    rlUnloadTexture(R3D.texture.randNoise);
     rlUnloadTexture(R3D.texture.ssaoKernel);
     rlUnloadTexture(R3D.texture.iblBrdfLut);
 
@@ -289,9 +298,19 @@ void R3D_ApplyRenderMode(R3D_RenderMode mode)
     R3D.state.render.mode = mode;
 }
 
-void R3D_ApplyShadowCasting(bool enabled)
+void R3D_ApplyBlendMode(R3D_BlendMode mode)
 {
-    R3D.state.render.shadowCasting = enabled;
+    R3D.state.render.blendMode = mode;
+}
+
+void R3D_ApplyShadowCastMode(R3D_ShadowCastMode mode)
+{
+    R3D.state.render.shadowCastMode = mode;
+}
+
+void R3D_ApplyBillboardMode(R3D_BillboardMode mode)
+{
+    R3D.state.render.billboardMode = mode;
 }
 
 void R3D_Begin(Camera3D camera)
@@ -366,20 +385,20 @@ void R3D_End(void)
         r3d_pass_ssao();
     }
 
-    r3d_pass_lit_env();
-    r3d_pass_lit_obj();
+    if (R3D.container.aDrawDeferred.count > 0 || R3D.container.aDrawDeferredInst.count > 0) {
+        r3d_pass_lit_env();
+        r3d_pass_lit_obj();
+        r3d_pass_scene_deferred();
+    }
 
-    r3d_pass_scene_deferred();
     r3d_pass_scene_background();
 
-    if (R3D.container.aDrawForward.count > 0 ||
-        R3D.container.aDrawForwardInst.count > 0) {
+    if (R3D.container.aDrawForward.count > 0 || R3D.container.aDrawForwardInst.count > 0) {
         r3d_pass_scene_forward();
     }
 
     r3d_pass_post_init(
         R3D.framebuffer.scene.id,
-        GL_COLOR_ATTACHMENT0,
         GL_COLOR_ATTACHMENT0
     );
 
@@ -391,7 +410,7 @@ void R3D_End(void)
         r3d_pass_post_fog();
     }
 
-    if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f || R3D.env.tonemapWhite != 1.0f) {
+    if (R3D.env.tonemapMode != R3D_TONEMAP_LINEAR || R3D.env.tonemapExposure != 1.0f) {
         r3d_pass_post_tonemap();
     }
 
@@ -410,19 +429,30 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
 {
     r3d_drawcall_t drawCall = { 0 };
 
+    if (R3D.state.render.billboardMode == R3D_BILLBOARD_FRONT) {
+        r3d_billboard_mode_front(&transform, &R3D.state.transform.invView);
+    }
+    else if (R3D.state.render.billboardMode == R3D_BILLBOARD_Y_AXIS) {
+        r3d_billboard_mode_y(&transform, &R3D.state.transform.invView);
+    }
+
     drawCall.transform = transform;
     drawCall.material = material;
-    drawCall.mesh = mesh;
+    drawCall.geometry.mesh = mesh;
+    drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_MESH;
 
-    drawCall.castShadows = R3D.state.render.shadowCasting;
+    drawCall.blendMode = R3D.state.render.blendMode;
+    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
-    drawCall.instanced.transforms = NULL;
-    drawCall.instanced.colors = NULL;
-    drawCall.instanced.count = 0;
+    R3D_RenderMode mode = R3D.state.render.mode;
+
+    if (mode == R3D_RENDER_AUTO_DETECT) {
+        mode = r3d_render_auto_detect_mode(&material);
+    }
 
     r3d_array_t* arr = &R3D.container.aDrawDeferred;
 
-    if (R3D.state.render.mode == R3D_RENDER_FORWARD) {
+    if (mode == R3D_RENDER_FORWARD) {
         arr = &R3D.container.aDrawForward;
     }
 
@@ -431,15 +461,18 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
 
 void R3D_DrawMeshInstanced(Mesh mesh, Material material, Matrix* instanceTransforms, int instanceCount)
 {
-    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, NULL, instanceCount);
+    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, 0, NULL, 0, instanceCount);
 }
 
 void R3D_DrawMeshInstancedEx(Mesh mesh, Material material, Matrix* instanceTransforms, Color* instanceColors, int instanceCount)
 {
-    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, instanceColors, instanceCount);
+    R3D_DrawMeshInstancedPro(mesh, material, MatrixIdentity(), instanceTransforms, 0, instanceColors, 0, instanceCount);
 }
 
-void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Matrix* instanceTransforms, Color* instanceColors, int instanceCount)
+void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
+                              Matrix* instanceTransforms, int transformsStride,
+                              Color* instanceColors, int colorsStride,
+                              int instanceCount)
 {
     r3d_drawcall_t drawCall = { 0 };
 
@@ -449,17 +482,28 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform, Ma
 
     drawCall.transform = transform;
     drawCall.material = material;
-    drawCall.mesh = mesh;
+    drawCall.geometry.mesh = mesh;
+    drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_MESH;
 
-    drawCall.castShadows = R3D.state.render.shadowCasting;
+    drawCall.blendMode = R3D.state.render.blendMode;
+    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
+    drawCall.instanced.billboardMode = R3D.state.render.billboardMode;
     drawCall.instanced.transforms = instanceTransforms;
+    drawCall.instanced.transStride = transformsStride;
+    drawCall.instanced.colStride = colorsStride;
     drawCall.instanced.colors = instanceColors;
     drawCall.instanced.count = instanceCount;
 
+    R3D_RenderMode mode = R3D.state.render.mode;
+
+    if (mode == R3D_RENDER_AUTO_DETECT) {
+        mode = r3d_render_auto_detect_mode(&material);
+    }
+
     r3d_array_t* arr = &R3D.container.aDrawDeferredInst;
 
-    if (R3D.state.render.mode == R3D_RENDER_FORWARD) {
+    if (mode == R3D_RENDER_FORWARD) {
         arr = &R3D.container.aDrawForwardInst;
     }
 
@@ -485,6 +529,74 @@ void R3D_DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float 
     for (int i = 0; i < model.meshCount; i++) {
         R3D_DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], model.transform);
     }
+}
+
+void R3D_DrawSprite(R3D_Sprite sprite, Vector3 position)
+{
+    R3D_DrawSpritePro(sprite, position, (Vector2) { 1.0f, 1.0f }, (Vector3) { 0, 1, 0 }, 0.0f);
+}
+
+void R3D_DrawSpriteEx(R3D_Sprite sprite, Vector3 position, Vector2 size, float rotation)
+{
+    R3D_DrawSpritePro(sprite, position, size, (Vector3) { 0, 1, 0 }, rotation);
+}
+
+void R3D_DrawSpritePro(R3D_Sprite sprite, Vector3 position, Vector2 size, Vector3 rotationAxis, float rotationAngle)
+{
+    Matrix matScale = MatrixScale(fabsf(size.x) * 0.5f, -fabsf(size.y) * 0.5f, 1.0f);
+    Matrix matRotation = MatrixRotate(rotationAxis, rotationAngle * DEG2RAD);
+    Matrix matTranslation = MatrixTranslate(position.x, position.y, position.z);
+    Matrix matTransform = MatrixMultiply(MatrixMultiply(matScale, matRotation), matTranslation);
+
+    r3d_drawcall_t drawCall = { 0 };
+
+    if (R3D.state.render.billboardMode == R3D_BILLBOARD_FRONT) {
+        r3d_billboard_mode_front(&matTransform, &R3D.state.transform.invView);
+    }
+    else if (R3D.state.render.billboardMode == R3D_BILLBOARD_Y_AXIS) {
+        r3d_billboard_mode_y(&matTransform, &R3D.state.transform.invView);
+    }
+
+    drawCall.transform = matTransform;
+    drawCall.material = sprite.material;
+    drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_SPRITE;
+
+    r3d_sprite_get_uv_scale_offset(
+        &sprite, &drawCall.geometry.sprite.uvScale, &drawCall.geometry.sprite.uvOffset,
+        (size.x > 0) ? 1.0f : -1.0f, (size.y > 0) ? 1.0f : -1.0f
+    );
+
+    drawCall.blendMode = R3D.state.render.blendMode;
+    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
+
+    R3D_RenderMode mode = R3D.state.render.mode;
+
+    if (mode == R3D_RENDER_AUTO_DETECT) {
+        mode = r3d_render_auto_detect_mode(&sprite.material);
+    }
+
+    r3d_array_t* arr = &R3D.container.aDrawDeferred;
+
+    if (mode == R3D_RENDER_FORWARD) {
+        arr = &R3D.container.aDrawForward;
+    }
+
+    r3d_array_push_back(arr, &drawCall);
+}
+
+void R3D_DrawParticleSystem(const R3D_ParticleSystem* system, Mesh mesh, Material material)
+{
+    R3D_DrawParticleSystemEx(system, mesh, material, MatrixIdentity());
+}
+
+void R3D_DrawParticleSystemEx(const R3D_ParticleSystem* system, Mesh mesh, Material material, Matrix transform)
+{
+    R3D_DrawMeshInstancedPro(
+        mesh, material, transform,
+        &system->particles->transform, sizeof(R3D_Particle),
+        &system->particles->color, sizeof(R3D_Particle),
+        system->count
+    );
 }
 
 
@@ -521,6 +633,121 @@ void r3d_framebuffers_unload(void)
 
     if (R3D.framebuffer.pingPongBloom.id != 0) {
         r3d_framebuffer_unload_pingpong_bloom();
+    }
+}
+
+void r3d_sprite_get_uv_scale_offset(const R3D_Sprite* sprite, Vector2* uvScale, Vector2* uvOffset, float sgnX, float sgnY)
+{
+    uvScale->x = sgnX / sprite->xFrameCount;
+    uvScale->y = sgnY / sprite->yFrameCount;
+
+    int frameIndex = (int)sprite->currentFrame % (sprite->xFrameCount * sprite->yFrameCount);
+    int frameX = frameIndex % sprite->xFrameCount;
+    int frameY = frameIndex / sprite->xFrameCount;
+
+    uvOffset->x = frameX * uvScale->x;
+    uvOffset->y = frameY * uvScale->y;
+}
+
+void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode)
+{
+    switch (mode)
+    {
+    case R3D_SHADOW_CAST_FRONT_FACES:
+        rlEnableBackfaceCulling();
+        rlSetCullFace(RL_CULL_FACE_BACK);
+        break;
+    case R3D_SHADOW_CAST_BACK_FACES:
+        rlEnableBackfaceCulling();
+        rlSetCullFace(RL_CULL_FACE_FRONT);
+        break;
+    case R3D_SHADOW_CAST_ALL_FACES:
+        rlDisableBackfaceCulling();
+        break;
+    default:
+        break;
+    }
+}
+
+R3D_RenderMode r3d_render_auto_detect_mode(const Material* material)
+{
+    // If the desired mode is opaque, then there is no need to perform further tests
+    if (R3D.state.render.blendMode == R3D_BLEND_OPAQUE) {
+        return R3D_RENDER_DEFERRED;
+    }
+
+    // If the blend mode is not alpha but also not opaque
+    // (such as additive or multiply), then we still need the forward render mode
+    if (R3D.state.render.blendMode != R3D_BLEND_ALPHA) {
+        return R3D_RENDER_FORWARD;
+    }
+
+    // Obtaining the albedo texture used in the material
+    unsigned int texId = material->maps[MATERIAL_MAP_ALBEDO].texture.id;
+
+    // Detecting if it is a default texture
+    bool defaultTex = (texId == 0 || texId == rlGetTextureIdDefault());
+
+    // Detecting if a transparency value is used for the albedo
+    bool alphaColor = (material->maps[MATERIAL_MAP_ALBEDO].color.a < 255);
+
+    // Detecting if the format of the used texture supports transparency
+    // NOTE: By default, we know that default textures do not contain transparency
+    bool alphaFormat = false;
+    if (!defaultTex) {
+        switch (material->maps[MATERIAL_MAP_ALBEDO].texture.format) {
+        case PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
+        case PIXELFORMAT_UNCOMPRESSED_R5G5B5A1:
+        case PIXELFORMAT_UNCOMPRESSED_R4G4B4A4:
+        case PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
+        case PIXELFORMAT_UNCOMPRESSED_R32G32B32A32:
+        case PIXELFORMAT_UNCOMPRESSED_R16G16B16A16:
+        case PIXELFORMAT_COMPRESSED_DXT1_RGBA:
+        case PIXELFORMAT_COMPRESSED_DXT3_RGBA:
+        case PIXELFORMAT_COMPRESSED_DXT5_RGBA:
+        case PIXELFORMAT_COMPRESSED_ETC2_EAC_RGBA:
+        case PIXELFORMAT_COMPRESSED_PVRT_RGBA:
+        case PIXELFORMAT_COMPRESSED_ASTC_4x4_RGBA:
+        case PIXELFORMAT_COMPRESSED_ASTC_8x8_RGBA:
+            alphaFormat = true;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // If the color contains transparency or the texture format supports it
+    // and the current blend mode is alpha, then we will use the forward mode
+    if ((alphaColor || alphaFormat) && R3D.state.render.blendMode == R3D_BLEND_ALPHA) {
+        return R3D_RENDER_FORWARD;
+    }
+
+    // Here, the alpha blend mode is requested but transparency is not possible,
+    // so we can perform the rendering in deferred mode
+    return R3D_RENDER_DEFERRED;
+}
+
+void r3d_render_apply_blend_mode(R3D_BlendMode mode)
+{
+    switch (mode)
+    {
+    case R3D_BLEND_OPAQUE:
+        glDisable(GL_BLEND);
+        break;
+    case R3D_BLEND_ALPHA:
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        break;
+    case R3D_BLEND_ADDITIVE:
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        break;
+    case R3D_BLEND_MULTIPLY:
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_DST_COLOR, GL_ZERO);
+        break;
+    default:
+        break;
     }
 }
 
@@ -584,7 +811,7 @@ void r3d_prepass_process_lights_and_batch(void)
     // Compute view / projection matrix
     Matrix viewProj = MatrixMultiply(R3D.state.transform.view, R3D.state.transform.proj);
 
-    for (int id = 1; id <= r3d_registry_get_allocated_count(&R3D.container.rLights); id++) {
+    for (int id = 1; id <= (int)r3d_registry_get_allocated_count(&R3D.container.rLights); id++) {
         // Check if the light in the registry is still valid
         if (!r3d_registry_is_valid(&R3D.container.rLights, id)) continue;
 
@@ -602,8 +829,8 @@ void r3d_prepass_process_lights_and_batch(void)
         switch (light->type) {
         case R3D_LIGHT_DIR:
             dstRect.x = 0, dstRect.y = 0;
-            dstRect.width = R3D.state.resolution.width;
-            dstRect.height = R3D.state.resolution.height;
+            dstRect.width = (float)R3D.state.resolution.width;
+            dstRect.height = (float)R3D.state.resolution.height;
             break;
         case R3D_LIGHT_SPOT: {
             dstRect = r3d_project_cone_bounding_box(
@@ -622,7 +849,7 @@ void r3d_prepass_process_lights_and_batch(void)
         // Determine if the light illuminates a part visible to the screen
         int screenW = R3D.state.resolution.width;
         int screenH = R3D.state.resolution.height;
-        if (!CheckCollisionRecs(dstRect, (Rectangle) { 0, 0, screenW, screenH })) {
+        if (!CheckCollisionRecs(dstRect, (Rectangle) { 0, 0, (float)screenW, (float)screenH })) {
             continue;
         }
 
@@ -662,6 +889,9 @@ void r3d_pass_shadow_maps(void)
         // TODO: The lights could be sorted to avoid too frequent
         //       state changes, just like with shaders.
 
+        // TODO: The draw calls could also be sorted
+        //       according to the shadow cast mode.
+
         // Start rendering to shadow map
         rlEnableFramebuffer(light->data->shadow.map.id);
         {
@@ -674,9 +904,8 @@ void r3d_pass_shadow_maps(void)
 
                 // Render geometries for each face of the cubemap
                 for (int j = 0; j < 6; j++) {
-                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->data->shadow.map.cube, 0);
-                    glClearColor(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, light->data->shadow.map.depth, 0);
+                    glClear(GL_DEPTH_BUFFER_BIT);
 
                     // Set view matrix for the current cubemap face
                     rlMatrixMode(RL_MODELVIEW);
@@ -686,24 +915,44 @@ void r3d_pass_shadow_maps(void)
                     // Rasterize geometries for depth rendering
                     r3d_shader_enable(raster.depthCubeInst);
                     {
+                        r3d_shader_set_vec3(raster.depthCubeInst, uViewPosition, light->data->position);
+                        r3d_shader_set_float(raster.depthCubeInst, uFar, light->data->far);
+
                         for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube_inst(call);
+                            }
                         }
+
                         for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube_inst(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube_inst(call);
+                            }
                         }
                     }
                     r3d_shader_enable(raster.depthCube);
                     {
+                        r3d_shader_set_vec3(raster.depthCube, uViewPosition, light->data->position);
+                        r3d_shader_set_float(raster.depthCube, uFar, light->data->far);
+
                         for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube(call);
+                            }
                         }
+
                         for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
                             r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForward.data + i;
-                            if (call->castShadows) r3d_drawcall_raster_depth_cube(call, light->data->position);
+                            if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                                r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                                r3d_drawcall_raster_depth_cube(call);
+                            }
                         }
                     }
                 }
@@ -724,7 +973,7 @@ void r3d_pass_shadow_maps(void)
                 }
 
                 // Store combined view and projection matrix for the shadow map
-                light->data->shadow.matViewProj = MatrixMultiply(matView, matProj);
+                light->data->shadow.matVP = MatrixMultiply(matView, matProj);
 
                 // Set up projection matrix
                 rlMatrixMode(RL_PROJECTION);
@@ -740,22 +989,34 @@ void r3d_pass_shadow_maps(void)
                 {
                     for (size_t i = 0; i < R3D.container.aDrawDeferredInst.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth_inst(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth_inst(call);
+                        }
                     }
                     for (size_t i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForwardInst.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth_inst(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth_inst(call);
+                        }
                     }
                 }
                 r3d_shader_enable(raster.depth);
                 {
                     for (size_t i = 0; i < R3D.container.aDrawDeferred.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth(call);
+                        }
                     }
                     for (size_t i = 0; i < R3D.container.aDrawForward.count; i++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawForward.data + i;
-                        if (call->castShadows) r3d_drawcall_raster_depth(call);
+                        if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
+                            r3d_shadow_apply_cast_mode(call->shadowCastMode);
+                            r3d_drawcall_raster_depth(call);
+                        }
                     }
                 }
             }
@@ -764,6 +1025,9 @@ void r3d_pass_shadow_maps(void)
         }
     }
     rlDisableFramebuffer();
+
+    // Reset face to cull
+    rlSetCullFace(RL_CULL_FACE_BACK);
 
     // Pop projection matrix
     rlMatrixMode(RL_PROJECTION);
@@ -862,8 +1126,8 @@ void r3d_pass_ssao(void)
                 (float)R3D.state.resolution.height / 2
             }));
 
-            r3d_shader_set_float(screen.ssao, uNear, rlGetCullDistanceNear());
-            r3d_shader_set_float(screen.ssao, uFar, rlGetCullDistanceFar());
+            r3d_shader_set_float(screen.ssao, uNear, (float)rlGetCullDistanceNear());
+            r3d_shader_set_float(screen.ssao, uFar, (float)rlGetCullDistanceFar());
 
             r3d_shader_set_float(screen.ssao, uRadius, R3D.env.ssaoRadius);
             r3d_shader_set_float(screen.ssao, uBias, R3D.env.ssaoBias);
@@ -871,7 +1135,7 @@ void r3d_pass_ssao(void)
             r3d_shader_bind_sampler2D(screen.ssao, uTexDepth, R3D.framebuffer.gBuffer.depth);
             r3d_shader_bind_sampler2D(screen.ssao, uTexNormal, R3D.framebuffer.gBuffer.normal);
             r3d_shader_bind_sampler1D(screen.ssao, uTexKernel, R3D.texture.ssaoKernel);
-            r3d_shader_bind_sampler2D(screen.ssao, uTexNoise, R3D.texture.ssaoNoise);
+            r3d_shader_bind_sampler2D(screen.ssao, uTexNoise, R3D.texture.randNoise);
 
             r3d_primitive_draw_quad();
 
@@ -1015,12 +1279,14 @@ void r3d_pass_lit_obj(void)
             r3d_shader_bind_sampler2D(screen.lighting, uTexNormal, R3D.framebuffer.gBuffer.normal);
             r3d_shader_bind_sampler2D(screen.lighting, uTexDepth, R3D.framebuffer.gBuffer.depth);
             r3d_shader_bind_sampler2D(screen.lighting, uTexORM, R3D.framebuffer.gBuffer.orm);
+            r3d_shader_bind_sampler2D(screen.lighting, uTexNoise, R3D.texture.randNoise);
 
             for (int i = 0; i < R3D.container.aLightBatch.count; i++) {
                 r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
 
                 // Send common data
                 r3d_shader_set_vec3(screen.lighting, uLight.color, light->data->color);
+                r3d_shader_set_float(screen.lighting, uLight.specular, light->data->specular);
                 r3d_shader_set_float(screen.lighting, uLight.energy, light->data->energy);
                 r3d_shader_set_int(screen.lighting, uLight.type, light->data->type);
 
@@ -1045,14 +1311,17 @@ void r3d_pass_lit_obj(void)
                 // Send shadow map data
                 if (light->data->shadow.enabled) {
                     if (light->data->type == R3D_LIGHT_OMNI) {
-                        r3d_shader_bind_samplerCube(screen.lighting, uLight.shadowCubemap, light->data->shadow.map.cube);
+                        r3d_shader_bind_samplerCube(screen.lighting, uLight.shadowCubemap, light->data->shadow.map.depth);
                     }
                     else {
                         r3d_shader_set_float(screen.lighting, uLight.shadowMapTxlSz, light->data->shadow.map.texelSize);
                         r3d_shader_bind_sampler2D(screen.lighting, uLight.shadowMap, light->data->shadow.map.depth);
-                        r3d_shader_set_mat4(screen.lighting, uLight.matViewProj, light->data->shadow.matViewProj);
+                        r3d_shader_set_mat4(screen.lighting, uLight.matVP, light->data->shadow.matVP);
                     }
                     r3d_shader_set_float(screen.lighting, uLight.shadowBias, light->data->shadow.bias);
+                    r3d_shader_set_float(screen.lighting, uLight.size, light->data->size);
+                    r3d_shader_set_float(screen.lighting, uLight.near, light->data->near);
+                    r3d_shader_set_float(screen.lighting, uLight.far, light->data->far);
                     r3d_shader_set_int(screen.lighting, uLight.shadow, true);
                 }
                 else {
@@ -1078,6 +1347,7 @@ void r3d_pass_lit_obj(void)
             r3d_shader_unbind_sampler2D(screen.lighting, uTexNormal);
             r3d_shader_unbind_sampler2D(screen.lighting, uTexDepth);
             r3d_shader_unbind_sampler2D(screen.lighting, uTexORM);
+            r3d_shader_unbind_sampler2D(screen.lighting, uTexNoise);
 
             r3d_shader_unbind_samplerCube(screen.lighting, uLight.shadowCubemap);
             r3d_shader_unbind_sampler2D(screen.lighting, uLight.shadowMap);
@@ -1113,6 +1383,7 @@ void r3d_pass_scene_deferred(void)
             r3d_shader_bind_sampler2D(screen.scene, uTexEnvSpecular, R3D.framebuffer.litEnv.specular);
             r3d_shader_bind_sampler2D(screen.scene, uTexObjDiffuse, R3D.framebuffer.litObj.diffuse);
             r3d_shader_bind_sampler2D(screen.scene, uTexObjSpecular, R3D.framebuffer.litObj.specular);
+            r3d_shader_bind_sampler2D(screen.scene, uTexORM, R3D.framebuffer.gBuffer.orm);
             if (R3D.env.ssaoEnabled) {
                 r3d_shader_bind_sampler2D(screen.scene, uTexSSAO,
                     R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTexIdx]
@@ -1130,6 +1401,7 @@ void r3d_pass_scene_deferred(void)
             r3d_shader_unbind_sampler2D(screen.scene, uTexEnvSpecular);
             r3d_shader_unbind_sampler2D(screen.scene, uTexObjDiffuse);
             r3d_shader_unbind_sampler2D(screen.scene, uTexObjSpecular);
+            r3d_shader_unbind_sampler2D(screen.scene, uTexORM);
             r3d_shader_unbind_sampler2D(screen.scene, uTexSSAO);
             r3d_shader_unbind_sampler2D(screen.scene, uTexAlbedo);
             r3d_shader_unbind_sampler2D(screen.scene, uTexEmission);
@@ -1250,7 +1522,9 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
         // TODO: Review this, it's not precise at all, but hard to determine without a bounding box...
         if (light->data->type != R3D_LIGHT_DIR) {
             if (!r3d_collision_check_point_in_sphere_sqr(
-                (Vector3) { call->transform.m12, call->transform.m13, call->transform.m14 },
+                (Vector3) {
+                call->transform.m12, call->transform.m13, call->transform.m14
+            },
                 light->data->position, light->data->range)) {
                 continue;
             }
@@ -1260,6 +1534,7 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
         r3d_shader_set_int(raster.forward, uLights[i].enabled, true);
         r3d_shader_set_int(raster.forward, uLights[i].type, light->data->type);
         r3d_shader_set_vec3(raster.forward, uLights[i].color, light->data->color);
+        r3d_shader_set_float(raster.forward, uLights[i].specular, light->data->specular);
         r3d_shader_set_float(raster.forward, uLights[i].energy, light->data->energy);
 
         // Send specific data
@@ -1283,14 +1558,17 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
         // Send shadow map data
         if (light->data->shadow.enabled) {
             if (light->data->type == R3D_LIGHT_OMNI) {
-                r3d_shader_bind_samplerCube(raster.forward, uLights[i].shadowCubemap, light->data->shadow.map.cube);
+                r3d_shader_bind_samplerCube(raster.forward, uLights[i].shadowCubemap, light->data->shadow.map.depth);
             }
             else {
                 r3d_shader_set_float(raster.forward, uLights[i].shadowMapTxlSz, light->data->shadow.map.texelSize);
                 r3d_shader_bind_sampler2D(raster.forward, uLights[i].shadowMap, light->data->shadow.map.depth);
-                r3d_shader_set_mat4(raster.forward, uMatLightMVP[i], light->data->shadow.matViewProj);
+                r3d_shader_set_mat4(raster.forward, uMatLightVP[i], light->data->shadow.matVP);
             }
             r3d_shader_set_float(raster.forward, uLights[i].shadowBias, light->data->shadow.bias);
+            r3d_shader_set_float(raster.forward, uLights[i].size, light->data->size);
+            r3d_shader_set_float(raster.forward, uLights[i].near, light->data->near);
+            r3d_shader_set_float(raster.forward, uLights[i].far, light->data->far);
             r3d_shader_set_int(raster.forward, uLights[i].shadow, true);
         }
         else {
@@ -1303,6 +1581,76 @@ static void r3d_pass_scene_forward_filter_and_send_lights(const r3d_drawcall_t* 
     }
 }
 
+static void r3d_pass_scene_forward_inst_filter_and_send_lights(const r3d_drawcall_t* call)
+{
+    int lightCount = 0;
+
+    for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS && i < R3D.container.aLightBatch.count; i++, lightCount++)
+    {
+        r3d_light_batched_t* light = r3d_array_at(&R3D.container.aLightBatch, i);
+
+        // TODO: Determine which light should illuminate all instances seems compromised in the current state...
+        //if (light->data->type != R3D_LIGHT_DIR) {
+        //    if (!r3d_collision_check_point_in_sphere_sqr(
+        //        (Vector3) {
+        //        call->transform.m12, call->transform.m13, call->transform.m14
+        //    },
+        //        light->data->position, light->data->range)) {
+        //        continue;
+        //    }
+        //}
+
+        // Send common data
+        r3d_shader_set_int(raster.forwardInst, uLights[i].enabled, true);
+        r3d_shader_set_int(raster.forwardInst, uLights[i].type, light->data->type);
+        r3d_shader_set_vec3(raster.forwardInst, uLights[i].color, light->data->color);
+        r3d_shader_set_float(raster.forwardInst, uLights[i].specular, light->data->specular);
+        r3d_shader_set_float(raster.forwardInst, uLights[i].energy, light->data->energy);
+
+        // Send specific data
+        if (light->data->type == R3D_LIGHT_DIR) {
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].direction, light->data->direction);
+        }
+        else if (light->data->type == R3D_LIGHT_SPOT) {
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].position, light->data->position);
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].direction, light->data->direction);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].range, light->data->range);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].attenuation, light->data->attenuation);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].innerCutOff, light->data->innerCutOff);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].outerCutOff, light->data->outerCutOff);
+        }
+        else if (light->data->type == R3D_LIGHT_OMNI) {
+            r3d_shader_set_vec3(raster.forwardInst, uLights[i].position, light->data->position);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].range, light->data->range);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].attenuation, light->data->attenuation);
+        }
+
+        // Send shadow map data
+        if (light->data->shadow.enabled) {
+            if (light->data->type == R3D_LIGHT_OMNI) {
+                r3d_shader_bind_samplerCube(raster.forwardInst, uLights[i].shadowCubemap, light->data->shadow.map.depth);
+            }
+            else {
+                r3d_shader_set_float(raster.forwardInst, uLights[i].shadowMapTxlSz, light->data->shadow.map.texelSize);
+                r3d_shader_bind_sampler2D(raster.forwardInst, uLights[i].shadowMap, light->data->shadow.map.depth);
+                r3d_shader_set_mat4(raster.forwardInst, uMatLightVP[i], light->data->shadow.matVP);
+            }
+            r3d_shader_set_float(raster.forwardInst, uLights[i].shadowBias, light->data->shadow.bias);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].size, light->data->size);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].near, light->data->near);
+            r3d_shader_set_float(raster.forwardInst, uLights[i].far, light->data->far);
+            r3d_shader_set_int(raster.forwardInst, uLights[i].shadow, true);
+        }
+        else {
+            r3d_shader_set_int(raster.forwardInst, uLights[i].shadow, false);
+        }
+    }
+
+    for (int i = lightCount; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+        r3d_shader_set_int(raster.forwardInst, uLights[i].enabled, false);
+    }
+}
+
 void r3d_pass_scene_forward(void)
 {
     rlEnableFramebuffer(R3D.framebuffer.scene.id);
@@ -1312,10 +1660,8 @@ void r3d_pass_scene_forward(void)
         rlEnableDepthTest();
         rlEnableDepthMask();
 
-        r3d_gbuffer_disable_stencil();
-
-        rlEnableColorBlend();
-        rlSetBlendMode(RL_BLEND_ALPHA);
+        // Reactivation of geometry drawing in the stencil buffer
+        r3d_gbuffer_enable_stencil_write();
 
         // Setup projection matrix
         rlMatrixMode(RL_PROJECTION);
@@ -1334,48 +1680,95 @@ void r3d_pass_scene_forward(void)
             GL_TEXTURE_2D, R3D.framebuffer.gBuffer.depth, 0
         );
 
-        r3d_shader_enable(raster.forward);
-        {
-            if (R3D.env.useSky) {
-                r3d_shader_bind_samplerCube(raster.forward, uCubeIrradiance, R3D.env.sky.irradiance.id);
-                r3d_shader_bind_samplerCube(raster.forward, uCubePrefilter, R3D.env.sky.prefilter.id);
-                r3d_shader_bind_sampler2D(raster.forward, uTexBrdfLut, R3D.texture.iblBrdfLut);
+        // Render instanced meshes
+        if (R3D.container.aDrawForwardInst.count > 0) {
+            r3d_shader_enable(raster.forwardInst);
+            {
+                r3d_shader_bind_sampler2D(raster.forwardInst, uTexNoise, R3D.texture.randNoise);
 
-                r3d_shader_set_vec4(raster.forward, uQuatSkybox, R3D.env.quatSky);
-                r3d_shader_set_int(raster.forward, uHasSkybox, true);
-            }
-            else {
-                r3d_shader_set_vec3(raster.forward, uColAmbient, R3D.env.ambientColor);
-                r3d_shader_set_int(raster.forward, uHasSkybox, false);
-            }
+                if (R3D.env.useSky) {
+                    r3d_shader_bind_samplerCube(raster.forwardInst, uCubeIrradiance, R3D.env.sky.irradiance.id);
+                    r3d_shader_bind_samplerCube(raster.forwardInst, uCubePrefilter, R3D.env.sky.prefilter.id);
+                    r3d_shader_bind_sampler2D(raster.forwardInst, uTexBrdfLut, R3D.texture.iblBrdfLut);
 
-            r3d_shader_set_vec3(raster.forward, uViewPosition, R3D.state.transform.position);
-            r3d_shader_set_float(raster.forward, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
+                    r3d_shader_set_vec4(raster.forwardInst, uQuatSkybox, R3D.env.quatSky);
+                    r3d_shader_set_int(raster.forwardInst, uHasSkybox, true);
+                }
+                else {
+                    r3d_shader_set_vec3(raster.forwardInst, uColAmbient, R3D.env.ambientColor);
+                    r3d_shader_set_int(raster.forwardInst, uHasSkybox, false);
+                }
 
-            for (int i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
-                r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForwardInst, i);
-                r3d_pass_scene_forward_filter_and_send_lights(call);
-                r3d_drawcall_raster_forward_inst(call);
-            }
+                r3d_shader_set_vec3(raster.forwardInst, uViewPosition, R3D.state.transform.position);
+                r3d_shader_set_float(raster.forwardInst, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
 
-            for (int i = 0; i < R3D.container.aDrawForward.count; i++) {
-                r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForward, i);
-                r3d_pass_scene_forward_filter_and_send_lights(call);
-                r3d_drawcall_raster_forward(call);
-            }
+                for (int i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
+                    r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForwardInst, i);
+                    r3d_pass_scene_forward_inst_filter_and_send_lights(call);
+                    r3d_render_apply_blend_mode(call->blendMode);
+                    r3d_drawcall_raster_forward_inst(call);
+                }
 
-            if (R3D.env.useSky) {
-                r3d_shader_unbind_samplerCube(raster.forward, uCubeIrradiance);
-                r3d_shader_unbind_samplerCube(raster.forward, uCubePrefilter);
-                r3d_shader_unbind_sampler2D(raster.forward, uTexBrdfLut);
-            }
+                r3d_shader_unbind_sampler2D(raster.forwardInst, uTexNoise);
 
-            for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
-                r3d_shader_unbind_samplerCube(raster.forward, uLights[i].shadowCubemap);
-                r3d_shader_unbind_sampler2D(raster.forward, uLights[i].shadowMap);
+                if (R3D.env.useSky) {
+                    r3d_shader_unbind_samplerCube(raster.forwardInst, uCubeIrradiance);
+                    r3d_shader_unbind_samplerCube(raster.forwardInst, uCubePrefilter);
+                    r3d_shader_unbind_sampler2D(raster.forwardInst, uTexBrdfLut);
+                }
+
+                for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+                    r3d_shader_unbind_samplerCube(raster.forwardInst, uLights[i].shadowCubemap);
+                    r3d_shader_unbind_sampler2D(raster.forwardInst, uLights[i].shadowMap);
+                }
             }
+            r3d_shader_disable();
         }
-        r3d_shader_disable();
+
+        // Render non-instanced meshes
+        if (R3D.container.aDrawForward.count > 0) {
+            r3d_shader_enable(raster.forward);
+            {
+                r3d_shader_bind_sampler2D(raster.forward, uTexNoise, R3D.texture.randNoise);
+
+                if (R3D.env.useSky) {
+                    r3d_shader_bind_samplerCube(raster.forward, uCubeIrradiance, R3D.env.sky.irradiance.id);
+                    r3d_shader_bind_samplerCube(raster.forward, uCubePrefilter, R3D.env.sky.prefilter.id);
+                    r3d_shader_bind_sampler2D(raster.forward, uTexBrdfLut, R3D.texture.iblBrdfLut);
+
+                    r3d_shader_set_vec4(raster.forward, uQuatSkybox, R3D.env.quatSky);
+                    r3d_shader_set_int(raster.forward, uHasSkybox, true);
+                }
+                else {
+                    r3d_shader_set_vec3(raster.forward, uColAmbient, R3D.env.ambientColor);
+                    r3d_shader_set_int(raster.forward, uHasSkybox, false);
+                }
+
+                r3d_shader_set_vec3(raster.forward, uViewPosition, R3D.state.transform.position);
+                r3d_shader_set_float(raster.forward, uBloomHdrThreshold, R3D.env.bloomHdrThreshold);
+
+                for (int i = 0; i < R3D.container.aDrawForward.count; i++) {
+                    r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForward, i);
+                    r3d_pass_scene_forward_filter_and_send_lights(call);
+                    r3d_render_apply_blend_mode(call->blendMode);
+                    r3d_drawcall_raster_forward(call);
+                }
+
+                r3d_shader_unbind_sampler2D(raster.forward, uTexNoise);
+
+                if (R3D.env.useSky) {
+                    r3d_shader_unbind_samplerCube(raster.forward, uCubeIrradiance);
+                    r3d_shader_unbind_samplerCube(raster.forward, uCubePrefilter);
+                    r3d_shader_unbind_sampler2D(raster.forward, uTexBrdfLut);
+                }
+
+                for (int i = 0; i < R3D_SHADER_FORWARD_NUM_LIGHTS; i++) {
+                    r3d_shader_unbind_samplerCube(raster.forward, uLights[i].shadowCubemap);
+                    r3d_shader_unbind_sampler2D(raster.forward, uLights[i].shadowMap);
+                }
+            }
+            r3d_shader_disable();
+        }
 
         // Reset projection matrix
         rlMatrixMode(RL_PROJECTION);
@@ -1387,22 +1780,22 @@ void r3d_pass_scene_forward(void)
     }
 }
 
-void r3d_pass_post_init(unsigned int fb, unsigned srcBuf, unsigned dstBuf)
+void r3d_pass_post_init(unsigned int fb, unsigned srcAttach)
 {
     r3d_gbuffer_disable_stencil();
 
-    rlEnableFramebuffer(R3D.framebuffer.post.id);
+    glBindFramebuffer(GL_FRAMEBUFFER, R3D.framebuffer.post.id);
+
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
         R3D.framebuffer.post.textures[R3D.framebuffer.post.targetTexIdx], 0
     );
-    rlDisableFramebuffer();
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, R3D.framebuffer.post.id);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, fb);
 
-    glReadBuffer(srcBuf);
-    glDrawBuffer(dstBuf);
+    glReadBuffer(srcAttach);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
     glBlitFramebuffer(
         0, 0, R3D.state.resolution.width, R3D.state.resolution.height,
@@ -1500,8 +1893,8 @@ void r3d_pass_post_fog(void)
             );
             R3D.framebuffer.post.targetTexIdx = !R3D.framebuffer.post.targetTexIdx;
 
-            r3d_shader_set_float(screen.fog, uNear, rlGetCullDistanceNear());
-            r3d_shader_set_float(screen.fog, uFar, rlGetCullDistanceFar());
+            r3d_shader_set_float(screen.fog, uNear, (float)rlGetCullDistanceNear());
+            r3d_shader_set_float(screen.fog, uFar, (float)rlGetCullDistanceFar());
             r3d_shader_set_int(screen.fog, uFogMode, R3D.env.fogMode);
             r3d_shader_set_vec3(screen.fog, uFogColor, R3D.env.fogColor);
             r3d_shader_set_float(screen.fog, uFogStart, R3D.env.fogStart);
@@ -1623,12 +2016,12 @@ void r3d_pass_final_blit(void)
         float dstRatio = (float)dstW / dstH;
         if (srcRatio > dstRatio) {
             int prevH = dstH;
-            dstH = dstW * srcRatio;
+            dstH = (int)(dstW * srcRatio + 0.5f);
             dstY = (prevH - dstH) / 2;
         }
         else {
             int prevW = dstW;
-            dstW = dstH * srcRatio;
+            dstW = (int)(dstH * srcRatio + 0.5f);
             dstX = (prevW - dstW) / 2;
         }
     }

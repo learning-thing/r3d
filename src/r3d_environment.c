@@ -181,9 +181,9 @@ void R3D_SetFogColor(Color color)
 Color R3D_GetFogColor(void)
 {
 	Color color = { 0 };
-	color.r = R3D.env.fogColor.x * 255;
-	color.g = R3D.env.fogColor.y * 255;
-	color.b = R3D.env.fogColor.z * 255;
+	color.r = (unsigned char)(R3D.env.fogColor.x * 255);
+	color.g = (unsigned char)(R3D.env.fogColor.y * 255);
+	color.b = (unsigned char)(R3D.env.fogColor.z * 255);
 	color.a = 255;
 	return color;
 }

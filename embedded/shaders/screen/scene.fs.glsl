@@ -31,6 +31,7 @@ uniform sampler2D uTexEnvSpecular;
 uniform sampler2D uTexObjDiffuse;
 uniform sampler2D uTexObjSpecular;
 
+uniform sampler2D uTexORM;          //< Just for occlusion map (from G-Buffer)
 uniform sampler2D uTexSSAO;
 uniform sampler2D uTexAlbedo;
 uniform sampler2D uTexEmission;
@@ -53,27 +54,30 @@ float GetBrightness(vec3 color)
 
 void main()
 {
+    /* Sample textures */
+
     vec3 envAmbient = texture(uTexEnvAmbient, vTexCoord).rgb;
     vec3 envSpecular = texture(uTexEnvSpecular, vTexCoord).rgb;
 
     vec3 objDiffuse = texture(uTexObjDiffuse, vTexCoord).rgb;
     vec3 objSpecular = texture(uTexObjSpecular, vTexCoord).rgb;
 
-    float ssao = texture(uTexSSAO, vTexCoord).r;
     vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
     vec3 emission = texture(uTexEmission, vTexCoord).rgb;
 
-    // NOTE: Despite the fact that the occlusion map is applied only to "real" lighting,
-    //       I have chosen to apply SSAO to both the lighting and the environment.
-    //       This means that with extreme values, the rendering can become black
-    //       (darker than the ambient tint).
-    //       This is not physically correct, but it somewhat better simulates
-    //       "global illumination" in a way...
+    float occlusion = texture(uTexORM, vTexCoord).r;
+    occlusion *= texture(uTexSSAO, vTexCoord).r;
 
-    vec3 diffuse = albedo * (envAmbient + objDiffuse) * ssao;
-    vec3 specular = (objSpecular + envSpecular) * ssao;
+    /* Compute ambient lighting and direct lighting */
+
+    envAmbient *= occlusion;
+
+    vec3 diffuse = albedo * (envAmbient + objDiffuse);
+    vec3 specular = (objSpecular + envSpecular);
 
     FragColor = diffuse + specular + emission;
+
+    /* Extract brightness parts for bloom */
 
     float bright = GetBrightness(FragColor);
     FragBrightness = FragColor * step(uBloomHdrThreshold, bright);

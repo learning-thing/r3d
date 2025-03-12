@@ -196,6 +196,18 @@ void R3D_SetLightEnergy(R3D_Light id, float energy)
     light->energy = energy;
 }
 
+float R3D_GetLightSpecular(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->specular;
+}
+
+void R3D_SetLightSpecular(R3D_Light id, float specular)
+{
+    r3d_get_and_check_light(light, id);
+    light->specular = specular;
+}
+
 float R3D_GetLightRange(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
@@ -208,16 +220,28 @@ void R3D_SetLightRange(R3D_Light id, float range)
     light->range = range;
 }
 
+float R3D_GetLightSize(R3D_Light id)
+{
+    r3d_get_and_check_light(light, id, 0);
+    return light->size;
+}
+
+void R3D_SetLightSize(R3D_Light id, float size)
+{
+    r3d_get_and_check_light(light, id);
+    light->size = size;
+}
+
 float R3D_GetLightAttenuation(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
-    return light->attenuation;
+    return 1.0f / light->attenuation;
 }
 
 void R3D_SetLightAttenuation(R3D_Light id, float attenuation)
 {
     r3d_get_and_check_light(light, id);
-    light->attenuation = attenuation;
+    light->attenuation = 1.0f / attenuation;
 }
 
 float R3D_GetLightInnerCutOff(R3D_Light id)
@@ -301,7 +325,7 @@ void R3D_SetShadowUpdateMode(R3D_Light id, R3D_ShadowUpdateMode mode)
 int R3D_GetShadowUpdateFrequency(R3D_Light id)
 {
     r3d_get_and_check_light(light, id, 0);
-    return light->shadow.updateConf.frequencySec * 1000;
+    return (int)(light->shadow.updateConf.frequencySec * 1000);
 }
 
 void R3D_SetShadowUpdateFrequency(R3D_Light id, int msec)
@@ -344,7 +368,7 @@ void R3D_DrawLightShape(R3D_Light id)
         100
     };
 
-    DrawSphereEx(light->position, 0.1f, 4, 8, color);
+    DrawSphereEx(light->position, light->size * 0.5f, 4, 8, color);
 
     if (light->type == R3D_LIGHT_SPOT)
     {

@@ -45,9 +45,10 @@ glsl_keywords = {
     'determinant', 'mod', 'modf', 'isnan', 'isinf', 'ldexp',
 
     # Texture operators and functions
-    'texture2D', 'textureCube', 'texture2DArray', 'sampler2D', 'samplerCube', 
-    'sampler2DArray', 'samplerCubeArray', 'texture1D', 'sampler1D', 'texture1DArray', 
-    'sampler1DArray', 'dFdx', 'dFdy', 'fwidth',
+    'texture2D', 'textureCube', 'texture2DArray', 'sampler2D', 'sampler2DShadow',
+    'samplerCube', 'samplerCubeShadow', 'sampler2DArray', 'samplerCubeArray',
+    'texture1D', 'sampler1D', 'texture1DArray', 'sampler1DArray',
+    'dFdx', 'dFdy', 'fwidth',
 
     # Image data types
     'image2D', 'image3D', 'imageCube', 'image2DArray', 'image3DArray', 'imageCubeArray', 
