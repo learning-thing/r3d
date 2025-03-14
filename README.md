@@ -87,6 +87,30 @@ R3D requires an OpenGL 3.3+ compatible driver. OpenGL ES support is not yet avai
    - R3D is a CMake project, and you can include it in your own CMake-based project via `add_subdirectory()` or by linking directly to the built library.
    - If you're using it as the main project, you can build the examples using the option `R3D_BUILD_EXAMPLES` in CMake.
 
+5. **Cross Compilation**:
+
+   You can also perform cross-compilation on Linux for Windows using MinGW.
+
+   #### Prerequisites
+   Ensure that MinGW is installed on your system. For example, on a Debian or Ubuntu-based system, run:
+
+   ```bash
+   sudo apt-get install mingw-w64
+   ```
+
+   #### Project Configuration
+   Once inside the `build` directory, use one of the following commands depending on the target architecture:
+
+   - **For Windows 32-bit**:
+   ```bash
+   cmake .. -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w32-x86_64.cmake
+   ```
+
+   - **For Windows 64-bit**:
+   ```bash
+   cmake .. -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-x86_64.cmake
+   ```
+
 ---
 
 ## Usage
