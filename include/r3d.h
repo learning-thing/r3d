@@ -1264,28 +1264,6 @@ R3DAPI void R3D_UpdateSprite(R3D_Sprite* sprite, float speed);
  */
 R3DAPI void R3D_UpdateSpriteEx(R3D_Sprite* sprite, int firstFrame, int lastFrame, float speed);
 
-/**
- * @brief Retrieves the current frame's texture coordinates for a sprite.
- *
- * This function returns the `Vector2` representing the top-left corner of the current frame's texture coordinates.
- *
- * @param sprite A pointer to the `R3D_Sprite` to query.
- *
- * @return A `Vector2` containing the current frame's texture coordinates.
- */
-R3DAPI Vector2 R3D_GetCurrentSpriteFrameCoord(const R3D_Sprite* sprite);
-
-/**
- * @brief Retrieves the current frame's rectangle for a sprite.
- *
- * This function returns a `Rectangle` representing the dimensions and position of the current frame within the texture.
- *
- * @param sprite A pointer to the `R3D_Sprite` to query.
- *
- * @return A `Rectangle` representing the current frame's position and size.
- */
-R3DAPI Rectangle R3D_GetCurrentSpriteFrameRect(const R3D_Sprite* sprite);
-
 
 
 // --------------------------------------------

@@ -35,21 +35,3 @@ void R3D_UpdateSpriteEx(R3D_Sprite* sprite, int firstFrame, int lastFrame, float
 {
     sprite->currentFrame = Wrap(sprite->currentFrame + speed, firstFrame, lastFrame);
 }
-
-Vector2 R3D_GetCurrentSpriteFrameCoord(const R3D_Sprite* sprite)
-{
-    int xFrame = (int)(sprite->currentFrame) % sprite->xFrameCount;
-    int yFrame = (int)(sprite->currentFrame) / sprite->yFrameCount;
-    return Vector2Multiply((Vector2) { (float)xFrame, (float)yFrame }, sprite->frameSize);
-}
-
-Rectangle R3D_GetCurrentSpriteFrameRect(const R3D_Sprite* sprite)
-{
-    Vector2 coord = R3D_GetCurrentSpriteFrameCoord(sprite);
-
-    return (Rectangle) {
-        coord.x, coord.y,
-        sprite->frameSize.x,
-        sprite->frameSize.y
-    };
-}
