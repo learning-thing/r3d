@@ -22,27 +22,39 @@ endif()
 
 option(R3D_BUILD_SHARED "Build r3d as a shared library" OFF)
 option(R3D_BUILD_EXAMPLES "Build the examples" ${R3D_IS_MAIN})
+option(R3D_BUILD_RAYLIB_SHARED "Build raylib as dynamic if built with r3d" OFF)
+
+set(R3D_RAYLIB_PATH "" CACHE STRING "Path to a specific raylib installation")
 
 # Include standard cmake scripts
 
 include(CheckLibraryExists)
 
-# Submodule check for raylib
+# Checks for raylib installation
 
-set(RAYLIB_PATH "${R3D_ROOT_PATH}/external/raylib")
+if(R3D_BUILD_RAYLIB_SHARED)
+    set(BUILD_SHARED_LIBS ON)
+endif()
 
-if(EXISTS "${RAYLIB_PATH}/CMakeLists.txt")
-  if(R3D_BUILD_SHARED)
-   set(BUILD_SHARED_LIBS ON)
-  endif() 
-    message(STATUS "Submodule raylib found and valid.")
-    add_subdirectory("${RAYLIB_PATH}")
+if(NOT "${R3D_RAYLIB_PATH}" STREQUAL "" AND EXISTS "${R3D_RAYLIB_PATH}/CMakeLists.txt")
+    message(STATUS "Using custom raylib installation: ${R3D_RAYLIB_PATH}")
+    add_subdirectory("${R3D_RAYLIB_PATH}")
+elseif(EXISTS "${R3D_ROOT_PATH}/external/raylib/CMakeLists.txt")
+    message(STATUS "Using raylib from submodule: ${R3D_ROOT_PATH}/external/raylib")
+    add_subdirectory("${R3D_ROOT_PATH}/external/raylib")
 else()
     find_package(raylib QUIET)
     if(TARGET raylib)
-        message(STATUS "raylib found via find_package.")
+        message(STATUS "Using system-installed raylib")
     else()
-        message(FATAL_ERROR "The 'raylib' submodule is missing or incomplete, and 'find_package(raylib)' failed. Please make sure the submodule is initialized and updated (git submodule update --init --recursive).")
+        message(FATAL_ERROR "No valid raylib installation found!
+- Custom path: '${R3D_RAYLIB_PATH}' (invalid or missing CMakeLists.txt)
+- Submodule: '${R3D_ROOT_PATH}/external/raylib' (missing or incomplete)
+- System-wide installation: find_package(raylib) failed
+
+Please provide a valid raylib installation, initialize the submodule with:
+    git submodule update --init --recursive
+or install raylib on your system.")
     endif()
 endif()
 
