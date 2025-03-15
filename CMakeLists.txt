@@ -24,7 +24,8 @@ option(R3D_BUILD_SHARED "Build r3d as a shared library" OFF)
 option(R3D_BUILD_EXAMPLES "Build the examples" ${R3D_IS_MAIN})
 option(R3D_BUILD_RAYLIB_SHARED "Build raylib as dynamic if built with r3d" OFF)
 
-set(R3D_RAYLIB_PATH "" CACHE STRING "Path to a specific raylib installation")
+set(R3D_RAYLIB_SRC_PATH "" CACHE STRING "Path to a specific raylib source")
+set(R3D_RAYLIB_BIN_PATH "" CACHE STRING "Path to a specific raylib binary")
 
 # Include standard cmake scripts
 
@@ -36,25 +37,36 @@ if(R3D_BUILD_RAYLIB_SHARED)
     set(BUILD_SHARED_LIBS ON)
 endif()
 
-if(NOT "${R3D_RAYLIB_PATH}" STREQUAL "" AND EXISTS "${R3D_RAYLIB_PATH}/CMakeLists.txt")
-    message(STATUS "Using custom raylib installation: ${R3D_RAYLIB_PATH}")
-    add_subdirectory("${R3D_RAYLIB_PATH}")
-elseif(EXISTS "${R3D_ROOT_PATH}/external/raylib/CMakeLists.txt")
-    message(STATUS "Using raylib from submodule: ${R3D_ROOT_PATH}/external/raylib")
-    add_subdirectory("${R3D_ROOT_PATH}/external/raylib")
-else()
-    find_package(raylib QUIET)
-    if(TARGET raylib)
-        message(STATUS "Using system-installed raylib")
+if("${R3D_RAYLIB_SRC_PATH}" STREQUAL "" AND "${R3D_RAYLIB_BIN_PATH}" STREQUAL "")
+    if(EXISTS "${R3D_ROOT_PATH}/external/raylib/CMakeLists.txt")
+        message(STATUS "Using raylib from submodule: ${R3D_ROOT_PATH}/external/raylib")
+        add_subdirectory("${R3D_ROOT_PATH}/external/raylib")
+        set(R3D_RAYLIB_SRC_PATH "${R3D_ROOT_PATH}/external/raylib/src" CACHE STRING "Path to raylib source" FORCE)
+        set(R3D_RAYLIB_BIN_PATH "raylib" CACHE STRING "Path to raylib binary" FORCE)
     else()
-        message(FATAL_ERROR "No valid raylib installation found!
-- Custom path: '${R3D_RAYLIB_PATH}' (invalid or missing CMakeLists.txt)
+        find_package(raylib QUIET)
+        if(TARGET raylib)
+            message(STATUS "Using system-installed raylib")
+            get_target_property(RAYLIB_INCLUDE_DIR raylib INTERFACE_INCLUDE_DIRECTORIES)
+            set(R3D_RAYLIB_SRC_PATH "${RAYLIB_INCLUDE_DIR}" CACHE STRING "Path to raylib source" FORCE)
+            set(R3D_RAYLIB_BIN_PATH "raylib" CACHE STRING "Path to raylib binary" FORCE)
+        else()
+            message(FATAL_ERROR "No valid raylib installation found!
+- Custom path: '${R3D_RAYLIB_SRC_PATH}' '${R3D_RAYLIB_BIN_PATH}' (invalid or missing CMakeLists.txt)
 - Submodule: '${R3D_ROOT_PATH}/external/raylib' (missing or incomplete)
 - System-wide installation: find_package(raylib) failed
 
 Please provide a valid raylib installation, initialize the submodule with:
     git submodule update --init --recursive
 or install raylib on your system.")
+        endif()
+    endif()
+else()
+    if("${R3D_RAYLIB_SRC_PATH}" STREQUAL "")
+        message(FATAL_ERROR "Invalid raylib source directory: ${R3D_RAYLIB_SRC_PATH}")
+    endif()
+    if("${R3D_RAYLIB_BIN_PATH}" STREQUAL "")
+        message(FATAL_ERROR "Invalid raylib binary path: ${R3D_RAYLIB_BIN_PATH}")
     endif()
 endif()
 
@@ -105,7 +117,7 @@ add_library(${PROJECT_NAME} ${R3D_LIB_TYPE}
 
 # Link project dependencies
 
-target_link_libraries(${PROJECT_NAME} PUBLIC raylib)
+target_link_libraries(${PROJECT_NAME} PUBLIC "${R3D_RAYLIB_BIN_PATH}")
 
 check_library_exists(m cos "" HAVE_LIB_M)
 
@@ -116,9 +128,9 @@ endif()
 # Specify the include directories needed for the project
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-    "${R3D_ROOT_PATH}/include"
     "${R3D_ROOT_PATH}/external/glad"
-    "${R3D_ROOT_PATH}/external/raylib/src"
+    "${R3D_ROOT_PATH}/include"
+    "${R3D_RAYLIB_SRC_PATH}"
 )
 
 # Ensure the C standard is set for MSVC if using CMake version greater than 3.12
