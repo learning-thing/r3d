@@ -249,6 +249,12 @@ void r3d_framebuffer_load_scene(int width, int height)
     rlFramebufferAttach(scene->id, scene->color, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
     rlFramebufferAttach(scene->id, scene->bright, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
 
+    // Attach the depth-stencil buffer from the G-buffer
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+        GL_TEXTURE_2D, R3D.framebuffer.gBuffer.depth, 0
+    );
+
     // Check if the framebuffer is complete
     if (!rlFramebufferComplete(scene->id)) {
         TraceLog(LOG_WARNING, "Framebuffer is not complete");

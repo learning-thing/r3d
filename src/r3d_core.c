@@ -57,8 +57,8 @@ static void r3d_gbuffer_enable_stencil_write(void);
 static void r3d_gbuffer_enable_stencil_test(bool passOnGeometry);
 static void r3d_gbuffer_disable_stencil(void);
 
-static void r3d_prepass_sort_drawcalls(void);
-static void r3d_prepass_process_lights_and_batch(void);
+static void r3d_prepare_sort_drawcalls(void);
+static void r3d_prepare_process_lights_and_batch(void);
 
 static void r3d_pass_shadow_maps(void);
 static void r3d_pass_gbuffer(void);
@@ -69,6 +69,7 @@ static void r3d_pass_lit_obj(void);
 
 static void r3d_pass_scene_deferred(void);
 static void r3d_pass_scene_background(void);
+static void r3d_pass_scene_forward_depth_prepass(void);
 static void r3d_pass_scene_forward(void);
 
 static void r3d_pass_post_init(unsigned int fb, unsigned srcAttach);
@@ -323,8 +324,8 @@ void R3D_Begin(Camera3D camera)
 
 void R3D_End(void)
 {
-    r3d_prepass_sort_drawcalls();
-    r3d_prepass_process_lights_and_batch();
+    r3d_prepare_sort_drawcalls();
+    r3d_prepare_process_lights_and_batch();
 
     r3d_pass_shadow_maps();
     r3d_pass_gbuffer();
@@ -342,6 +343,9 @@ void R3D_End(void)
     r3d_pass_scene_background();
 
     if (R3D.container.aDrawForward.count > 0 || R3D.container.aDrawForwardInst.count > 0) {
+        if (R3D.state.flags & R3D_FLAG_DEPTH_PREPASS) {
+            r3d_pass_scene_forward_depth_prepass();
+        }
         r3d_pass_scene_forward();
     }
 
@@ -840,7 +844,7 @@ void r3d_gbuffer_disable_stencil(void)
     glDisable(GL_STENCIL_TEST);
 }
 
-void r3d_prepass_sort_drawcalls(void)
+void r3d_prepare_sort_drawcalls(void)
 {
     // Sort front-to-back for deferred rendering
     // This optimizes the depth test
@@ -857,7 +861,7 @@ void r3d_prepass_sort_drawcalls(void)
     );
 }
 
-void r3d_prepass_process_lights_and_batch(void)
+void r3d_prepare_process_lights_and_batch(void)
 {
     // Clear the previous light batch
     r3d_array_clear(&R3D.container.aLightBatch);
@@ -1705,12 +1709,15 @@ static void r3d_pass_scene_forward_inst_filter_and_send_lights(const r3d_drawcal
     }
 }
 
-void r3d_pass_scene_forward(void)
+void r3d_pass_scene_forward_depth_prepass(void)
 {
     rlEnableFramebuffer(R3D.framebuffer.scene.id);
     {
         rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
         rlEnableBackfaceCulling();
+
+        // Setup the depth pre-pass
+        rlColorMask(false, false, false, false);
         rlEnableDepthTest();
         rlEnableDepthMask();
 
@@ -1727,12 +1734,69 @@ void r3d_pass_scene_forward(void)
         rlLoadIdentity();
         rlMultMatrixf(MatrixToFloat(R3D.state.transform.view));
 
-        // Attach the depth texture of the G-Buffer
-        // We need it for depth testing
-        glFramebufferTexture2D(
-            GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-            GL_TEXTURE_2D, R3D.framebuffer.gBuffer.depth, 0
-        );
+        // Render instanced meshes
+        if (R3D.container.aDrawForwardInst.count > 0) {
+            r3d_shader_enable(raster.depthInst);
+            {
+                for (int i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
+                    r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForwardInst, i);
+                    r3d_drawcall_raster_depth_inst(call);
+                }
+            }
+            r3d_shader_disable();
+        }
+
+        // Render non-instanced meshes
+        if (R3D.container.aDrawForward.count > 0) {
+            r3d_shader_enable(raster.depth);
+            {
+                // We render in reverse order to prioritize drawing the nearest
+                // objects first, in order to optimize early depth testing.
+                for (int i = R3D.container.aDrawForward.count - 1; i >= 0; i--) {
+                    r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForward, i);
+                    r3d_drawcall_raster_depth(call);
+                }
+            }
+            r3d_shader_disable();
+        }
+
+        // Reset projection matrix
+        rlMatrixMode(RL_PROJECTION);
+        rlPopMatrix();
+
+        // Reset view matrix
+        rlMatrixMode(RL_MODELVIEW);
+        rlLoadIdentity();
+    }
+}
+
+void r3d_pass_scene_forward(void)
+{
+    rlEnableFramebuffer(R3D.framebuffer.scene.id);
+    {
+        rlViewport(0, 0, R3D.state.resolution.width, R3D.state.resolution.height);
+        rlColorMask(true, true, true, true);
+        rlEnableBackfaceCulling();
+        rlEnableDepthTest();
+
+        if (R3D.state.flags & R3D_FLAG_DEPTH_PREPASS) {
+            glDepthFunc(GL_EQUAL);
+            rlDisableDepthMask();
+        }
+        else {
+            r3d_gbuffer_enable_stencil_write();
+            rlEnableDepthMask();
+        }
+
+        // Setup projection matrix
+        rlMatrixMode(RL_PROJECTION);
+        rlPushMatrix();
+        rlSetMatrixProjection(R3D.state.transform.proj);
+
+        // Setup view matrix
+        rlMatrixMode(RL_MODELVIEW);
+        rlLoadIdentity();
+        rlMultMatrixf(MatrixToFloat(R3D.state.transform.view));
 
         // Render instanced meshes
         if (R3D.container.aDrawForwardInst.count > 0) {
@@ -2109,4 +2173,6 @@ void r3d_reset_raylib_state(void)
     rlEnableBackfaceCulling();
     rlEnableColorBlend();
     rlDisableDepthTest();
+
+    glDepthFunc(GL_LEQUAL);
 }
