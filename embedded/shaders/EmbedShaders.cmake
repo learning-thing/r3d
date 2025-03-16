@@ -4,6 +4,8 @@ if("${R3D_CUSTOM_SHADER_PATH}" STREQUAL "")
     set(R3D_CUSTOM_SHADER_PATH "${R3D_ROOT_PATH}/embedded/shaders" CACHE STRING "" FORCE)
 endif()
 
+message(STATUS "Using shader path: '${R3D_CUSTOM_SHADER_PATH}'")
+
 function(ProcessShader shader_file var_name)
     execute_process(
         COMMAND ${PYTHON_EXECUTABLE} "${R3D_ROOT_PATH}/scripts/glsl_minifier.py" "${shader_file}"
