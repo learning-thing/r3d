@@ -17,8 +17,6 @@
  *   3. This notice may not be removed or altered from any source distribution.
  */
 
-// TODO: Load some shaders/textures when needed (like ssao/lut/etc)
-
 #include "r3d.h"
 
 #include <raylib.h>
@@ -42,6 +40,12 @@
 
 static void r3d_framebuffers_load(int width, int height);
 static void r3d_framebuffers_unload(void);
+
+static void r3d_textures_load(void);
+static void r3d_textures_unload(void);
+
+static void r3d_shaders_load(void);
+static void r3d_shaders_unload(void);
 
 static void r3d_sprite_get_uv_scale_offset(const R3D_Sprite* sprite, Vector2* uvScale, Vector2* uvOffset, float sgnX, float sgnY);
 static void r3d_shadow_apply_cast_mode(R3D_ShadowCastMode mode);
@@ -82,8 +86,10 @@ static void r3d_reset_raylib_state(void);
 
 void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 {
-    // Load framebuffers
+    // Load GL Objects
     r3d_framebuffers_load(resWidth, resHeight);
+    r3d_textures_load();
+    r3d_shaders_load();
 
     // Load draw call arrays
     R3D.container.aDrawForward = r3d_array_create(32, sizeof(r3d_drawcall_t));
@@ -94,35 +100,6 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     // Load lights registry
     R3D.container.rLights = r3d_registry_create(8, sizeof(r3d_light_t));
     R3D.container.aLightBatch = r3d_array_create(8, sizeof(r3d_light_batched_t));
-
-    // Load generation shaders
-    r3d_shader_load_generate_gaussian_blur_dual_pass();
-    r3d_shader_load_generate_cubemap_from_equirectangular();
-    r3d_shader_load_generate_irradiance_convolution();
-    r3d_shader_load_generate_prefilter();
-
-    // Load raster shaders
-    r3d_shader_load_raster_geometry();
-    r3d_shader_load_raster_geometry_inst();
-    r3d_shader_load_raster_forward();
-    r3d_shader_load_raster_forward_inst();
-    r3d_shader_load_raster_skybox();
-    r3d_shader_load_raster_depth();
-    r3d_shader_load_raster_depth_inst();
-    r3d_shader_load_raster_depth_cube();
-    r3d_shader_load_raster_depth_cube_inst();
-
-    // Load screen shaders
-    r3d_shader_load_screen_ssao();
-    r3d_shader_load_screen_ibl();
-    r3d_shader_load_screen_lighting();
-    r3d_shader_load_screen_scene();
-    r3d_shader_load_screen_bloom();
-    r3d_shader_load_screen_fog();
-    r3d_shader_load_screen_tonemap();
-    r3d_shader_load_screen_adjustment();
-    r3d_shader_load_screen_fxaa();
-    r3d_shader_load_screen_color();
 
     // Environment data
     R3D.env.backgroundColor = (Vector3) { 0.2f, 0.2f, 0.2f };
@@ -171,14 +148,6 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     // Set parameter flags
     R3D.state.flags = flags;
 
-    // Load default textures
-    r3d_texture_load_white();
-    r3d_texture_load_black();
-    r3d_texture_load_normal();
-    r3d_texture_load_rand_noise();
-    r3d_texture_load_ssao_kernel();
-    r3d_texture_load_ibl_brdf_lut();
-
     // Load primitive shapes
     R3D.primitive.quad = r3d_primitive_load_quad();
     R3D.primitive.cube = r3d_primitive_load_cube();
@@ -195,6 +164,8 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
 void R3D_Close(void)
 {
     r3d_framebuffers_unload();
+    r3d_textures_unload();
+    r3d_shaders_unload();
 
     r3d_array_destroy(&R3D.container.aDrawForward);
     r3d_array_destroy(&R3D.container.aDrawDeferred);
@@ -203,35 +174,6 @@ void R3D_Close(void)
 
     r3d_registry_destroy(&R3D.container.rLights);
     r3d_array_destroy(&R3D.container.aLightBatch);
-
-    rlUnloadShaderProgram(R3D.shader.generate.gaussianBlurDualPass.id);
-    rlUnloadShaderProgram(R3D.shader.generate.cubemapFromEquirectangular.id);
-    rlUnloadShaderProgram(R3D.shader.generate.irradianceConvolution.id);
-    rlUnloadShaderProgram(R3D.shader.generate.prefilter.id);
-    rlUnloadShaderProgram(R3D.shader.raster.geometry.id);
-    rlUnloadShaderProgram(R3D.shader.raster.geometryInst.id);
-    rlUnloadShaderProgram(R3D.shader.raster.forward.id);
-    rlUnloadShaderProgram(R3D.shader.raster.forwardInst.id);
-    rlUnloadShaderProgram(R3D.shader.raster.skybox.id);
-    rlUnloadShaderProgram(R3D.shader.raster.depth.id);
-    rlUnloadShaderProgram(R3D.shader.raster.depthInst.id);
-    rlUnloadShaderProgram(R3D.shader.raster.depthCube.id);
-    rlUnloadShaderProgram(R3D.shader.raster.depthCubeInst.id);
-    rlUnloadShaderProgram(R3D.shader.screen.ssao.id);
-    rlUnloadShaderProgram(R3D.shader.screen.lighting.id);
-    rlUnloadShaderProgram(R3D.shader.screen.bloom.id);
-    rlUnloadShaderProgram(R3D.shader.screen.fog.id);
-    rlUnloadShaderProgram(R3D.shader.screen.tonemap.id);
-    rlUnloadShaderProgram(R3D.shader.screen.adjustment.id);
-    rlUnloadShaderProgram(R3D.shader.screen.fxaa.id);
-    rlUnloadShaderProgram(R3D.shader.screen.color.id);
-
-    rlUnloadTexture(R3D.texture.white);
-    rlUnloadTexture(R3D.texture.black);
-    rlUnloadTexture(R3D.texture.normal);
-    rlUnloadTexture(R3D.texture.randNoise);
-    rlUnloadTexture(R3D.texture.ssaoKernel);
-    rlUnloadTexture(R3D.texture.iblBrdfLut);
 
     r3d_primitive_unload(&R3D.primitive.quad);
     r3d_primitive_unload(&R3D.primitive.cube);
@@ -245,6 +187,12 @@ bool R3D_HasState(unsigned int flag)
 void R3D_SetState(unsigned int flags)
 {
     R3D.state.flags |= flags;
+
+    if (flags & R3D_FLAG_FXAA) {
+        if (R3D.shader.screen.fxaa.id == 0) {
+            r3d_shader_load_screen_fxaa();
+        }
+    }
 }
 
 void R3D_ClearState(unsigned int flags)
@@ -633,6 +581,112 @@ void r3d_framebuffers_unload(void)
 
     if (R3D.framebuffer.pingPongBloom.id != 0) {
         r3d_framebuffer_unload_pingpong_bloom();
+    }
+}
+
+void r3d_textures_load(void)
+{
+    r3d_texture_load_white();
+    r3d_texture_load_black();
+    r3d_texture_load_normal();
+    r3d_texture_load_rand_noise();
+    r3d_texture_load_ibl_brdf_lut();
+
+    if (R3D.env.ssaoEnabled) {
+        r3d_texture_load_ssao_kernel();
+    }
+}
+
+void r3d_textures_unload(void)
+{
+    rlUnloadTexture(R3D.texture.white);
+    rlUnloadTexture(R3D.texture.black);
+    rlUnloadTexture(R3D.texture.normal);
+    rlUnloadTexture(R3D.texture.randNoise);
+    rlUnloadTexture(R3D.texture.iblBrdfLut);
+
+    if (R3D.texture.ssaoKernel != 0) {
+        rlUnloadTexture(R3D.texture.ssaoKernel);
+    }
+}
+
+void r3d_shaders_load(void)
+{
+    // Load generation shaders
+    r3d_shader_load_generate_gaussian_blur_dual_pass();
+    r3d_shader_load_generate_cubemap_from_equirectangular();
+    r3d_shader_load_generate_irradiance_convolution();
+    r3d_shader_load_generate_prefilter();
+
+    // Load raster shaders
+    r3d_shader_load_raster_geometry();
+    r3d_shader_load_raster_geometry_inst();
+    r3d_shader_load_raster_forward();
+    r3d_shader_load_raster_forward_inst();
+    r3d_shader_load_raster_skybox();
+    r3d_shader_load_raster_depth();
+    r3d_shader_load_raster_depth_inst();
+    r3d_shader_load_raster_depth_cube();
+    r3d_shader_load_raster_depth_cube_inst();
+
+    // Load screen shaders
+    r3d_shader_load_screen_ibl();
+    r3d_shader_load_screen_lighting();
+    r3d_shader_load_screen_scene();
+    r3d_shader_load_screen_tonemap();
+    r3d_shader_load_screen_adjustment();
+    r3d_shader_load_screen_color();
+
+    if (R3D.env.ssaoEnabled) {
+        r3d_shader_load_screen_ssao();
+    }
+    if (R3D.env.bloomMode != R3D_BLOOM_DISABLED) {
+        r3d_shader_load_screen_bloom();
+    }
+    if (R3D.env.fogMode != R3D_FOG_DISABLED) {
+        r3d_shader_load_screen_fog();
+    }
+    if (R3D.state.flags & R3D_FLAG_FXAA) {
+        r3d_shader_load_screen_fxaa();
+    }
+}
+
+void r3d_shaders_unload(void)
+{
+    // Unload generation shaders
+    rlUnloadShaderProgram(R3D.shader.generate.gaussianBlurDualPass.id);
+    rlUnloadShaderProgram(R3D.shader.generate.cubemapFromEquirectangular.id);
+    rlUnloadShaderProgram(R3D.shader.generate.irradianceConvolution.id);
+    rlUnloadShaderProgram(R3D.shader.generate.prefilter.id);
+
+    // Unload raster shaders
+    rlUnloadShaderProgram(R3D.shader.raster.geometry.id);
+    rlUnloadShaderProgram(R3D.shader.raster.geometryInst.id);
+    rlUnloadShaderProgram(R3D.shader.raster.forward.id);
+    rlUnloadShaderProgram(R3D.shader.raster.forwardInst.id);
+    rlUnloadShaderProgram(R3D.shader.raster.skybox.id);
+    rlUnloadShaderProgram(R3D.shader.raster.depth.id);
+    rlUnloadShaderProgram(R3D.shader.raster.depthInst.id);
+    rlUnloadShaderProgram(R3D.shader.raster.depthCube.id);
+    rlUnloadShaderProgram(R3D.shader.raster.depthCubeInst.id);
+
+    // Unload screen shaders
+    rlUnloadShaderProgram(R3D.shader.screen.lighting.id);
+    rlUnloadShaderProgram(R3D.shader.screen.tonemap.id);
+    rlUnloadShaderProgram(R3D.shader.screen.adjustment.id);
+    rlUnloadShaderProgram(R3D.shader.screen.color.id);
+
+    if (R3D.shader.screen.ssao.id != 0) {
+        rlUnloadShaderProgram(R3D.shader.screen.ssao.id);
+    }
+    if (R3D.shader.screen.bloom.id != 0) {
+        rlUnloadShaderProgram(R3D.shader.screen.bloom.id);
+    }
+    if (R3D.shader.screen.fog.id != 0) {
+        rlUnloadShaderProgram(R3D.shader.screen.fog.id);
+    }
+    if (R3D.shader.screen.fxaa.id != 0) {
+        rlUnloadShaderProgram(R3D.shader.screen.fxaa.id);
     }
 }
 

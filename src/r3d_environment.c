@@ -61,11 +61,19 @@ void R3D_SetSSAO(bool enabled)
 {
 	R3D.env.ssaoEnabled = enabled;
 
-	if (R3D.framebuffer.pingPongSSAO.id == 0) {
-		r3d_framebuffer_load_pingpong_ssao(
-			R3D.state.resolution.width,
-			R3D.state.resolution.height
-		);
+	if (enabled) {
+		if (R3D.framebuffer.pingPongSSAO.id == 0) {
+			r3d_framebuffer_load_pingpong_ssao(
+				R3D.state.resolution.width,
+				R3D.state.resolution.height
+			);
+		}
+		if (R3D.texture.ssaoKernel == 0) {
+			r3d_texture_load_ssao_kernel();
+		}
+		if (R3D.shader.screen.ssao.id == 0) {
+			r3d_shader_load_screen_ssao();
+		}
 	}
 }
 
@@ -108,11 +116,16 @@ void R3D_SetBloomMode(R3D_Bloom mode)
 {
 	R3D.env.bloomMode = mode;
 
-	if (mode != R3D_BLOOM_DISABLED && R3D.framebuffer.pingPongBloom.id == 0) {
-		r3d_framebuffer_load_pingpong_bloom(
-			R3D.state.resolution.width,
-			R3D.state.resolution.height
-		);
+	if (mode != R3D_BLOOM_DISABLED) {
+		if (R3D.framebuffer.pingPongBloom.id == 0) {
+			r3d_framebuffer_load_pingpong_bloom(
+				R3D.state.resolution.width,
+				R3D.state.resolution.height
+			);
+		}
+		if (R3D.shader.screen.bloom.id == 0) {
+			r3d_shader_load_screen_bloom();
+		}
 	}
 }
 
@@ -164,6 +177,12 @@ int R3D_GetBloomIterations(void)
 void R3D_SetFogMode(R3D_Fog mode)
 {
 	R3D.env.fogMode = mode;
+
+	if (mode != R3D_FOG_DISABLED) {
+		if (R3D.shader.screen.fog.id == 0) {
+			r3d_shader_load_screen_fog();
+		}
+	}
 }
 
 R3D_Fog R3D_GetFogMode(void)
