@@ -24,6 +24,8 @@ option(R3D_BUILD_SHARED "Build r3d as a shared library" OFF)
 option(R3D_BUILD_EXAMPLES "Build the examples" ${R3D_IS_MAIN})
 option(R3D_BUILD_RAYLIB_SHARED "Build raylib as dynamic if built with r3d" OFF)
 
+set(R3D_CUSTOM_SHADER_PATH "" CACHE STRING "Path to custom shaders")
+
 set(R3D_RAYLIB_SRC_PATH "" CACHE STRING "Path to a specific raylib source")
 set(R3D_RAYLIB_BIN_PATH "" CACHE STRING "Path to a specific raylib binary")
 
