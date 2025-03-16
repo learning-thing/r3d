@@ -137,8 +137,9 @@ void R3D_Init(int resWidth, int resHeight, unsigned int flags)
     // Init rendering mode configs
     R3D.state.render.mode = R3D_RENDER_AUTO_DETECT;
     R3D.state.render.blendMode = R3D_BLEND_ALPHA;
-    R3D.state.render.shadowCastMode= R3D_SHADOW_CAST_FRONT_FACES;
+    R3D.state.render.shadowCastMode = R3D_SHADOW_CAST_FRONT_FACES;
     R3D.state.render.billboardMode = R3D_BILLBOARD_DISABLED;
+    R3D.state.render.alphaScissorThreshold = 0.01f;
 
     // Init scene data
     R3D.state.scene.bounds = (BoundingBox) {
@@ -260,6 +261,11 @@ void R3D_ApplyShadowCastMode(R3D_ShadowCastMode mode)
 void R3D_ApplyBillboardMode(R3D_BillboardMode mode)
 {
     R3D.state.render.billboardMode = mode;
+}
+
+void R3D_ApplyAlphaScissorThreshold(float threshold)
+{
+    R3D.state.render.alphaScissorThreshold = threshold;
 }
 
 void R3D_Begin(Camera3D camera)
@@ -392,8 +398,6 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
     drawCall.material = material;
     drawCall.geometry.mesh = mesh;
     drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_MESH;
-
-    drawCall.blendMode = R3D.state.render.blendMode;
     drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     R3D_RenderMode mode = R3D.state.render.mode;
@@ -405,6 +409,8 @@ void R3D_DrawMesh(Mesh mesh, Material material, Matrix transform)
     r3d_array_t* arr = &R3D.container.aDrawDeferred;
 
     if (mode == R3D_RENDER_FORWARD) {
+        drawCall.forward.alphaScissorThreshold = R3D.state.render.alphaScissorThreshold;
+        drawCall.forward.blendMode = R3D.state.render.blendMode;
         arr = &R3D.container.aDrawForward;
     }
 
@@ -436,8 +442,6 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
     drawCall.material = material;
     drawCall.geometry.mesh = mesh;
     drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_MESH;
-
-    drawCall.blendMode = R3D.state.render.blendMode;
     drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     drawCall.instanced.billboardMode = R3D.state.render.billboardMode;
@@ -456,6 +460,8 @@ void R3D_DrawMeshInstancedPro(Mesh mesh, Material material, Matrix transform,
     r3d_array_t* arr = &R3D.container.aDrawDeferredInst;
 
     if (mode == R3D_RENDER_FORWARD) {
+        drawCall.forward.alphaScissorThreshold = R3D.state.render.alphaScissorThreshold;
+        drawCall.forward.blendMode = R3D.state.render.blendMode;
         arr = &R3D.container.aDrawForwardInst;
     }
 
@@ -512,14 +518,12 @@ void R3D_DrawSpritePro(R3D_Sprite sprite, Vector3 position, Vector2 size, Vector
     drawCall.transform = matTransform;
     drawCall.material = sprite.material;
     drawCall.geometryType = R3D_DRAWCALL_GEOMETRY_SPRITE;
+    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     r3d_sprite_get_uv_scale_offset(
         &sprite, &drawCall.geometry.sprite.uvScale, &drawCall.geometry.sprite.uvOffset,
         (size.x > 0) ? 1.0f : -1.0f, (size.y > 0) ? 1.0f : -1.0f
     );
-
-    drawCall.blendMode = R3D.state.render.blendMode;
-    drawCall.shadowCastMode = R3D.state.render.shadowCastMode;
 
     R3D_RenderMode mode = R3D.state.render.mode;
 
@@ -530,6 +534,8 @@ void R3D_DrawSpritePro(R3D_Sprite sprite, Vector3 position, Vector2 size, Vector
     r3d_array_t* arr = &R3D.container.aDrawDeferred;
 
     if (mode == R3D_RENDER_FORWARD) {
+        drawCall.forward.alphaScissorThreshold = R3D.state.render.alphaScissorThreshold;
+        drawCall.forward.blendMode = R3D.state.render.blendMode;
         arr = &R3D.container.aDrawForward;
     }
 
@@ -1823,7 +1829,7 @@ void r3d_pass_scene_forward(void)
                 for (int i = 0; i < R3D.container.aDrawForwardInst.count; i++) {
                     r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForwardInst, i);
                     r3d_pass_scene_forward_inst_filter_and_send_lights(call);
-                    r3d_render_apply_blend_mode(call->blendMode);
+                    r3d_render_apply_blend_mode(call->forward.blendMode);
                     r3d_drawcall_raster_forward_inst(call);
                 }
 
@@ -1868,7 +1874,7 @@ void r3d_pass_scene_forward(void)
                 for (int i = 0; i < R3D.container.aDrawForward.count; i++) {
                     r3d_drawcall_t* call = r3d_array_at(&R3D.container.aDrawForward, i);
                     r3d_pass_scene_forward_filter_and_send_lights(call);
-                    r3d_render_apply_blend_mode(call->blendMode);
+                    r3d_render_apply_blend_mode(call->forward.blendMode);
                     r3d_drawcall_raster_forward(call);
                 }
 

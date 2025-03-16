@@ -57,7 +57,11 @@ typedef struct {
         size_t count;
     } instanced;
 
-    R3D_BlendMode blendMode;
+    struct {
+        R3D_BlendMode blendMode;
+        float alphaScissorThreshold;
+    } forward;
+
     R3D_ShadowCastMode shadowCastMode;
     r3d_drawcall_geometry_e geometryType;
 

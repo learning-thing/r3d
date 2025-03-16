@@ -241,6 +241,7 @@ extern struct R3D_State {
             R3D_BlendMode blendMode;
             R3D_ShadowCastMode shadowCastMode;
             R3D_BillboardMode billboardMode;
+            float alphaScissorThreshold;
         } render;
 
         // Miscellaneous flags

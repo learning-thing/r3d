@@ -482,6 +482,9 @@ void r3d_drawcall_raster_forward(const r3d_drawcall_t* call)
     r3d_shader_set_float(raster.forward, uValRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].value);
     r3d_shader_set_float(raster.forward, uValMetalness, call->material.maps[MATERIAL_MAP_METALNESS].value);
 
+    // Set misc material values
+    r3d_shader_set_float(raster.forward, uAlphaScissorThreshold, call->forward.alphaScissorThreshold);
+
     // Set color material maps
     r3d_shader_set_col4(raster.forward, uColAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].color);
     r3d_shader_set_col3(raster.forward, uColEmission, call->material.maps[MATERIAL_MAP_EMISSION].color);
@@ -620,6 +623,9 @@ void r3d_drawcall_raster_forward_inst(const r3d_drawcall_t* call)
     r3d_shader_set_float(raster.forwardInst, uValOcclusion, call->material.maps[MATERIAL_MAP_OCCLUSION].value);
     r3d_shader_set_float(raster.forwardInst, uValRoughness, call->material.maps[MATERIAL_MAP_ROUGHNESS].value);
     r3d_shader_set_float(raster.forwardInst, uValMetalness, call->material.maps[MATERIAL_MAP_METALNESS].value);
+
+    // Set misc material values
+    r3d_shader_set_float(raster.forwardInst, uAlphaScissorThreshold, call->forward.alphaScissorThreshold);
 
     // Set color material maps
     r3d_shader_set_col4(raster.forwardInst, uColAlbedo, call->material.maps[MATERIAL_MAP_ALBEDO].color);

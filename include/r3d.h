@@ -475,6 +475,16 @@ R3DAPI void R3D_ApplyShadowCastMode(R3D_ShadowCastMode mode);
  */
 R3DAPI void R3D_ApplyBillboardMode(R3D_BillboardMode mode);
 
+/**
+ * @brief Sets an alpha threshold for forward rendering.
+ *
+ * This function defines an alpha scissor threshold, determining the minimum alpha
+ * value required for a fragment to be rendered. Fragments with an alpha value below
+ * the threshold will be discarded.
+ *
+ * @param threshold The alpha value threshold (usually from 0.0 to 1.0).
+ */
+R3DAPI void R3D_ApplyAlphaScissorThreshold(float threshold);
 
 
 // --------------------------------------------

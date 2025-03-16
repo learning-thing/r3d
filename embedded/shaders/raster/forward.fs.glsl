@@ -89,6 +89,8 @@ uniform vec4 uQuatSkybox;
 uniform bool uHasSkybox;
 
 uniform Light uLights[NUM_LIGHTS];
+
+uniform float uAlphaScissorThreshold;
 uniform float uBloomHdrThreshold;
 uniform vec3 uViewPosition;
 uniform float uFar;
@@ -100,7 +102,7 @@ layout(location = 1) out vec3 FragBrightness;
 
 /* === Constants === */
 
-vec2 POISSON_DISK[16] = vec2[](
+const vec2 POISSON_DISK[16] = vec2[](
     vec2(-0.94201624, -0.39906216),
     vec2(0.94558609, -0.76890725),
     vec2(-0.094184101, -0.92938870),
@@ -397,6 +399,7 @@ void main()
     /* Sample albedo texture */
 
     vec4 albedo = vColor * texture(uTexAlbedo, vTexCoord);
+    if (albedo.a < uAlphaScissorThreshold) discard;
 
     /* Sample emission texture */
 

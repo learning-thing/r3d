@@ -584,6 +584,7 @@ void r3d_shader_load_raster_forward(void)
     r3d_shader_get_location(raster.forward, uTexBrdfLut);
     r3d_shader_get_location(raster.forward, uQuatSkybox);
     r3d_shader_get_location(raster.forward, uHasSkybox);
+    r3d_shader_get_location(raster.forward, uAlphaScissorThreshold);
     r3d_shader_get_location(raster.forward, uBloomHdrThreshold);
     r3d_shader_get_location(raster.forward, uViewPosition);
 
@@ -663,6 +664,7 @@ void r3d_shader_load_raster_forward_inst(void)
     r3d_shader_get_location(raster.forwardInst, uTexBrdfLut);
     r3d_shader_get_location(raster.forwardInst, uQuatSkybox);
     r3d_shader_get_location(raster.forwardInst, uHasSkybox);
+    r3d_shader_get_location(raster.forwardInst, uAlphaScissorThreshold);
     r3d_shader_get_location(raster.forwardInst, uBloomHdrThreshold);
     r3d_shader_get_location(raster.forwardInst, uViewPosition);
 

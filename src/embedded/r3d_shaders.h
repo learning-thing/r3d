@@ -240,6 +240,7 @@ typedef struct {
     r3d_shader_uniform_sampler2D_t uTexBrdfLut;
     r3d_shader_uniform_vec4_t uQuatSkybox;
     r3d_shader_uniform_int_t uHasSkybox;
+    r3d_shader_uniform_float_t uAlphaScissorThreshold;
     r3d_shader_uniform_float_t uBloomHdrThreshold;
     r3d_shader_uniform_vec3_t uViewPosition;
 } r3d_shader_raster_forward_t;
@@ -293,6 +294,7 @@ typedef struct {
     r3d_shader_uniform_sampler2D_t uTexBrdfLut;
     r3d_shader_uniform_vec4_t uQuatSkybox;
     r3d_shader_uniform_int_t uHasSkybox;
+    r3d_shader_uniform_float_t uAlphaScissorThreshold;
     r3d_shader_uniform_float_t uBloomHdrThreshold;
     r3d_shader_uniform_vec3_t uViewPosition;
 } r3d_shader_raster_forward_inst_t;
