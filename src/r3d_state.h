@@ -256,6 +256,17 @@ extern struct R3D_State {
 
 } R3D;
 
+/* === Main loading functions === */
+
+void r3d_framebuffers_load(int width, int height);
+void r3d_framebuffers_unload(void);
+
+void r3d_textures_load(void);
+void r3d_textures_unload(void);
+
+void r3d_shaders_load(void);
+void r3d_shaders_unload(void);
+
 
 /* === Framebuffer loading functions === */
 
