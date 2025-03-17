@@ -211,11 +211,11 @@ typedef struct {
  * potentially causing undesired visual artifacts for semi-transparent sprites.
  */
 typedef struct {
-    Material material;              ///< The material used for rendering the sprite, including its texture and shading properties.
-    float currentFrame;             ///< The current animation frame, represented as a floating-point value to allow smooth interpolation.
-    Vector2 frameSize;              ///< The size of a single animation frame, in texture coordinates (width and height).
-    int xFrameCount;                ///< The number of frames along the horizontal (X) axis of the texture.
-    int yFrameCount;                ///< The number of frames along the vertical (Y) axis of the texture.
+    Material material;      ///< The material used for rendering the sprite, including its texture and shading properties.
+    float currentFrame;     ///< The current animation frame, represented as a floating-point value to allow smooth interpolation.
+    Vector2 frameSize;      ///< The size of a single animation frame, in texture coordinates (width and height).
+    int xFrameCount;        ///< The number of frames along the horizontal (X) axis of the texture.
+    int yFrameCount;        ///< The number of frames along the vertical (Y) axis of the texture.
 } R3D_Sprite;
 
 /**
@@ -225,8 +225,8 @@ typedef struct {
  * The time is normalized between 0.0 and 1.0, where 0.0 represents the start of the curve and 1.0 represents the end.
  */
 typedef struct {
-    float time;         ///< Normalized time of the keyframe, ranging from 0.0 to 1.0.
-    float value;        ///< The value of the interpolation at this keyframe.
+    float time;             ///< Normalized time of the keyframe, ranging from 0.0 to 1.0.
+    float value;            ///< The value of the interpolation at this keyframe.
 } R3D_Keyframe;
 
 /**
