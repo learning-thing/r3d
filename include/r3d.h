@@ -2017,6 +2017,34 @@ R3DAPI Texture2D R3D_GetNormalTexture(void);
 
 
 // --------------------------------------------
+// UTILS: Render Texture Retrieval Functions
+// --------------------------------------------
+
+/**
+ * @brief Retrieves the final scene color buffer.
+ *
+ * This texture stores the final rendered scene as a 24-bit RGB buffer.
+ *
+ * @return The final color buffer texture.
+ */
+R3DAPI Texture2D R3D_GetBufferColor(void);
+
+/**
+ * @brief Retrieves the final depth buffer.
+ *
+ * This texture contains the depth stored in 24 bits and a stencil buffer where each value is 0 or 1, indicating the presence of geometry.
+ * It is useful for post-processing effects outside of R3D.
+ *
+ * @note If you modify the texture parameters to sample the stencil instead of the depth,
+ * make sure to reset the parameters afterward.
+ *
+ * @return The final depth buffer texture.
+ */
+R3DAPI Texture2D R3D_GetBufferDepth(void);
+
+
+
+// --------------------------------------------
 // UTILS: Debug Buffer Rendering Functions
 // --------------------------------------------
 

@@ -146,6 +146,28 @@ Texture2D R3D_GetNormalTexture(void)
     return texture;
 }
 
+Texture2D R3D_GetBufferColor(void)
+{
+    Texture2D texture = { 0 };
+    texture.id = R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx];
+    texture.width = R3D.state.resolution.width;
+    texture.height = R3D.state.resolution.height;
+    texture.mipmaps = 1;
+    texture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+    return texture;
+}
+
+Texture2D R3D_GetBufferDepth(void)
+{
+    Texture2D texture = { 0 };
+    texture.id = R3D.framebuffer.gBuffer.depth;
+    texture.width = R3D.state.resolution.width;
+    texture.height = R3D.state.resolution.height;
+    texture.mipmaps = 1;
+    texture.format = PIXELFORMAT_UNCOMPRESSED_R32;
+    return texture;
+}
+
 void R3D_DrawBufferAlbedo(float x, float y, float w, float h)
 {
     Texture2D tex = {
