@@ -157,6 +157,17 @@ Texture2D R3D_GetBufferColor(void)
     return texture;
 }
 
+Texture2D R3D_GetBufferNormal(void)
+{
+    Texture2D texture = { 0 };
+    texture.id = R3D.framebuffer.gBuffer.normal;
+    texture.width = R3D.state.resolution.width;
+    texture.height = R3D.state.resolution.height;
+    texture.mipmaps = 1;
+    texture.format = PIXELFORMAT_UNCOMPRESSED_R32;
+    return texture;
+}
+
 Texture2D R3D_GetBufferDepth(void)
 {
     Texture2D texture = { 0 };
