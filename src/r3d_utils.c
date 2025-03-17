@@ -179,6 +179,26 @@ Texture2D R3D_GetBufferDepth(void)
     return texture;
 }
 
+Matrix R3D_GetMatrixView(void)
+{
+    return R3D.state.transform.view;
+}
+
+Matrix R3D_GetMatrixInvView(void)
+{
+    return R3D.state.transform.invView;
+}
+
+Matrix R3D_GetMatrixProjection(void)
+{
+    return R3D.state.transform.proj;
+}
+
+Matrix R3D_GetMatrixInvProjection(void)
+{
+    return R3D.state.transform.invProj;
+}
+
 void R3D_DrawBufferAlbedo(float x, float y, float w, float h)
 {
     Texture2D tex = {
