@@ -19,6 +19,7 @@
 
 #include "./r3d_state.h"
 
+#include <assert.h>
 #include <raylib.h>
 #include <raymath.h>
 #include <rlgl.h>
@@ -34,14 +35,55 @@
 
 struct R3D_State R3D = { 0 };
 
+/* === Internal Functions === */
+
+static char* r3d_shader_inject_defines(const char* code, const char* defines[], int count)
+{
+    if (!code) return NULL;
+
+    // Calculate the size of the final buffer
+    size_t codeLen = strlen(code);
+    size_t definesLen = 0;
+
+    // Calculate the total size of the #define statements
+    for (int i = 0; i < count; i++) {
+        definesLen += strlen(defines[i]) + 1;  // +1 for '\n'
+    }
+
+    // Allocate memory for the new shader
+    size_t newSize = codeLen + definesLen + 1;
+    char* newShader = (char*)malloc(newSize);
+    if (!newShader) return NULL;
+
+    const char* versionStart = strstr(code, "#version");
+    assert(versionStart && "Shader must have version");
+
+    // Copy everything up to the end of the `#version` line
+    const char* afterVersion = strchr(versionStart, '\n');
+    if (!afterVersion) afterVersion = versionStart + strlen(versionStart);
+
+    size_t prefix_len = afterVersion - code + 1;
+    strncpy(newShader, code, prefix_len);
+    newShader[prefix_len] = '\0';
+
+    // Add the `#define` statements
+    for (int i = 0; i < count; i++) {
+        strcat(newShader, defines[i]);
+        strcat(newShader, "\n");
+    }
+
+    // Add the rest of the shader after `#version`
+    strcat(newShader, afterVersion + 1);
+
+    return newShader;
+}
 
 /* === Main loading functions === */
 
 void r3d_framebuffers_load(int width, int height)
 {
     r3d_framebuffer_load_gbuffer(width, height);
-    r3d_framebuffer_load_lit_env(width, height);
-    r3d_framebuffer_load_lit_obj(width, height);
+    r3d_framebuffer_load_deferred(width, height);
     r3d_framebuffer_load_scene(width, height);
     r3d_framebuffer_load_post(width, height);
 
@@ -57,8 +99,7 @@ void r3d_framebuffers_load(int width, int height)
 void r3d_framebuffers_unload(void)
 {
     r3d_framebuffer_unload_gbuffer();
-    r3d_framebuffer_unload_lit_env();
-    r3d_framebuffer_unload_lit_obj();
+    r3d_framebuffer_unload_deferred();
     r3d_framebuffer_unload_scene();
     r3d_framebuffer_unload_post();
 
@@ -117,12 +158,12 @@ void r3d_shaders_load(void)
     r3d_shader_load_raster_depth_cube_inst();
 
     // Load screen shaders
-    r3d_shader_load_screen_ibl();
+    r3d_shader_load_screen_ambient_ibl();
+    r3d_shader_load_screen_ambient();
     r3d_shader_load_screen_lighting();
     r3d_shader_load_screen_scene();
     r3d_shader_load_screen_tonemap();
     r3d_shader_load_screen_adjustment();
-    r3d_shader_load_screen_color();
 
     if (R3D.env.ssaoEnabled) {
         r3d_shader_load_screen_ssao();
@@ -158,10 +199,12 @@ void r3d_shaders_unload(void)
     rlUnloadShaderProgram(R3D.shader.raster.depthCubeInst.id);
 
     // Unload screen shaders
+    rlUnloadShaderProgram(R3D.shader.screen.ambientIbl.id);
+    rlUnloadShaderProgram(R3D.shader.screen.ambient.id);
     rlUnloadShaderProgram(R3D.shader.screen.lighting.id);
+    rlUnloadShaderProgram(R3D.shader.screen.scene.id);
     rlUnloadShaderProgram(R3D.shader.screen.tonemap.id);
     rlUnloadShaderProgram(R3D.shader.screen.adjustment.id);
-    rlUnloadShaderProgram(R3D.shader.screen.color.id);
 
     if (R3D.shader.screen.ssao.id != 0) {
         rlUnloadShaderProgram(R3D.shader.screen.ssao.id);
@@ -278,69 +321,29 @@ void r3d_framebuffer_load_pingpong_ssao(int width, int height)
     ssao->targetTexIdx = 0;
 }
 
-void r3d_framebuffer_load_lit_env(int width, int height)
+void r3d_framebuffer_load_deferred(int width, int height)
 {
-    struct r3d_fb_lit_env_t* litEnv = &R3D.framebuffer.litEnv;
+    struct r3d_fb_deferred_t* deferred = &R3D.framebuffer.deferred;
 
-    litEnv->id = rlLoadFramebuffer();
-    if (litEnv->id == 0) {
+    deferred->id = rlLoadFramebuffer();
+    if (deferred->id == 0) {
         TraceLog(LOG_WARNING, "Failed to create framebuffer");
     }
 
-    rlEnableFramebuffer(litEnv->id);
-
-    // Generate (ambient / specular) buffers
-    litEnv->ambient = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
-    litEnv->specular = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
-
-    // Setup ambient texture parameters
-    glBindTexture(GL_TEXTURE_2D, litEnv->ambient);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Setup specular texture parameters
-    glBindTexture(GL_TEXTURE_2D, litEnv->specular);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Activate the draw buffers for all the attachments
-    rlActiveDrawBuffers(2);
-
-    // Attach the textures to the framebuffer
-    rlFramebufferAttach(litEnv->id, litEnv->ambient, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
-    rlFramebufferAttach(litEnv->id, litEnv->specular, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
-
-    // Check if the framebuffer is complete
-    if (!rlFramebufferComplete(litEnv->id)) {
-        TraceLog(LOG_WARNING, "Framebuffer is not complete");
-    }
-}
-
-void r3d_framebuffer_load_lit_obj(int width, int height)
-{
-    struct r3d_fb_lit_obj_t* litObj = &R3D.framebuffer.litObj;
-
-    litObj->id = rlLoadFramebuffer();
-    if (litObj->id == 0) {
-        TraceLog(LOG_WARNING, "Failed to create framebuffer");
-    }
-
-    rlEnableFramebuffer(litObj->id);
+    rlEnableFramebuffer(deferred->id);
 
     // Generate (ambient / diffuse / specular) buffers
-    litObj->diffuse = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
-    litObj->specular = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
+    deferred->diffuse = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
+    deferred->specular = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
 
     // Setup diffuse texture parameters
-    glBindTexture(GL_TEXTURE_2D, litObj->diffuse);
+    glBindTexture(GL_TEXTURE_2D, deferred->diffuse);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // Setup specular texture parameters
-    glBindTexture(GL_TEXTURE_2D, litObj->specular);
+    glBindTexture(GL_TEXTURE_2D, deferred->specular);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -349,11 +352,11 @@ void r3d_framebuffer_load_lit_obj(int width, int height)
     rlActiveDrawBuffers(3);
 
     // Attach the textures to the framebuffer
-    rlFramebufferAttach(litObj->id, litObj->diffuse, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
-    rlFramebufferAttach(litObj->id, litObj->specular, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(deferred->id, deferred->diffuse, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(deferred->id, deferred->specular, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
-    if (!rlFramebufferComplete(litObj->id)) {
+    if (!rlFramebufferComplete(deferred->id)) {
         TraceLog(LOG_WARNING, "Framebuffer is not complete");
     }
 }
@@ -501,28 +504,16 @@ void r3d_framebuffer_unload_pingpong_ssao(void)
     memset(ssao, 0, sizeof(struct r3d_fb_pingpong_ssao_t));
 }
 
-void r3d_framebuffer_unload_lit_env(void)
+void r3d_framebuffer_unload_deferred(void)
 {
-    struct r3d_fb_lit_env_t* litEnv = &R3D.framebuffer.litEnv;
+    struct r3d_fb_deferred_t* deferred = &R3D.framebuffer.deferred;
 
-    rlUnloadTexture(litEnv->ambient);
-    rlUnloadTexture(litEnv->specular);
+    rlUnloadTexture(deferred->diffuse);
+    rlUnloadTexture(deferred->specular);
 
-    rlUnloadFramebuffer(litEnv->id);
+    rlUnloadFramebuffer(deferred->id);
 
-    memset(litEnv, 0, sizeof(struct r3d_fb_lit_env_t));
-}
-
-void r3d_framebuffer_unload_lit_obj(void)
-{
-    struct r3d_fb_lit_obj_t* litObj = &R3D.framebuffer.litObj;
-
-    rlUnloadTexture(litObj->diffuse);
-    rlUnloadTexture(litObj->specular);
-
-    rlUnloadFramebuffer(litObj->id);
-
-    memset(litObj, 0, sizeof(struct r3d_fb_lit_obj_t));
+    memset(deferred, 0, sizeof(struct r3d_fb_deferred_t));
 }
 
 void r3d_framebuffer_unload_scene(void)
@@ -946,33 +937,56 @@ void r3d_shader_load_screen_ssao(void)
     r3d_shader_disable();
 }
 
-void r3d_shader_load_screen_ibl(void)
+void r3d_shader_load_screen_ambient_ibl(void)
 {
-    R3D.shader.screen.ibl.id = rlLoadShaderCode(VS_COMMON_SCREEN, FS_SCREEN_IBL);
-    r3d_shader_screen_ibl_t* shader = &R3D.shader.screen.ibl;
+    const char* defines[] = { "#define IBL" };
+    char* fsCode = r3d_shader_inject_defines(FS_SCREEN_AMBIENT, defines, 1);
 
-    r3d_shader_get_location(screen.ibl, uTexAlbedo);
-    r3d_shader_get_location(screen.ibl, uTexNormal);
-    r3d_shader_get_location(screen.ibl, uTexDepth);
-    r3d_shader_get_location(screen.ibl, uTexORM);
-    r3d_shader_get_location(screen.ibl, uCubeIrradiance);
-    r3d_shader_get_location(screen.ibl, uCubePrefilter);
-    r3d_shader_get_location(screen.ibl, uTexBrdfLut);
-    r3d_shader_get_location(screen.ibl, uQuatSkybox);
-    r3d_shader_get_location(screen.ibl, uViewPosition);
-    r3d_shader_get_location(screen.ibl, uMatInvProj);
-    r3d_shader_get_location(screen.ibl, uMatInvView);
+    R3D.shader.screen.ambientIbl.id = rlLoadShaderCode(VS_COMMON_SCREEN, fsCode);
+    r3d_shader_screen_ambient_ibl_t* shader = &R3D.shader.screen.ambientIbl;
 
-    r3d_shader_enable(screen.ibl);
+    r3d_shader_get_location(screen.ambientIbl, uTexAlbedo);
+    r3d_shader_get_location(screen.ambientIbl, uTexNormal);
+    r3d_shader_get_location(screen.ambientIbl, uTexDepth);
+    r3d_shader_get_location(screen.ambientIbl, uTexSSAO);
+    r3d_shader_get_location(screen.ambientIbl, uTexORM);
+    r3d_shader_get_location(screen.ambientIbl, uCubeIrradiance);
+    r3d_shader_get_location(screen.ambientIbl, uCubePrefilter);
+    r3d_shader_get_location(screen.ambientIbl, uTexBrdfLut);
+    r3d_shader_get_location(screen.ambientIbl, uQuatSkybox);
+    r3d_shader_get_location(screen.ambientIbl, uViewPosition);
+    r3d_shader_get_location(screen.ambientIbl, uMatInvProj);
+    r3d_shader_get_location(screen.ambientIbl, uMatInvView);
 
-    r3d_shader_set_sampler2D_slot(screen.ibl, uTexAlbedo, 0);
-    r3d_shader_set_sampler2D_slot(screen.ibl, uTexNormal, 1);
-    r3d_shader_set_sampler2D_slot(screen.ibl, uTexDepth, 2);
-    r3d_shader_set_sampler2D_slot(screen.ibl, uTexORM, 3);
+    r3d_shader_enable(screen.ambientIbl);
 
-    r3d_shader_set_samplerCube_slot(screen.ibl, uCubeIrradiance, 4);
-    r3d_shader_set_samplerCube_slot(screen.ibl, uCubePrefilter, 5);
-    r3d_shader_set_sampler2D_slot(screen.ibl, uTexBrdfLut, 6);
+    r3d_shader_set_sampler2D_slot(screen.ambientIbl, uTexAlbedo, 0);
+    r3d_shader_set_sampler2D_slot(screen.ambientIbl, uTexNormal, 1);
+    r3d_shader_set_sampler2D_slot(screen.ambientIbl, uTexDepth, 2);
+    r3d_shader_set_sampler2D_slot(screen.ambientIbl, uTexSSAO, 3);
+    r3d_shader_set_sampler2D_slot(screen.ambientIbl, uTexORM, 4);
+
+    r3d_shader_set_samplerCube_slot(screen.ambientIbl, uCubeIrradiance, 5);
+    r3d_shader_set_samplerCube_slot(screen.ambientIbl, uCubePrefilter, 6);
+    r3d_shader_set_sampler2D_slot(screen.ambientIbl, uTexBrdfLut, 7);
+
+    r3d_shader_disable();
+}
+
+void r3d_shader_load_screen_ambient(void)
+{
+    R3D.shader.screen.ambient.id = rlLoadShaderCode(
+        VS_COMMON_SCREEN, FS_SCREEN_AMBIENT
+    );
+
+    r3d_shader_get_location(screen.ambient, uTexSSAO);
+    r3d_shader_get_location(screen.ambient, uTexORM);
+    r3d_shader_get_location(screen.ambient, uColor);
+
+    r3d_shader_enable(screen.ambient);
+
+    r3d_shader_set_sampler2D_slot(screen.ambient, uTexSSAO, 0);
+    r3d_shader_set_sampler2D_slot(screen.ambient, uTexORM, 1);
 
     r3d_shader_disable();
 }
@@ -1030,26 +1044,18 @@ void r3d_shader_load_screen_scene(void)
     R3D.shader.screen.scene.id = rlLoadShaderCode(VS_COMMON_SCREEN, FS_SCREEN_SCENE);
     r3d_shader_screen_scene_t* shader = &R3D.shader.screen.scene;
 
-    r3d_shader_get_location(screen.scene, uTexEnvAmbient);
-    r3d_shader_get_location(screen.scene, uTexEnvSpecular);
-    r3d_shader_get_location(screen.scene, uTexObjDiffuse);
-    r3d_shader_get_location(screen.scene, uTexObjSpecular);
-    r3d_shader_get_location(screen.scene, uTexORM);
-    r3d_shader_get_location(screen.scene, uTexSSAO);
     r3d_shader_get_location(screen.scene, uTexAlbedo);
     r3d_shader_get_location(screen.scene, uTexEmission);
+    r3d_shader_get_location(screen.scene, uTexDiffuse);
+    r3d_shader_get_location(screen.scene, uTexSpecular);
     r3d_shader_get_location(screen.scene, uBloomHdrThreshold);
 
     r3d_shader_enable(screen.scene);
 
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexEnvAmbient, 0);
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexEnvSpecular, 1);
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexObjDiffuse, 2);
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexObjSpecular, 3);
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexORM, 4);
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexSSAO, 5);
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexAlbedo, 6);
-    r3d_shader_set_sampler2D_slot(screen.scene, uTexEmission, 7);
+    r3d_shader_set_sampler2D_slot(screen.scene, uTexAlbedo, 0);
+    r3d_shader_set_sampler2D_slot(screen.scene, uTexEmission, 1);
+    r3d_shader_set_sampler2D_slot(screen.scene, uTexDiffuse, 2);
+    r3d_shader_set_sampler2D_slot(screen.scene, uTexSpecular, 3);
 
     r3d_shader_disable();
 }
@@ -1138,16 +1144,6 @@ void r3d_shader_load_screen_fxaa(void)
     r3d_shader_set_sampler2D_slot(screen.fxaa, uTexture, 0);
     r3d_shader_disable();
 }
-
-void r3d_shader_load_screen_color(void)
-{
-    R3D.shader.screen.color.id = rlLoadShaderCode(
-        VS_COMMON_SCREEN, FS_SCREEN_COLOR
-    );
-
-    r3d_shader_get_location(screen.color, uColor);
-}
-
 
 /* === Texture loading functions === */
 

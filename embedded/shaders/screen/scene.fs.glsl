@@ -25,16 +25,11 @@ noperspective in vec2 vTexCoord;
 
 /* === Uniforms === */
 
-uniform sampler2D uTexEnvAmbient;
-uniform sampler2D uTexEnvSpecular;
-
-uniform sampler2D uTexObjDiffuse;
-uniform sampler2D uTexObjSpecular;
-
-uniform sampler2D uTexORM;          //< Just for occlusion map (from G-Buffer)
-uniform sampler2D uTexSSAO;
 uniform sampler2D uTexAlbedo;
 uniform sampler2D uTexEmission;
+
+uniform sampler2D uTexDiffuse;
+uniform sampler2D uTexSpecular;
 
 uniform float uBloomHdrThreshold;
 
@@ -56,29 +51,20 @@ void main()
 {
     /* Sample textures */
 
-    vec3 envAmbient = texture(uTexEnvAmbient, vTexCoord).rgb;
-    vec3 envSpecular = texture(uTexEnvSpecular, vTexCoord).rgb;
-
-    vec3 objDiffuse = texture(uTexObjDiffuse, vTexCoord).rgb;
-    vec3 objSpecular = texture(uTexObjSpecular, vTexCoord).rgb;
-
     vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
     vec3 emission = texture(uTexEmission, vTexCoord).rgb;
 
-    float occlusion = texture(uTexORM, vTexCoord).r;
-    occlusion *= texture(uTexSSAO, vTexCoord).r;
+    vec3 diffuse = texture(uTexDiffuse, vTexCoord).rgb;
+    vec3 specular = texture(uTexSpecular, vTexCoord).rgb;
 
-    /* Compute ambient lighting and direct lighting */
+    /* Combine all lighting contributions */
 
-    envAmbient *= occlusion;
-
-    vec3 diffuse = albedo * (envAmbient + objDiffuse);
-    vec3 specular = (objSpecular + envSpecular);
-
-    FragColor = diffuse + specular + emission;
+    FragColor = (albedo * diffuse) + specular + emission;
 
     /* Extract brightness parts for bloom */
 
-    float bright = GetBrightness(FragColor);
-    FragBrightness = FragColor * step(uBloomHdrThreshold, bright);
+    float brightness = GetBrightness(FragColor);
+    float isBright = step(uBloomHdrThreshold, brightness);
+
+    FragBrightness = FragColor * isBright;
 }

@@ -22,11 +22,9 @@
 
 #include <raylib.h>
 
-
 /* === Shader defines === */
 
 #define R3D_SHADER_FORWARD_NUM_LIGHTS 8
-
 
 /* === Shader code declarations === */
 
@@ -54,7 +52,7 @@ extern const char VS_RASTER_DEPTH_CUBE_INST[];
 extern const char FS_RASTER_DEPTH_CUBE[];
 
 extern const char FS_SCREEN_SSAO[];
-extern const char FS_SCREEN_IBL[];
+extern const char FS_SCREEN_AMBIENT[];
 extern const char FS_SCREEN_LIGHTING[];
 extern const char FS_SCREEN_SCENE[];
 extern const char FS_SCREEN_BLOOM[];
@@ -62,7 +60,6 @@ extern const char FS_SCREEN_FOG[];
 extern const char FS_SCREEN_TONEMAP[];
 extern const char FS_SCREEN_ADJUSTMENT[];
 extern const char FS_SCREEN_FXAA[];
-extern const char FS_SCREEN_COLOR[];
 
 /* === Uniform types === */
 
@@ -321,6 +318,7 @@ typedef struct {
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexNormal;
     r3d_shader_uniform_sampler2D_t uTexDepth;
+    r3d_shader_uniform_sampler2D_t uTexSSAO;
     r3d_shader_uniform_sampler2D_t uTexORM;
     r3d_shader_uniform_samplerCube_t uCubeIrradiance;
     r3d_shader_uniform_samplerCube_t uCubePrefilter;
@@ -329,7 +327,14 @@ typedef struct {
     r3d_shader_uniform_vec3_t uViewPosition;
     r3d_shader_uniform_mat4_t uMatInvProj;
     r3d_shader_uniform_mat4_t uMatInvView;
-} r3d_shader_screen_ibl_t;
+} r3d_shader_screen_ambient_ibl_t;
+
+typedef struct {
+    unsigned int id;
+    r3d_shader_uniform_sampler2D_t uTexSSAO;
+    r3d_shader_uniform_sampler2D_t uTexORM;
+    r3d_shader_uniform_vec4_t uColor;
+} r3d_shader_screen_ambient_t;
 
 typedef struct {
     unsigned int id;
@@ -366,14 +371,10 @@ typedef struct {
 
 typedef struct {
     unsigned int id;
-    r3d_shader_uniform_sampler2D_t uTexEnvAmbient;
-    r3d_shader_uniform_sampler2D_t uTexEnvSpecular;
-    r3d_shader_uniform_sampler2D_t uTexObjDiffuse;
-    r3d_shader_uniform_sampler2D_t uTexObjSpecular;
-    r3d_shader_uniform_sampler2D_t uTexORM;
-    r3d_shader_uniform_sampler2D_t uTexSSAO;
     r3d_shader_uniform_sampler2D_t uTexAlbedo;
     r3d_shader_uniform_sampler2D_t uTexEmission;
+    r3d_shader_uniform_sampler2D_t uTexDiffuse;
+    r3d_shader_uniform_sampler2D_t uTexSpecular;
     r3d_shader_uniform_float_t uBloomHdrThreshold;
 } r3d_shader_screen_scene_t;
 
@@ -419,10 +420,5 @@ typedef struct {
     r3d_shader_uniform_sampler2D_t uTexture;
     r3d_shader_uniform_vec2_t uTexelSize;
 } r3d_shader_screen_fxaa_t;
-
-typedef struct {
-    unsigned int id;
-    r3d_shader_uniform_vec4_t uColor;
-} r3d_shader_screen_color_t;
 
 #endif // R3D_EMBEDDED_SHADERS_H

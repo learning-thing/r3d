@@ -19,6 +19,8 @@
 
 #version 330 core
 
+#ifdef IBL
+
 /* === Defines === */
 
 #define PI 3.1415926535897932384626433832795028
@@ -32,6 +34,7 @@ noperspective in vec2 vTexCoord;
 uniform sampler2D uTexAlbedo;
 uniform sampler2D uTexNormal;
 uniform sampler2D uTexDepth;
+uniform sampler2D uTexSSAO;
 uniform sampler2D uTexORM;
 
 uniform samplerCube uCubeIrradiance;
@@ -45,7 +48,7 @@ uniform mat4 uMatInvView;
 
 /* === Fragments === */
 
-layout(location = 0) out vec3 FragAmbient;
+layout(location = 0) out vec3 FragDiffuse;
 layout(location = 1) out vec3 FragSpecular;
 
 /* === PBR functions === */
@@ -108,8 +111,13 @@ void main()
     
     vec3 albedo = texture(uTexAlbedo, vTexCoord).rgb;
     vec3 orm = texture(uTexORM, vTexCoord).rgb;
+    float occlusion = orm.r;
     float roughness = orm.g;
     float metalness = orm.b;
+
+    /* Sample SSAO buffer and modulate occlusion value */
+
+    occlusion *= texture(uTexSSAO, vTexCoord).r;
 
     /* Compute F0 (reflectance at normal incidence) based on the metallic factor */
 
@@ -138,7 +146,8 @@ void main()
 
     vec3 Nr = RotateWithQuat(N, uQuatSkybox);
 
-    FragAmbient = kD * texture(uCubeIrradiance, Nr).rgb; // Added with lighting `albedo * diffuse`
+    FragDiffuse = kD * texture(uCubeIrradiance, Nr).rgb;
+    FragDiffuse *= occlusion;
 
     /* Skybox reflection - (IBL specular) */
 
@@ -155,3 +164,31 @@ void main()
 
     FragSpecular = specularReflection;
 }
+
+#else
+
+/* === Varyings === */
+
+noperspective in vec2 vTexCoord;
+
+/* === Uniforms === */
+
+uniform sampler2D uTexSSAO;
+uniform sampler2D uTexORM;
+
+uniform vec4 uColor;
+
+/* === Fragments === */
+
+layout(location = 0) out vec4 FragDiffuse;
+
+/* === Main === */
+
+void main()
+{
+    float occlusion = texture(uTexORM, vTexCoord).r;
+    occlusion *= texture(uTexSSAO, vTexCoord).r;
+    FragDiffuse = uColor * occlusion;
+}
+
+#endif

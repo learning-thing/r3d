@@ -59,21 +59,21 @@ extern struct R3D_State {
             bool targetTexIdx;
         } pingPongSSAO;
 
-        // Lit environment
-        struct r3d_fb_lit_env_t {
-            unsigned int id;
-            unsigned int ambient;           ///< RGB[16|16|16] -> Ambient color (sky or object irradiance)
-            unsigned int specular;          ///< RGB[16|16|16] -> Specular reflection on objects
-        } litEnv;
-
-        // Lit objects
-        struct r3d_fb_lit_obj_t {
+        // Deferred lighting
+        // Receive in order:
+        //  - IBL (from skybox)
+        //  - Lit from lights
+        struct r3d_fb_deferred_t {
             unsigned int id;
             unsigned int diffuse;           ///< RGB[16|16|16] -> Diffuse contribution
             unsigned int specular;          ///< RGB[16|16|16] -> Specular contribution
-        } litObj;
+        } deferred;
 
         // Final scene (before post process)
+        // Receive in order:
+        //  - Environment
+        //  - Deferred
+        //  - Forward
         struct r3d_fb_scene_t {
             unsigned int id;
             unsigned int color;             ///< RGB[8|8|8] -> Final color
@@ -140,7 +140,8 @@ extern struct R3D_State {
         // Screen shaders
         struct {
             r3d_shader_screen_ssao_t ssao;
-            r3d_shader_screen_ibl_t ibl;
+            r3d_shader_screen_ambient_ibl_t ambientIbl;
+            r3d_shader_screen_ambient_t ambient;
             r3d_shader_screen_lighting_t lighting;
             r3d_shader_screen_scene_t scene;
             r3d_shader_screen_bloom_t bloom;
@@ -148,7 +149,6 @@ extern struct R3D_State {
             r3d_shader_screen_tonemap_t tonemap;
             r3d_shader_screen_adjustment_t adjustment;
             r3d_shader_screen_fxaa_t fxaa;
-            r3d_shader_screen_color_t color;
         } screen;
 
     } shader;
@@ -272,16 +272,14 @@ void r3d_shaders_unload(void);
 
 void r3d_framebuffer_load_gbuffer(int width, int height);
 void r3d_framebuffer_load_pingpong_ssao(int width, int height);
-void r3d_framebuffer_load_lit_env(int width, int height);
-void r3d_framebuffer_load_lit_obj(int width, int height);
+void r3d_framebuffer_load_deferred(int width, int height);
 void r3d_framebuffer_load_scene(int width, int height);
 void r3d_framebuffer_load_pingpong_bloom(int width, int height);
 void r3d_framebuffer_load_post(int width, int height);
 
 void r3d_framebuffer_unload_gbuffer(void);
 void r3d_framebuffer_unload_pingpong_ssao(void);
-void r3d_framebuffer_unload_lit_env(void);
-void r3d_framebuffer_unload_lit_obj(void);
+void r3d_framebuffer_unload_deferred(void);
 void r3d_framebuffer_unload_scene(void);
 void r3d_framebuffer_unload_pingpong_bloom(void);
 void r3d_framebuffer_unload_post(void);
@@ -303,7 +301,8 @@ void r3d_shader_load_raster_depth_inst(void);
 void r3d_shader_load_raster_depth_cube(void);
 void r3d_shader_load_raster_depth_cube_inst(void);
 void r3d_shader_load_screen_ssao(void);
-void r3d_shader_load_screen_ibl(void);
+void r3d_shader_load_screen_ambient_ibl(void);
+void r3d_shader_load_screen_ambient(void);
 void r3d_shader_load_screen_lighting(void);
 void r3d_shader_load_screen_scene(void);
 void r3d_shader_load_screen_bloom(void);
@@ -311,7 +310,6 @@ void r3d_shader_load_screen_fog(void);
 void r3d_shader_load_screen_tonemap(void);
 void r3d_shader_load_screen_adjustment(void);
 void r3d_shader_load_screen_fxaa(void);
-void r3d_shader_load_screen_color(void);
 
 
 /* === Texture loading functions === */
