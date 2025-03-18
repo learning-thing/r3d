@@ -85,7 +85,7 @@ void r3d_framebuffers_load(int width, int height)
     r3d_framebuffer_load_gbuffer(width, height);
     r3d_framebuffer_load_deferred(width, height);
     r3d_framebuffer_load_scene(width, height);
-    r3d_framebuffer_load_post(width, height);
+    r3d_framebuffer_load_pingpong_post(width, height);
 
     if (R3D.env.ssaoEnabled) {
         r3d_framebuffer_load_pingpong_ssao(width, height);
@@ -295,30 +295,34 @@ void r3d_framebuffer_load_pingpong_ssao(int width, int height)
     rlEnableFramebuffer(ssao->id);
 
     // Generate (ssao) buffers
-    for (int i = 0; i < 2; i++) {
-        glGenTextures(1, &ssao->textures[i]);
-        glBindTexture(GL_TEXTURE_2D, ssao->textures[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    }
+    glGenTextures(1, &ssao->source);
+    glBindTexture(GL_TEXTURE_2D, ssao->source);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glGenTextures(1, &ssao->target);
+    glBindTexture(GL_TEXTURE_2D, ssao->target);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // Activate the draw buffers for all the attachments
     rlActiveDrawBuffers(1);
 
     // Attach the textures to the framebuffer
-    rlFramebufferAttach(ssao->id, ssao->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(ssao->id, ssao->target, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
     if (!rlFramebufferComplete(ssao->id)) {
         TraceLog(LOG_WARNING, "Framebuffer is not complete");
     }
-
-    // Internal data setup
-    ssao->targetTexIdx = 0;
 }
 
 void r3d_framebuffer_load_deferred(int width, int height)
@@ -421,34 +425,39 @@ void r3d_framebuffer_load_pingpong_bloom(int width, int height)
     rlEnableFramebuffer(bloom->id);
 
     // Generate (color) buffers
-    for (int i = 0; i < 2; i++) {
-        bloom->textures[i] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R16G16B16, 1);
-        glBindTexture(GL_TEXTURE_2D, bloom->textures[i]);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
+    glGenTextures(1, &bloom->source);
+    glBindTexture(GL_TEXTURE_2D, bloom->source);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glGenTextures(1, &bloom->target);
+    glBindTexture(GL_TEXTURE_2D, bloom->target);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     // Activate the draw buffers for all the attachments
     rlActiveDrawBuffers(1);
 
     // Attach the textures to the framebuffer
-    rlFramebufferAttach(bloom->id, bloom->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(bloom->id, bloom->target, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
     if (!rlFramebufferComplete(bloom->id)) {
         TraceLog(LOG_WARNING, "Framebuffer is not complete");
     }
-
-    // Internal data setup
-    bloom->targetTexIdx = 0;
 }
 
-void r3d_framebuffer_load_post(int width, int height)
+void r3d_framebuffer_load_pingpong_post(int width, int height)
 {
-    struct r3d_fb_post_t* post = &R3D.framebuffer.post;
+    struct r3d_fb_pingpong_post_t* post = &R3D.framebuffer.post;
 
     post->id = rlLoadFramebuffer();
     if (post->id == 0) {
@@ -458,22 +467,19 @@ void r3d_framebuffer_load_post(int width, int height)
     rlEnableFramebuffer(post->id);
 
     // Generate (color) buffers
-    post->textures[0] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
-    post->textures[1] = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
+    post->source = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
+    post->target = rlLoadTexture(NULL, width, height, RL_PIXELFORMAT_UNCOMPRESSED_R8G8B8, 1);
 
     // Activate the draw buffers for all the attachments
     rlActiveDrawBuffers(1);
 
     // Attach the textures to the framebuffer
-    rlFramebufferAttach(post->id, post->textures[0], RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
+    rlFramebufferAttach(post->id, post->target, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
 
     // Check if the framebuffer is complete
     if (!rlFramebufferComplete(post->id)) {
         TraceLog(LOG_WARNING, "Framebuffer is not complete");
     }
-
-    // Internal data setup
-    post->targetTexIdx = 0;
 }
 
 void r3d_framebuffer_unload_gbuffer(void)
@@ -495,9 +501,8 @@ void r3d_framebuffer_unload_pingpong_ssao(void)
 {
     struct r3d_fb_pingpong_ssao_t* ssao = &R3D.framebuffer.pingPongSSAO;
 
-    for (int i = 0; i < sizeof(ssao->textures) / sizeof(*ssao->textures); i++) {
-        rlUnloadTexture(ssao->textures[i]);
-    }
+    rlUnloadTexture(ssao->source);
+    rlUnloadTexture(ssao->target);
 
     rlUnloadFramebuffer(ssao->id);
 
@@ -532,9 +537,8 @@ void r3d_framebuffer_unload_pingpong_bloom(void)
 {
     struct r3d_fb_pingpong_bloom_t* bloom = &R3D.framebuffer.pingPongBloom;
 
-    for (int i = 0; i < sizeof(bloom->textures) / sizeof(*bloom->textures); i++) {
-        rlUnloadTexture(bloom->textures[i]);
-    }
+    rlUnloadTexture(bloom->source);
+    rlUnloadTexture(bloom->target);
 
     rlUnloadFramebuffer(bloom->id);
 
@@ -543,15 +547,14 @@ void r3d_framebuffer_unload_pingpong_bloom(void)
 
 void r3d_framebuffer_unload_post(void)
 {
-    struct r3d_fb_post_t* post = &R3D.framebuffer.post;
+    struct r3d_fb_pingpong_post_t* post = &R3D.framebuffer.post;
 
-    for (int i = 0; i < sizeof(post->textures) / sizeof(*post->textures); i++) {
-        rlUnloadTexture(post->textures[i]);
-    }
+    rlUnloadTexture(post->source);
+    rlUnloadTexture(post->target);
 
     rlUnloadFramebuffer(post->id);
 
-    memset(post, 0, sizeof(struct r3d_fb_post_t));
+    memset(post, 0, sizeof(struct r3d_fb_pingpong_post_t));
 }
 
 

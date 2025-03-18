@@ -149,7 +149,7 @@ Texture2D R3D_GetNormalTexture(void)
 Texture2D R3D_GetBufferColor(void)
 {
     Texture2D texture = { 0 };
-    texture.id = R3D.framebuffer.post.textures[!R3D.framebuffer.post.targetTexIdx];
+    texture.id = R3D.framebuffer.post.target;
     texture.width = R3D.state.resolution.width;
     texture.height = R3D.state.resolution.height;
     texture.mipmaps = 1;
@@ -282,7 +282,7 @@ void R3D_DrawBufferORM(float x, float y, float w, float h)
 void R3D_DrawBufferSSAO(float x, float y, float w, float h)
 {
     Texture2D tex = {
-        .id = R3D.framebuffer.pingPongSSAO.textures[!R3D.framebuffer.pingPongSSAO.targetTexIdx],
+        .id = R3D.framebuffer.pingPongSSAO.target,
         .width = R3D.state.resolution.width / 2,
         .height = R3D.state.resolution.height / 2
     };
@@ -322,7 +322,7 @@ void R3D_DrawBufferBrightColors(float x, float y, float w, float h)
 void R3D_DrawBufferBloom(float x, float y, float w, float h)
 {
     Texture2D tex = {
-        .id = R3D.framebuffer.pingPongBloom.textures[!R3D.framebuffer.pingPongBloom.targetTexIdx],
+        .id = R3D.framebuffer.pingPongBloom.target,
         .width = R3D.state.resolution.width / 2,
         .height = R3D.state.resolution.height / 2
     };

@@ -55,8 +55,8 @@ extern struct R3D_State {
         // Ping-pong buffer for SSAO blur processing (half internal resolution)
         struct r3d_fb_pingpong_ssao_t {
             unsigned int id;
-            unsigned int textures[2];       ///< R[8] -> Used for initial SSAO rendering + blur effect
-            bool targetTexIdx;
+            unsigned int source;            ///< R[8] -> Used for initial SSAO rendering + blur effect
+            unsigned int target;            ///< R[8] -> Used for initial SSAO rendering + blur effect
         } pingPongSSAO;
 
         // Deferred lighting
@@ -83,15 +83,15 @@ extern struct R3D_State {
         // Ping-pong buffer for bloom blur processing (half internal resolution)
         struct r3d_fb_pingpong_bloom_t {
             unsigned int id;
-            unsigned int textures[2];       ///< RGB[16|16|16]
-            bool targetTexIdx;
+            unsigned int source;            ///< RGB[16|16|16]
+            unsigned int target;            ///< RGB[16|16|16]
         } pingPongBloom;
 
-        // Post-processing buffer
-        struct r3d_fb_post_t {
+        // Post-processing ping-pong buffer
+        struct r3d_fb_pingpong_post_t {
             unsigned int id;
-            unsigned int textures[2];       ///< RGB[8|8|8]
-            bool targetTexIdx;
+            unsigned int source;            ///< RGB[8|8|8]
+            unsigned int target;            ///< RGB[8|8|8]
         } post;
 
         // Custom target (optional)
@@ -275,7 +275,7 @@ void r3d_framebuffer_load_pingpong_ssao(int width, int height);
 void r3d_framebuffer_load_deferred(int width, int height);
 void r3d_framebuffer_load_scene(int width, int height);
 void r3d_framebuffer_load_pingpong_bloom(int width, int height);
-void r3d_framebuffer_load_post(int width, int height);
+void r3d_framebuffer_load_pingpong_post(int width, int height);
 
 void r3d_framebuffer_unload_gbuffer(void);
 void r3d_framebuffer_unload_pingpong_ssao(void);
@@ -320,6 +320,20 @@ void r3d_texture_load_normal(void);
 void r3d_texture_load_rand_noise(void);
 void r3d_texture_load_ssao_kernel(void);
 void r3d_texture_load_ibl_brdf_lut(void);
+
+
+/* === Framebuffer helper macros === */
+
+#define r3d_framebuffer_swap_pingpong(fb)       \
+{                                               \
+    unsigned int tmp = (fb).target;             \
+    (fb).target = (fb).source;                  \
+    (fb).source = tmp;                          \
+    glFramebufferTexture2D(                     \
+        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,   \
+        GL_TEXTURE_2D, (fb).target, 0           \
+    );                                          \
+}
 
 
 /* === Shader helper macros === */
