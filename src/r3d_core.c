@@ -2029,6 +2029,7 @@ void r3d_reset_raylib_state(void)
     rlEnableBackfaceCulling();
     rlEnableColorBlend();
     rlDisableDepthTest();
+    rlEnableDepthMask();
 
     glDepthFunc(GL_LEQUAL);
 }
