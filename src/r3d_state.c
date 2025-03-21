@@ -52,7 +52,7 @@ static char* r3d_shader_inject_defines(const char* code, const char* defines[], 
 
     // Allocate memory for the new shader
     size_t newSize = codeLen + definesLen + 1;
-    char* newShader = (char*)malloc(newSize);
+    char* newShader = (char*)RL_MALLOC(newSize);
     if (!newShader) return NULL;
 
     const char* versionStart = strstr(code, "#version");
@@ -944,8 +944,10 @@ void r3d_shader_load_screen_ambient_ibl(void)
 {
     const char* defines[] = { "#define IBL" };
     char* fsCode = r3d_shader_inject_defines(FS_SCREEN_AMBIENT, defines, 1);
-
     R3D.shader.screen.ambientIbl.id = rlLoadShaderCode(VS_COMMON_SCREEN, fsCode);
+
+    RL_FREE(fsCode);
+
     r3d_shader_screen_ambient_ibl_t* shader = &R3D.shader.screen.ambientIbl;
 
     r3d_shader_get_location(screen.ambientIbl, uTexAlbedo);
