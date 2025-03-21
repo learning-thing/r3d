@@ -25,10 +25,10 @@
 #include <rlgl.h>
 #include <glad.h>
 
-#include "./embedded/r3d_shaders.h"
-#include "./embedded/r3d_textures.h"
+#include "./details/misc/r3d_dds_loader_ext.h"
 #include "./details/misc/r3d_half.h"
-#include "./details/r3d_dds_loader_ext.h"
+#include "./embedded/r3d_textures.h"
+#include "./embedded/r3d_shaders.h"
 
 
 /* === Global state definition === */
