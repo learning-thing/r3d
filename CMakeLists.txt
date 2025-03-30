@@ -84,6 +84,7 @@ EmbedTextures(R3D_GENERATED_TEXTURES_SOURCE
 
 if(BUILD_SHARED_LIBS)
     add_definitions(-DR3D_BUILD_SHARED)
+    add_definitions(-DGLAD_API_CALL_EXPORT)
 endif()
 
 add_library(${PROJECT_NAME}
