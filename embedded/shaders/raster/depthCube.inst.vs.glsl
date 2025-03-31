@@ -27,6 +27,8 @@
 /* === Attributes === */
 
 layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec2 aTexCoord;
+layout(location = 3) in vec4 aColor;
 
 /* === Instanced attributes === */
 
@@ -38,11 +40,15 @@ uniform mat4 uMatInvView;       ///< Only for billboard modes
 uniform mat4 uMatModel;
 uniform mat4 uMatVP;
 
+uniform float uAlpha;
+
 uniform lowp int uBillboardMode;
 
 /* === Varyings === */
 
 out vec3 vPosition;
+out vec2 vTexCoord;
+out float vAlpha;
 
 /* === Helper functions === */
 
@@ -98,5 +104,9 @@ void main()
     else if (uBillboardMode == BILLBOARD_Y_AXIS) BillboardY(matModel);
 
     vPosition = vec3(matModel * vec4(aPosition, 1.0));
+
+    vTexCoord = aTexCoord;
+    vAlpha = uAlpha * aColor.a;
+
     gl_Position = uMatVP * (matModel * vec4(aPosition, 1.0));
 }

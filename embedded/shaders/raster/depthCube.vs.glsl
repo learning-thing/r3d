@@ -20,14 +20,23 @@
 #version 330 core
 
 layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec2 aTexCoord;
+layout(location = 3) in vec4 aColor;
 
 uniform mat4 uMatModel;
 uniform mat4 uMatMVP;
+uniform float uAlpha;
 
 out vec3 vPosition;
+out vec2 vTexCoord;
+out float vAlpha;
 
 void main()
 {
     vPosition = vec3(uMatModel * vec4(aPosition, 1.0));
+
+    vTexCoord = aTexCoord;
+    vAlpha = uAlpha * aColor.a;
+
     gl_Position = uMatMVP * vec4(aPosition, 1.0);
 }

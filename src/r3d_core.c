@@ -849,6 +849,7 @@ void r3d_pass_shadow_maps(void)
                     // Rasterize geometries for depth rendering
                     r3d_shader_enable(raster.depthCubeInst);
                     {
+                        r3d_shader_set_float(raster.depthCubeInst, uAlphaScissorThreshold, R3D.state.render.alphaScissorThreshold);
                         r3d_shader_set_vec3(raster.depthCubeInst, uViewPosition, light->data->position);
                         r3d_shader_set_float(raster.depthCubeInst, uFar, light->data->far);
 
@@ -870,6 +871,7 @@ void r3d_pass_shadow_maps(void)
                     }
                     r3d_shader_enable(raster.depthCube);
                     {
+                        r3d_shader_set_float(raster.depthCube, uAlphaScissorThreshold, R3D.state.render.alphaScissorThreshold);
                         r3d_shader_set_vec3(raster.depthCube, uViewPosition, light->data->position);
                         r3d_shader_set_float(raster.depthCube, uFar, light->data->far);
 
@@ -921,6 +923,8 @@ void r3d_pass_shadow_maps(void)
                 // Rasterize geometry for depth rendering
                 r3d_shader_enable(raster.depthInst);
                 {
+                    r3d_shader_set_float(raster.depthInst, uAlphaScissorThreshold, R3D.state.render.alphaScissorThreshold);
+
                     for (size_t j = 0; j < R3D.container.aDrawDeferredInst.count; j++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferredInst.data + j;
                         if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {
@@ -938,6 +942,8 @@ void r3d_pass_shadow_maps(void)
                 }
                 r3d_shader_enable(raster.depth);
                 {
+                    r3d_shader_set_float(raster.depth, uAlphaScissorThreshold, R3D.state.render.alphaScissorThreshold);
+
                     for (size_t j = 0; j < R3D.container.aDrawDeferred.count; j++) {
                         r3d_drawcall_t* call = (r3d_drawcall_t*)R3D.container.aDrawDeferred.data + j;
                         if (call->shadowCastMode != R3D_SHADOW_CAST_DISABLED) {

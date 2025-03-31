@@ -20,11 +20,19 @@
 #version 330 core
 
 in vec3 vPosition;
+in vec2 vTexCoord;
+in float vAlpha;
 
+uniform sampler2D uTexAlbedo;
+
+uniform float uAlphaScissorThreshold;
 uniform vec3 uViewPosition;
 uniform float uFar;
 
 void main()
 {
+    float alpha = vAlpha * texture(uTexAlbedo, vTexCoord).a;
+    if (alpha < uAlphaScissorThreshold) discard;
+
     gl_FragDepth = length(vPosition - uViewPosition) / uFar;
 }

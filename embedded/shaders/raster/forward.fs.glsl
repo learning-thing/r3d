@@ -399,6 +399,8 @@ void main()
     /* Sample albedo texture */
 
     vec4 albedo = vColor * texture(uTexAlbedo, vTexCoord);
+
+    // TODO: Alpha scissor is unnecessary after a depth pre-pass
     if (albedo.a < uAlphaScissorThreshold) discard;
 
     /* Sample emission texture */
