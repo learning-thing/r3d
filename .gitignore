@@ -363,5 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Additionals
+CMakeSettings.json
 .vscode/
 build/
