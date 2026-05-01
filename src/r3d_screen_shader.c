@@ -61,16 +61,6 @@ R3D_ScreenShader* R3D_LoadScreenShaderFromMemory(const char* code)
         return NULL;
     }
 
-    char* output = RL_MALLOC(userCodeLen * 3);
-    if (!output) {
-        R3D_TRACELOG(LOG_ERROR, "Bad alloc during screen shader loading");
-        RL_FREE(shader);
-        return NULL;
-    }
-
-    char* outPtr = output;
-    const char* ptr = code;
-
     int uniformCount = 0;
     int samplerCount = 0;
     int currentOffset = 0;
@@ -78,6 +68,8 @@ R3D_ScreenShader* R3D_LoadScreenShaderFromMemory(const char* code)
     r3d_rshade_parsed_function_t fragmentFunc = {0};
 
     /* --- PHASE 1: Parse user code and collect metadata --- */
+
+    const char* ptr = code;
 
     while (*ptr)
     {
@@ -116,27 +108,27 @@ R3D_ScreenShader* R3D_LoadScreenShaderFromMemory(const char* code)
 
     /* --- PHASE 2: Generate transformed shader code --- */
 
+    r3d_rshade_writer_t writer = {
+        .ptr       = shader->program->userCode,
+        .remaining = R3D_MAX_SHADER_CODE_LENGTH,
+        .overflow  = false,
+    };
+
     // Write uniform block and samplers
-    outPtr = r3d_rshade_write_uniform_block(outPtr, shader->data.uniforms.entries, uniformCount);
-    outPtr = r3d_rshade_write_samplers(outPtr, shader->data.samplers, samplerCount);
+    r3d_rshade_write_uniform_block(&writer, shader->data.uniforms.entries, uniformCount);
+    r3d_rshade_write_samplers(&writer, shader->data.samplers, samplerCount);
 
     // Copy global code (excluding comments, uniforms, fragment()) then write fragment stage section
-    outPtr = r3d_rshade_copy_global_code(outPtr, code, false, NULL, &fragmentFunc);
-    outPtr = r3d_rshade_write_shader_function(outPtr, "fragment", &fragmentFunc);
+    r3d_rshade_copy_global_code(&writer, code, false, NULL, &fragmentFunc);
+    r3d_rshade_write_shader_function(&writer, "fragment", &fragmentFunc);
 
-    *outPtr = '\0';
-
-    // Copy transformed code to shader structure
-    size_t finalLen = strlen(output);
-    if (finalLen > R3D_MAX_SHADER_CODE_LENGTH) {
+    if (writer.overflow) {
         R3D_TRACELOG(LOG_ERROR, "Failed to load screen shader; Transformed code too long");
-        RL_FREE(output);
         RL_FREE(shader);
         return NULL;
     }
 
-    memcpy(shader->program->userCode, output, finalLen + 1);
-    RL_FREE(output);
+    *writer.ptr = '\0';
 
     /* --- PHASE 3: Compile shader --- */
 

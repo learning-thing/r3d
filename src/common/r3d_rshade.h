@@ -69,6 +69,12 @@ typedef struct {
     const char* bodyEnd;
 } r3d_rshade_parsed_function_t;
 
+typedef struct {
+    char*  ptr;
+    size_t remaining;
+    bool   overflow;
+} r3d_rshade_writer_t;
+
 // ========================================
 // INLINE FUNCTIONS
 // ========================================
@@ -511,105 +517,137 @@ static inline bool r3d_rshade_should_skip_line(const char* ptr, bool hasVaryings
            (r3d_rshade_check_shader_entry(ptr, vertexFunc, fragmentFunc) != NULL);
 }
 
+/* Write a single character to the buffer */
+static inline void r3d_rshade_writer_putc(r3d_rshade_writer_t* w, char c)
+{
+    if (w->overflow || w->remaining < 2) {
+        w->overflow = true;
+        return;
+    }
+    *w->ptr++ = c;
+    w->remaining--;
+}
+
+/* Write raw data to the buffer */
+static inline void r3d_rshade_writer_write(r3d_rshade_writer_t* w, const char* src, size_t len)
+{
+    if (w->overflow) return;
+    if (len + 1 > w->remaining) {
+        w->overflow = true;
+        return;
+    }
+    memcpy(w->ptr, src, len);
+    w->ptr += len;
+    w->remaining -= len;
+}
+
+/* Write formatted text to the buffer */
+static inline void r3d_rshade_writer_printf(r3d_rshade_writer_t* w, const char* fmt, ...)
+{
+    if (w->overflow) return;
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(w->ptr, w->remaining, fmt, args);
+    va_end(args);
+    if (n < 0 || (size_t)n >= w->remaining) {
+        w->overflow = true;
+        return;
+    }
+    w->ptr += n;
+    w->remaining -= n;
+}
+
+/* Write varyings with in/out qualifier */
+static inline void r3d_rshade_write_varyings(r3d_rshade_writer_t* w,
+    const char* inout, r3d_rshade_varying_t* varyings, int count)
+{
+    for (int i = 0; i < count; i++) {
+        if (varyings[i].qualifier[0] != '\0') {
+            r3d_rshade_writer_printf(w, "%s %s %s %s;\n",
+                varyings[i].qualifier, inout, varyings[i].type, varyings[i].name);
+        }
+        else {
+            r3d_rshade_writer_printf(w, "%s %s %s;\n",
+                inout, varyings[i].type, varyings[i].name);
+        }
+    }
+    if (count > 0) r3d_rshade_writer_putc(w, '\n');
+}
+
+/* Write sampler uniform declarations */
+static inline void r3d_rshade_write_samplers(r3d_rshade_writer_t* w,
+    r3d_rshade_sampler_t* samplers, int count)
+{
+    for (int i = 0; i < count; i++) {
+        const char* typeStr;
+        switch (samplers[i].target) {
+        case GL_TEXTURE_1D:       typeStr = "sampler1D";   break;
+        case GL_TEXTURE_2D:       typeStr = "sampler2D";   break;
+        case GL_TEXTURE_3D:       typeStr = "sampler3D";   break;
+        case GL_TEXTURE_CUBE_MAP: typeStr = "samplerCube"; break;
+        default:                  typeStr = "sampler2D";   break;
+        }
+        r3d_rshade_writer_printf(w, "uniform %s %s;\n", typeStr, samplers[i].name);
+    }
+    if (count > 0) r3d_rshade_writer_putc(w, '\n');
+}
+
+/* Write uniform block (UBO) declaration */
+static inline void r3d_rshade_write_uniform_block(r3d_rshade_writer_t* w,
+    r3d_rshade_uniform_t* entries, int count)
+{
+    if (count <= 0) return;
+
+    r3d_rshade_writer_printf(w, "layout(std140) uniform UserBlock {\n");
+    for (int i = 0; i < count; i++) {
+        r3d_rshade_writer_printf(w, "    %s %s;\n", entries[i].type, entries[i].name);
+    }
+    r3d_rshade_writer_printf(w, "};\n\n");
+}
+
+/* Write shader function body (vertex or fragment) */
+static inline void r3d_rshade_write_shader_function(r3d_rshade_writer_t* w,
+    const char* name, r3d_rshade_parsed_function_t* func)
+{
+    if (!func->bodyStart) return;
+
+    r3d_rshade_writer_printf(w, "void %s() ", name);
+    r3d_rshade_writer_write(w, func->bodyStart, (size_t)(func->bodyEnd - func->bodyStart));
+    r3d_rshade_writer_putc(w, '\n');
+}
+
 /* Copy global code while skipping uniforms, varyings, and entry points */
-static inline char* r3d_rshade_copy_global_code(char* outPtr, const char* code, bool hasVaryings,
-    r3d_rshade_parsed_function_t* vertexFunc, r3d_rshade_parsed_function_t* fragmentFunc)
+static inline void r3d_rshade_copy_global_code(r3d_rshade_writer_t* w,
+    const char* code, bool hasVaryings,
+    r3d_rshade_parsed_function_t* vertexFunc,
+    r3d_rshade_parsed_function_t* fragmentFunc)
 {
     const char* ptr = code;
 
-    while (*ptr)
+    while (*ptr && !w->overflow)
     {
         const char* lineStart = ptr;
         r3d_rshade_skip_whitespace_and_comments(&ptr);
 
         if (!*ptr) break;
 
-        // Check if line should be skipped
         if (r3d_rshade_should_skip_line(ptr, hasVaryings, vertexFunc, fragmentFunc)) {
-            // Special handling for entry points, skip entire function body
             if (r3d_rshade_check_shader_entry(ptr, vertexFunc, fragmentFunc)) {
                 r3d_rshade_skip_to_matching_brace(&ptr);
             }
-            // For pragmas, skip to end of line (not semicolon)
             else if (strncmp(ptr, "#pragma", 7) == 0) {
                 r3d_rshade_skip_to_end_of_line(&ptr);
             }
-            // For uniforms/varyings, skip to semicolon
             else {
                 r3d_rshade_skip_to_semicolon(&ptr);
             }
             continue;
         }
 
-        // Copy user code content
-        while (lineStart < ptr) *outPtr++ = *lineStart++;
-        if (*ptr) *outPtr++ = *ptr++;
+        // Copy whitespace/comments preceding this token, then the token character
+        r3d_rshade_writer_write(w, lineStart, (size_t)(ptr - lineStart));
+        if (*ptr) r3d_rshade_writer_putc(w, *ptr++);
     }
-
-    return outPtr;
-}
-
-/* Write varyings with in/out qualifier */
-static inline char* r3d_rshade_write_varyings(char* outPtr, const char* inout, r3d_rshade_varying_t* varyings, int count)
-{
-    for (int i = 0; i < count; i++) {
-        if (varyings[i].qualifier[0] != '\0') {
-            outPtr += sprintf(outPtr, "%s %s %s %s;\n",
-                varyings[i].qualifier, inout, varyings[i].type, varyings[i].name);
-        }
-        else {
-            outPtr += sprintf(outPtr, "%s %s %s;\n",
-                inout, varyings[i].type, varyings[i].name);
-        }
-    }
-    if (count > 0) *outPtr++ = '\n';
-    return outPtr;
-}
-
-/* Write sampler uniform declarations */
-static inline char* r3d_rshade_write_samplers(char* outPtr, r3d_rshade_sampler_t* samplers, int count)
-{
-    for (int i = 0; i < count; i++) {
-        const char* typeStr;
-        switch (samplers[i].target) {
-            case GL_TEXTURE_1D:       typeStr = "sampler1D"; break;
-            case GL_TEXTURE_2D:       typeStr = "sampler2D"; break;
-            case GL_TEXTURE_3D:       typeStr = "sampler3D"; break;
-            case GL_TEXTURE_CUBE_MAP: typeStr = "samplerCube"; break;
-            default:                  typeStr = "sampler2D"; break;
-        }
-        outPtr += sprintf(outPtr, "uniform %s %s;\n", typeStr, samplers[i].name);
-    }
-    if (count > 0) *outPtr++ = '\n';
-    return outPtr;
-}
-
-/* Write uniform block (UBO) declaration */
-static inline char* r3d_rshade_write_uniform_block(char* outPtr, r3d_rshade_uniform_t* entries, int count)
-{
-    if (count <= 0) return outPtr;
-
-    outPtr += sprintf(outPtr, "layout(std140) uniform UserBlock {\n");
-    for (int i = 0; i < count; i++) {
-        outPtr += sprintf(outPtr, "    %s %s;\n", entries[i].type, entries[i].name);
-    }
-    outPtr += sprintf(outPtr, "};\n\n");
-
-    return outPtr;
-}
-
-/* Write shader function body (vertex or fragment) */
-static inline char* r3d_rshade_write_shader_function(char* outPtr, const char* name, r3d_rshade_parsed_function_t* func)
-{
-    if (!func->bodyStart) return outPtr;
-
-    outPtr += sprintf(outPtr, "void %s() ", name);
-    while (func->bodyStart < func->bodyEnd) {
-        *outPtr++ = *func->bodyStart++;
-    }
-    *outPtr++ = '\n';
-
-    return outPtr;
 }
 
 // ========================================
