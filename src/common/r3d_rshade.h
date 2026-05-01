@@ -26,6 +26,14 @@
 #define R3D_RSHADE_MAX_VAR_NAME_LENGTH 64
 
 // ========================================
+// HELPER MACROS
+// ========================================
+
+// NOTE: All macros are undef at the end
+
+#define IS_SPACE(c) isspace((unsigned char)(c))
+
+// ========================================
 // STRUCT TYPES
 // ========================================
 
@@ -155,7 +163,7 @@ static inline void r3d_rshade_skip_to_matching_brace(const char** ptr)
 /* Skip whitespace characters */
 static inline void r3d_rshade_skip_whitespace(const char** ptr)
 {
-    while (**ptr && isspace(**ptr)) (*ptr)++;
+    while (**ptr && IS_SPACE(**ptr)) (*ptr)++;
 }
 
 /* Skip whitespace and all comment types (single-line and multi-line) */
@@ -163,7 +171,7 @@ static inline void r3d_rshade_skip_whitespace_and_comments(const char** ptr)
 {
     while (**ptr)
     {
-        if (isspace(**ptr)) {
+        if (IS_SPACE(**ptr)) {
             (*ptr)++;
             continue;
         }
@@ -187,7 +195,7 @@ static inline void r3d_rshade_skip_whitespace_and_comments(const char** ptr)
 /* Check if current position matches a keyword followed by whitespace */
 static inline bool r3d_rshade_match_keyword(const char* ptr, const char* keyword, size_t len)
 {
-    return strncmp(ptr, keyword, len) == 0 && isspace(ptr[len]);
+    return strncmp(ptr, keyword, len) == 0 && IS_SPACE(ptr[len]);
 }
 
 /* Check if current position is a varying keyword (varying, flat, smooth, noperspective) */
@@ -205,7 +213,7 @@ static inline bool r3d_rshade_parse_identifier(const char** ptr, char* output, s
     r3d_rshade_skip_whitespace(ptr);
 
     size_t i = 0;
-    while (**ptr && !isspace(**ptr) && **ptr != ';' && **ptr != '[' && i < maxLen - 1) {
+    while (**ptr && !IS_SPACE(**ptr) && **ptr != ';' && **ptr != '[' && i < maxLen - 1) {
         output[i++] = *(*ptr)++;
     }
     output[i] = '\0';
@@ -252,7 +260,7 @@ static inline int r3d_rshade_count_constructor_args(const char* ptr)
             count++;
             hasContent = false;
         }
-        else if (!isspace((unsigned char)*ptr)) {
+        else if (!IS_SPACE(*ptr)) {
             hasContent = true;
         }
         ptr++;
@@ -399,9 +407,9 @@ static inline bool r3d_rshade_parse_varying(const char** ptr, r3d_rshade_varying
 
     // Check for interpolation qualifier before "varying"
     size_t qualLen = 0;
-    if      (strncmp(*ptr, "flat", 4) == 0 && isspace((*ptr)[4]))            qualLen = 4;
-    else if (strncmp(*ptr, "noperspective", 13) == 0 && isspace((*ptr)[13])) qualLen = 13;
-    else if (strncmp(*ptr, "smooth", 6) == 0 && isspace((*ptr)[6]))          qualLen = 6;
+    if      (strncmp(*ptr, "flat", 4) == 0 && IS_SPACE((*ptr)[4]))            qualLen = 4;
+    else if (strncmp(*ptr, "noperspective", 13) == 0 && IS_SPACE((*ptr)[13])) qualLen = 13;
+    else if (strncmp(*ptr, "smooth", 6) == 0 && IS_SPACE((*ptr)[6]))          qualLen = 6;
 
     if (qualLen > 0) {
         memcpy(varying->qualifier, *ptr, qualLen);
@@ -485,7 +493,7 @@ static inline r3d_rshade_parsed_function_t* r3d_rshade_check_shader_entry(const 
     }
 
     const char* ahead = ptr + 4;
-    while (*ahead && isspace(*ahead)) ahead++;
+    while (*ahead && IS_SPACE(*ahead)) ahead++;
 
     if (strncmp(ahead, "vertex", 6) == 0)   return vertexFunc;
     if (strncmp(ahead, "fragment", 8) == 0) return fragmentFunc;
@@ -603,5 +611,11 @@ static inline char* r3d_rshade_write_shader_function(char* outPtr, const char* n
 
     return outPtr;
 }
+
+// ========================================
+// UNDEF HELPER MACROS
+// ========================================
+
+#undef IS_SPACE
 
 #endif // R3D_RSHADE_H
