@@ -140,7 +140,8 @@ static inline void r3d_rshade_skip_to_semicolon(const char** ptr)
 /* Skip to end of line */
 static inline void r3d_rshade_skip_to_end_of_line(const char** ptr)
 {
-    while (**ptr && **ptr != '\n') (*ptr)++;
+    while (**ptr && **ptr != '\n' && **ptr != '\r') (*ptr)++;
+    if (**ptr == '\r') (*ptr)++;
     if (**ptr == '\n') (*ptr)++;
 }
 
