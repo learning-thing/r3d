@@ -265,11 +265,11 @@ usage_hint_t parse_pragma_usage(const char** ptr)
     *ptr += 5;  // strlen("usage")
     r3d_rshade_skip_whitespace(ptr);
 
-    // Parse usage hints until end of line
-    while (**ptr && **ptr != '\n')
+    // Parse usage hints until end of line (CR, LF, or CRLF)
+    while (**ptr && **ptr != '\n' && **ptr != '\r')
     {
         r3d_rshade_skip_whitespace(ptr);
-        if (!**ptr || **ptr == '\n') break;
+        if (!**ptr || **ptr == '\n' || **ptr == '\r') break;
 
         // Match usage hint keywords
         static const struct {
@@ -287,9 +287,12 @@ usage_hint_t parse_pragma_usage(const char** ptr)
         };
 
         bool matched = false;
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 7; i++) {
             if (strncmp(*ptr, hints[i].name, hints[i].len) == 0 &&
-                (isspace((*ptr)[hints[i].len]) || (*ptr)[hints[i].len] == '\n' || (*ptr)[hints[i].len] == '\0'))
+                (isspace((*ptr)[hints[i].len]) ||
+                 (*ptr)[hints[i].len] == '\n' ||
+                 (*ptr)[hints[i].len] == '\r' ||
+                 (*ptr)[hints[i].len] == '\0'))
             {
                 result |= hints[i].flag;
                 *ptr += hints[i].len;
