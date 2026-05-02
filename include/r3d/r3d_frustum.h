@@ -19,8 +19,11 @@
  *
  * @note
  * R3D_Draw* functions already perform frustum culling internally.
- * Use this module only for advanced cases (e.g. instancing or special cases).
- * Avoid redundant per-draw-call tests.
+ * This module is intended for advanced use cases (e.g. instancing or custom culling).
+ *
+ * Be careful when manually culling objects: visibility depends on context.
+ * An object outside the camera frustum may still contribute to shadows or probes.
+ * Avoid removing instances solely based on camera visibility.
  *
  * @{
  */
