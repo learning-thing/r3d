@@ -9,11 +9,10 @@
 #ifndef R3D_MODULE_ENV_H
 #define R3D_MODULE_ENV_H
 
+#include <r3d/r3d_frustum.h>
 #include <r3d/r3d_probe.h>
 #include <raylib.h>
 #include <glad.h>
-
-#include "../common/r3d_frustum.h"
 
 // ========================================
 // HELPER MACROS
@@ -39,7 +38,7 @@ typedef struct {
 
 typedef struct {
     r3d_env_probe_state_t state;
-    r3d_frustum_t frustum[6];
+    R3D_Frustum frustum[6];
     Matrix view[6];
     Matrix viewProj[6];
     Matrix invView[6];
@@ -130,7 +129,7 @@ bool r3d_env_probe_has(r3d_env_probe_array_enum_t array);
 bool r3d_env_probe_iter(r3d_env_probe_t** probe, r3d_env_probe_array_enum_t array);
 
 /* Update probe states and collect visible ones (can indicate if probes influcences are visible) */
-void r3d_env_probe_update_and_cull(const r3d_frustum_t* viewFrustum, bool* hasVisibleProbes);
+void r3d_env_probe_update_and_cull(const R3D_Frustum* viewFrustum, bool* hasVisibleProbes);
 
 /* Check if probe should be rendered (updates state if willBeUpdated is true) */
 bool r3d_env_probe_should_be_updated(r3d_env_probe_t* probe, bool willBeUpdated);

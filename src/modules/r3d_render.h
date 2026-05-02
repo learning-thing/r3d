@@ -13,11 +13,10 @@
 #include <r3d/r3d_instance.h>
 #include <r3d/r3d_material.h>
 #include <r3d/r3d_skeleton.h>
+#include <r3d/r3d_frustum.h>
 #include <r3d/r3d_decal.h>
 #include <r3d/r3d_mesh.h>
 #include <glad.h>
-
-#include "../common/r3d_frustum.h"
 
 // ========================================
 // HELPER MACROS
@@ -215,7 +214,7 @@ typedef struct {
  */
 typedef struct {
     Matrix transform;               //< Model transformation matrix
-    r3d_oriented_box_t obb;         //< Oriented bounding box of all drawables contained in the group
+    R3D_OrientedBox obb;            //< Oriented bounding box of all drawables contained in the group
     GLuint skinTexture;             //< Texture that contains the bone matrices (can be 0 for non-skinned)
     R3D_InstanceBuffer instances;   //< Instance buffer to use
     int instanceOffset;             //< Offset to the first instance
@@ -446,14 +445,14 @@ r3d_render_group_t* r3d_render_get_call_group(const r3d_render_call_t* call);
  * Builds the list of groups that are visible inside the given frustum.
  * Must be called before issuing visibility tests with the same frustum.
  */
-void r3d_render_cull_groups(const r3d_frustum_t* frustum);
+void r3d_render_cull_groups(const R3D_Frustum* frustum);
 
 /*
  * Returns true if the draw call is visible within the given frustum.
  * Uses both per-call culling and the results produced by `r3d_render_cull_groups()`
  * Make sure to compute visible groups with the same frustum before calling this function.
  */
-bool r3d_render_call_is_visible(const r3d_render_call_t* call, const r3d_frustum_t* frustum);
+bool r3d_render_call_is_visible(const r3d_render_call_t* call, const R3D_Frustum* frustum);
 
 /*
  * Sort a render list according to the given mode and camera position.

@@ -29,6 +29,7 @@
 #include "r3d_decal.h"
 #include "r3d_draw.h"
 #include "r3d_environment.h"
+#include "r3d_frustum.h"
 #include "r3d_instance.h"
 #include "r3d_kinematics.h"
 #include "r3d_lighting.h"
@@ -42,6 +43,5 @@
 #include "r3d_sky.h"
 #include "r3d_surface_shader.h"
 #include "r3d_utils.h"
-#include "r3d_visibility.h"
 
 #endif // R3D_H

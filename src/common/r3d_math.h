@@ -59,14 +59,6 @@ typedef struct {
     int w, h;
 } r3d_rect_t;
 
-typedef struct {
-    Vector3 center;
-    Vector3 axisX;
-    Vector3 axisY;
-    Vector3 axisZ;
-    Vector3 halfExtents;
-} r3d_oriented_box_t;
-
 // ========================================
 // COLOR FUNCTIONS
 // ========================================
@@ -371,35 +363,6 @@ static inline Matrix r3d_matrix_normal(const Matrix* transform)
     result.m15 = 1.0f;
 
     return result;
-}
-
-// ========================================
-// SHAPE FUNCTIONS
-// ========================================
-
-static inline r3d_oriented_box_t r3d_compute_obb(BoundingBox aabb, Matrix transform)
-{
-    r3d_oriented_box_t obb;
-
-    obb.halfExtents.x = (aabb.max.x - aabb.min.x) * 0.5f;
-    obb.halfExtents.y = (aabb.max.y - aabb.min.y) * 0.5f;
-    obb.halfExtents.z = (aabb.max.z - aabb.min.z) * 0.5f;
-
-    Vector3 localCenter = {
-        (aabb.min.x + aabb.max.x) * 0.5f,
-        (aabb.min.y + aabb.max.y) * 0.5f,
-        (aabb.min.z + aabb.max.z) * 0.5f
-    };
-
-    obb.center.x = transform.m0*localCenter.x + transform.m4*localCenter.y + transform.m8*localCenter.z + transform.m12;
-    obb.center.y = transform.m1*localCenter.x + transform.m5*localCenter.y + transform.m9*localCenter.z + transform.m13;
-    obb.center.z = transform.m2*localCenter.x + transform.m6*localCenter.y + transform.m10*localCenter.z + transform.m14;
-
-    obb.axisX = (Vector3){transform.m0, transform.m1, transform.m2};
-    obb.axisY = (Vector3){transform.m4, transform.m5, transform.m6};
-    obb.axisZ = (Vector3){transform.m8, transform.m9, transform.m10};
-
-    return obb;
 }
 
 #endif // R3D_COMMON_MATH_H

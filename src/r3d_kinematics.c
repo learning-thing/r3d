@@ -106,6 +106,31 @@ static inline void raycast_mesh_indexed(
 // PUBLIC API
 // ========================================
 
+R3D_OrientedBox R3D_GetOrientedBox(BoundingBox aabb, Matrix transform)
+{
+    R3D_OrientedBox obb;
+
+    obb.halfExtents.x = (aabb.max.x - aabb.min.x) * 0.5f;
+    obb.halfExtents.y = (aabb.max.y - aabb.min.y) * 0.5f;
+    obb.halfExtents.z = (aabb.max.z - aabb.min.z) * 0.5f;
+
+    Vector3 localCenter = {
+        (aabb.min.x + aabb.max.x) * 0.5f,
+        (aabb.min.y + aabb.max.y) * 0.5f,
+        (aabb.min.z + aabb.max.z) * 0.5f
+    };
+
+    obb.center.x = transform.m0*localCenter.x + transform.m4*localCenter.y + transform.m8*localCenter.z + transform.m12;
+    obb.center.y = transform.m1*localCenter.x + transform.m5*localCenter.y + transform.m9*localCenter.z + transform.m13;
+    obb.center.z = transform.m2*localCenter.x + transform.m6*localCenter.y + transform.m10*localCenter.z + transform.m14;
+
+    obb.axisX = (Vector3){transform.m0, transform.m1, transform.m2};
+    obb.axisY = (Vector3){transform.m4, transform.m5, transform.m6};
+    obb.axisZ = (Vector3){transform.m8, transform.m9, transform.m10};
+
+    return obb;
+}
+
 bool R3D_CheckCollisionCapsuleBox(R3D_Capsule capsule, BoundingBox box)
 {
     Vector3 closestOnSegment = R3D_ClosestPointOnSegment(

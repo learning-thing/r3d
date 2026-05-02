@@ -254,7 +254,6 @@ add_library(${PROJECT_NAME}
     ${R3D_IMPORTER_SOURCES}
     # Common
     "${R3D_ROOT_PATH}/src/common/r3d_anim.c"
-    "${R3D_ROOT_PATH}/src/common/r3d_frustum.c"
     "${R3D_ROOT_PATH}/src/common/r3d_helper.c"
     "${R3D_ROOT_PATH}/src/common/r3d_image.c"
     "${R3D_ROOT_PATH}/src/common/r3d_pass.c"
@@ -277,6 +276,7 @@ add_library(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/src/r3d_decal.c"
     "${R3D_ROOT_PATH}/src/r3d_ambient_map.c"
     "${R3D_ROOT_PATH}/src/r3d_environment.c"
+    "${R3D_ROOT_PATH}/src/r3d_frustum.c"
     "${R3D_ROOT_PATH}/src/r3d_importer.c"
     "${R3D_ROOT_PATH}/src/r3d_instance.c"
     "${R3D_ROOT_PATH}/src/r3d_kinematics.c"
@@ -294,7 +294,6 @@ add_library(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/src/r3d_sky.c"
     "${R3D_ROOT_PATH}/src/r3d_utils.c"
     "${R3D_ROOT_PATH}/src/r3d_vertex.c"
-    "${R3D_ROOT_PATH}/src/r3d_visibility.c"
 )
 
 # ========================================

@@ -17,7 +17,6 @@
 #include <float.h>
 #include <glad.h>
 
-#include "../common/r3d_frustum.h"
 #include "../common/r3d_math.h"
 #include "../common/r3d_hash.h"
 
@@ -610,38 +609,38 @@ static void get_draw_call_info(const r3d_render_call_t* call, GLenum* primitive,
 // INTERNAL CULLING FUNCTIONS
 // ========================================
 
-static inline bool is_aabb_visible(const r3d_frustum_t* frustum, BoundingBox aabb)
+static inline bool is_aabb_visible(const R3D_Frustum* frustum, BoundingBox aabb)
 {
     if (memcmp(&aabb, &(BoundingBox){0}, sizeof(BoundingBox)) == 0) {
         return true;
     }
 
-    return r3d_frustum_is_aabb_in(frustum, aabb);
+    return R3D_FrustumIntersectsBoundingBox(frustum, aabb);
 }
 
-static inline bool is_obb_visible(const r3d_frustum_t* frustum, r3d_oriented_box_t obb)
+static inline bool is_obb_visible(const R3D_Frustum* frustum, R3D_OrientedBox obb)
 {
-    if (memcmp(&obb, &(r3d_oriented_box_t){0}, sizeof(r3d_oriented_box_t)) == 0) {
+    if (memcmp(&obb, &(R3D_OrientedBox){0}, sizeof(R3D_OrientedBox)) == 0) {
         return true;
     }
 
-    return r3d_frustum_is_obb_in(frustum, obb);
+    return R3D_FrustumIntersectsOrientedBox(frustum, obb);
 }
 
-static inline bool is_transformed_aabb_visible(const r3d_frustum_t* frustum, BoundingBox aabb, Matrix transform)
+static inline bool is_transformed_aabb_visible(const R3D_Frustum* frustum, BoundingBox aabb, Matrix transform)
 {
     if (memcmp(&aabb, &(BoundingBox){0}, sizeof(BoundingBox)) == 0) {
         return true;
     }
 
     if (r3d_matrix_is_identity(transform)) {
-        return r3d_frustum_is_aabb_in(frustum, aabb);
+        return R3D_FrustumIntersectsBoundingBox(frustum, aabb);
     }
 
-    return r3d_frustum_is_obb_in(frustum, r3d_compute_obb(aabb, transform));
+    return R3D_FrustumIntersectsOrientedBox(frustum, R3D_GetOrientedBox(aabb, transform));
 }
 
-static inline bool is_draw_call_visible(const r3d_frustum_t* frustum, const r3d_render_call_t* call, Matrix transform)
+static inline bool is_draw_call_visible(const R3D_Frustum* frustum, const r3d_render_call_t* call, Matrix transform)
 {
     switch (call->type) {
     case R3D_RENDER_CALL_MESH:
@@ -1323,7 +1322,7 @@ r3d_render_group_t* r3d_render_get_call_group(const r3d_render_call_t* call)
     return group;
 }
 
-void r3d_render_cull_groups(const r3d_frustum_t* frustum)
+void r3d_render_cull_groups(const R3D_Frustum* frustum)
 {
     // Reset visibility states if groups were already culled in a previous pass
     if (R3D_MOD_RENDER.groupCulled) {
@@ -1372,7 +1371,7 @@ void r3d_render_cull_groups(const r3d_frustum_t* frustum)
     }
 }
 
-bool r3d_render_call_is_visible(const r3d_render_call_t* call, const r3d_frustum_t* frustum)
+bool r3d_render_call_is_visible(const r3d_render_call_t* call, const R3D_Frustum* frustum)
 {
     // Get the draw call's parent group and its visibility state
     int callIndex = get_draw_call_index(call);

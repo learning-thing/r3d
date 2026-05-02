@@ -12,11 +12,11 @@
 #include <r3d/r3d_screen_shader.h>
 #include <r3d/r3d_environment.h>
 #include <r3d/r3d_material.h>
+#include <r3d/r3d_frustum.h>
 #include <r3d/r3d_core.h>
 #include <r3d_config.h>
 #include <raylib.h>
 
-#include "./common/r3d_frustum.h"
 #include "./common/r3d_camera.h"
 
 // ========================================
@@ -28,7 +28,7 @@
  */
 typedef struct {
     r3d_camera_t camera;    //< Complete camera data
-    r3d_frustum_t frustum;  //< View frustum for culling
+    R3D_Frustum frustum;    //< View frustum for culling
     Matrix view, invView;   //< View matrix and its inverse
     Matrix proj, invProj;   //< Projection matrix and its inverse
     Matrix viewProj;        //< Combined view-projection matrix

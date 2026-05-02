@@ -22,6 +22,19 @@
 // ========================================
 
 /**
+ * @brief Oriented bounding box (OBB).
+ *
+ * Defined by a center point, three orthogonal axes, and half-extents along each axis.
+ */
+typedef struct {
+    Vector3 center;
+    Vector3 axisX;
+    Vector3 axisY;
+    Vector3 axisZ;
+    Vector3 halfExtents;
+} R3D_OrientedBox;
+
+/**
  * @brief Capsule shape defined by two endpoints and radius
  */
 typedef struct R3D_Capsule {
@@ -57,6 +70,11 @@ typedef struct R3D_SweepCollision {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief Compute an oriented bounding box from an AABB and transform.
+ */
+R3DAPI R3D_OrientedBox R3D_GetOrientedBox(BoundingBox aabb, Matrix transform);
 
 /**
  * @brief Check if capsule intersects with box
