@@ -95,26 +95,36 @@ R3DAPI void R3D_ComputeFrustumCorners(Matrix invViewProj, Vector3 corners[8]);
 
 /**
  * @brief Check if a point is inside the frustum.
+ *
+ * @param frustum Frustum to test against. Must not be NULL.
  */
 R3DAPI bool R3D_FrustumContainsPoint(const R3D_Frustum* frustum, Vector3 position);
 
 /**
  * @brief Check if any point from a set is inside the frustum.
+ *
+ * @param frustum Frustum to test against. Must not be NULL.
  */
 R3DAPI bool R3D_FrustumContainsAnyPoint(const R3D_Frustum* frustum, const Vector3* positions, int count);
 
 /**
  * @brief Check if a sphere intersects the frustum.
+ *
+ * @param frustum Frustum to test against. Must not be NULL.
  */
 R3DAPI bool R3D_FrustumIntersectsSphere(const R3D_Frustum* frustum, Vector3 position, float radius);
 
 /**
  * @brief Check if a bounding box intersects the frustum.
+ *
+ * @param frustum Frustum to test against. Must not be NULL.
  */
 R3DAPI bool R3D_FrustumIntersectsBoundingBox(const R3D_Frustum* frustum, BoundingBox aabb);
 
 /**
  * @brief Check if an oriented box intersects the frustum.
+ *
+ * @param frustum Frustum to test against. Must not be NULL.
  */
 R3DAPI bool R3D_FrustumIntersectsOrientedBox(const R3D_Frustum* frustum, R3D_OrientedBox obb);
 
