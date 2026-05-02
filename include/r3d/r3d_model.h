@@ -149,6 +149,33 @@ R3DAPI R3D_Model R3D_LoadModelFromImporter(const R3D_Importer* importer);
  */
 R3DAPI void R3D_UnloadModel(R3D_Model model, bool unloadMaterials);
 
+/**
+ * @brief Returns the index of the mesh with the given name.
+ *
+ * @param model The model to search in.
+ * @param meshName The name of the mesh to look up.
+ * @return The mesh index, or -1 if not found or if @c meshNames is NULL.
+ */
+R3DAPI int R3D_GetModelMeshIndex(R3D_Model model, const char* meshName);
+
+/**
+ * @brief Returns a pointer to the mesh with the given name.
+ *
+ * @param model The model to search in.
+ * @param meshName The name of the mesh to look up.
+ * @return A pointer to the mesh, or NULL if not found or if @c meshNames is NULL.
+ */
+R3DAPI R3D_Mesh* R3D_GetModelMesh(R3D_Model model, const char* meshName);
+
+/**
+ * @brief Returns a pointer to the mesh data with the given name.
+ *
+ * @param model The model to search in.
+ * @param meshName The name of the mesh to look up.
+ * @return A pointer to the mesh data, or NULL if not found or if @c meshNames or @c meshData is NULL.
+ */
+R3DAPI R3D_MeshData* R3D_GetModelMeshData(R3D_Model model, const char* meshName);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
