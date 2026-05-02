@@ -254,6 +254,7 @@ static R3D_PrimitiveType get_primitive_type(unsigned int aiPrimitiveTypes)
 static bool load_mesh_internal(
     R3D_Mesh* outMesh,
     R3D_MeshData* outMeshData,
+    R3D_MeshName* outMeshName,
     const struct aiMesh* aiMesh,
     Matrix transform,
     bool hasBones)
@@ -314,8 +315,13 @@ static bool load_mesh_internal(
     R3D_PrimitiveType ptype = get_primitive_type(aiMesh->mPrimitiveTypes);
     *outMesh = R3D_LoadMesh(ptype, data, &aabb);
 
-    if (outMeshData == NULL) R3D_UnloadMeshData(data);
-    else *outMeshData = data;
+    if (outMeshData != NULL) *outMeshData = data;
+    else R3D_UnloadMeshData(data);
+
+    if (outMeshName != NULL && aiMesh->mName.length > 0) {
+        strncpy(*outMeshName, aiMesh->mName.data, sizeof(R3D_MeshName) - 1);
+        *outMeshName[sizeof(R3D_MeshName) - 1] = '\0';
+    }
 
     return true;
 }
@@ -334,7 +340,10 @@ static bool load_recursive(const R3D_Importer* importer, R3D_Model* model, const
         uint32_t meshIndex = node->mMeshes[i];
         const struct aiMesh* mesh = r3d_importer_get_mesh(importer, meshIndex);
 
-        if (!load_mesh_internal(&model->meshes[meshIndex], model->meshData ? &model->meshData[meshIndex] : NULL, mesh, globalTransform, mesh->mNumBones > 0)) {
+        R3D_MeshData* meshData = model->meshData ? &model->meshData[meshIndex] : NULL;
+        R3D_MeshName* meshName = model->meshNames ? &model->meshNames[meshIndex] : NULL;
+
+        if (!load_mesh_internal(&model->meshes[meshIndex], meshData, meshName, mesh, globalTransform, mesh->mNumBones > 0)) {
             R3D_TRACELOG(LOG_ERROR, "Unable to load mesh [%u]; The model will be invalid", meshIndex);
             return false;
         }
@@ -364,6 +373,8 @@ bool r3d_importer_load_meshes(const R3D_Importer* importer, R3D_Model* model)
     }
 
     bool keepMeshData = BIT_TEST(importer->flags, R3D_IMPORT_MESH_DATA);
+    bool keepMeshNames = BIT_TEST(importer->flags, R3D_IMPORT_MESH_NAMES);
+
     const struct aiScene* scene = r3d_importer_get_scene(importer);
 
     // Allocate space for meshes
@@ -371,7 +382,8 @@ bool r3d_importer_load_meshes(const R3D_Importer* importer, R3D_Model* model)
     model->meshes = RL_CALLOC(model->meshCount, sizeof(*model->meshes));
     model->meshMaterials = RL_CALLOC(model->meshCount, sizeof(*model->meshMaterials));
     if (keepMeshData) model->meshData = RL_CALLOC(model->meshCount, sizeof(*model->meshData));
-    if (!model->meshes || !model->meshMaterials || (keepMeshData && !model->meshData)) {
+    if (keepMeshNames) model->meshNames = RL_CALLOC(model->meshCount, sizeof(*model->meshNames));
+    if (!model->meshes || !model->meshMaterials || (keepMeshData && !model->meshData) || (keepMeshNames && !model->meshNames)) {
         R3D_TRACELOG(LOG_ERROR, "Unable to allocate memory for meshes");
         goto cleanup_and_fail;
     }

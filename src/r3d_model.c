@@ -170,3 +170,27 @@ void R3D_UnloadModel(R3D_Model model, bool unloadMaterials)
     RL_FREE(model.meshData);
     RL_FREE(model.meshes);
 }
+
+int R3D_GetModelMeshIndex(R3D_Model model, const char* meshName)
+{
+    if (model.meshNames == NULL) return -1;
+    for (int i = 0; i < model.meshCount; i++) {
+        if (strncmp(model.meshNames[i], meshName, sizeof(R3D_MeshName)) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+R3D_Mesh* R3D_GetModelMesh(R3D_Model model, const char* meshName)
+{
+    int index = R3D_GetModelMeshIndex(model, meshName);
+    return index >= 0 ? &model.meshes[index] : NULL;
+}
+
+R3D_MeshData* R3D_GetModelMeshData(R3D_Model model, const char* meshName)
+{
+    if (model.meshData == NULL) return NULL;
+    int index = R3D_GetModelMeshIndex(model, meshName);
+    return index >= 0 ? &model.meshData[index] : NULL;
+}
