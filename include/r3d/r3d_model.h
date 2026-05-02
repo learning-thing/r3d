@@ -21,6 +21,17 @@
  */
 
 // ========================================
+// ALIASES TYPES
+// ========================================
+
+/**
+ * @brief Fixed-length string type for mesh names.
+ *
+ * The size can be freely adjusted before compilation.
+ */
+typedef char R3D_MeshName[32];
+
+// ========================================
 // STRUCTS TYPES
 // ========================================
 
@@ -31,16 +42,18 @@
  */
 typedef struct R3D_Model {
 
-    R3D_Mesh* meshes;                   ///< Array of meshes composing the model.
-    R3D_MeshData* meshData;             ///< Array of meshes data in RAM (optional, can be NULL).
-    R3D_Material* materials;            ///< Array of materials used by the model.
-    int* meshMaterials;                 ///< Array of material indices, one per mesh.
+    R3D_Mesh* meshes;           ///< Array of meshes composing the model.
+    R3D_MeshData* meshData;     ///< Array of meshes data in RAM (optional, can be NULL).
+    R3D_MeshName* meshNames;    ///< Array of meshes names (optional, can be NULL).
 
-    int meshCount;                      ///< Number of meshes.
-    int materialCount;                  ///< Number of materials.
+    R3D_Material* materials;    ///< Array of materials used by the model.
+    int* meshMaterials;         ///< Array of material indices, one per mesh.
 
-    BoundingBox aabb;                   ///< Axis-Aligned Bounding Box encompassing the whole model.
-    R3D_Skeleton skeleton;              ///< Skeleton hierarchy and bind pose used for skinning (NULL if non-skinned).
+    int meshCount;              ///< Number of meshes.
+    int materialCount;          ///< Number of materials.
+
+    BoundingBox aabb;           ///< Axis-Aligned Bounding Box encompassing the whole model.
+    R3D_Skeleton skeleton;      ///< Skeleton hierarchy and bind pose used for skinning (NULL if non-skinned).
 
 } R3D_Model;
 
