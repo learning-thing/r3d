@@ -388,7 +388,7 @@ static void update_light_frustum(r3d_light_t* light)
 {
     int faceCount = (light->type == R3D_LIGHT_OMNI) ? 6 : 1;
     for (int i = 0; i < faceCount; i++) {
-        light->frustum[i] = r3d_frustum_create(light->viewProj[i]);
+        light->frustum[i] = R3D_ComputeFrustum(light->viewProj[i]);
     }
 }
 
@@ -400,7 +400,7 @@ static void update_light_bounding_box(r3d_light_t* light)
         light->aabb.max = Vector3AddValue(light->position, +light->range);
         break;
     case R3D_LIGHT_SPOT:
-        light->aabb = r3d_frustum_get_bounding_box(MatrixInvert(light->viewProj[0]));
+        light->aabb = R3D_ComputeFrustumBoundingBox(MatrixInvert(light->viewProj[0]));
         break;
     case R3D_LIGHT_DIR:
         light->aabb.min = (Vector3) {-FLT_MAX, -FLT_MAX, -FLT_MAX};
@@ -640,7 +640,7 @@ void r3d_light_disable_shadows(r3d_light_t* light)
     }
 }
 
-void r3d_light_update_and_cull(const r3d_frustum_t* viewFrustum, r3d_camera_t camera, bool* hasVisibleShadows)
+void r3d_light_update_and_cull(const R3D_Frustum* viewFrustum, r3d_camera_t camera, bool* hasVisibleShadows)
 {
     r3d_light_array_t* visibleLights = &R3D_MOD_LIGHT.arrays[R3D_LIGHT_ARRAY_VISIBLE];
     r3d_light_array_t* validLights = &R3D_MOD_LIGHT.arrays[R3D_LIGHT_ARRAY_VALID];
@@ -671,7 +671,7 @@ void r3d_light_update_and_cull(const r3d_frustum_t* viewFrustum, r3d_camera_t ca
             light->state.matrixShouldBeUpdated = false;
         }
 
-        if (r3d_frustum_is_aabb_in(viewFrustum, light->aabb)) {
+        if (R3D_FrustumIntersectsBoundingBox(viewFrustum, light->aabb)) {
             if (hasVisibleShadows) *hasVisibleShadows |= (light->shadowLayer >= 0);
             visibleLights->lights[visibleLights->count++] = index;
         }

@@ -17,7 +17,6 @@
 
 #include "./r3d_core_state.h"
 
-#include "./common/r3d_frustum.h"
 #include "./common/r3d_helper.h"
 #include "./common/r3d_pass.h"
 #include "./common/r3d_math.h"
@@ -307,7 +306,7 @@ void R3D_DrawMeshPro(R3D_Mesh mesh, R3D_Material material, Matrix transform)
 
     r3d_render_group_t drawGroup = {0};
     drawGroup.transform = transform;
-    drawGroup.obb = r3d_compute_obb(mesh.aabb, transform);
+    drawGroup.obb = R3D_GetOrientedBox(mesh.aabb, transform);
 
     r3d_render_group_push(&drawGroup);
 
@@ -369,7 +368,7 @@ void R3D_DrawModelPro(R3D_Model model, Matrix transform)
 {
     r3d_render_group_t drawGroup = {0};
     drawGroup.transform = transform;
-    drawGroup.obb = r3d_compute_obb(model.aabb, transform);
+    drawGroup.obb = R3D_GetOrientedBox(model.aabb, transform);
     drawGroup.skinTexture = model.skeleton.skinTexture;
 
     r3d_render_group_push(&drawGroup);
@@ -445,7 +444,7 @@ void R3D_DrawAnimatedModelPro(R3D_Model model, R3D_AnimationPlayer player, Matri
 {
     r3d_render_group_t drawGroup = {0};
     drawGroup.transform = transform;
-    drawGroup.obb = r3d_compute_obb(model.aabb, transform);
+    drawGroup.obb = R3D_GetOrientedBox(model.aabb, transform);
 
     drawGroup.skinTexture = (player.skinTexture > 0)
         ? player.skinTexture : model.skeleton.skinTexture;
@@ -528,7 +527,7 @@ void R3D_DrawDecalPro(R3D_Decal decal, Matrix transform)
 
     r3d_render_group_t drawGroup = {0};
     drawGroup.transform = transform;
-    drawGroup.obb = r3d_compute_obb(R3D_AABB_UNIT, transform);
+    drawGroup.obb = R3D_GetOrientedBox(R3D_AABB_UNIT, transform);
 
     r3d_render_group_push(&drawGroup);
 
@@ -598,7 +597,7 @@ void update_view_state(Camera3D camera, double near, double far)
     Matrix proj = r3d_camera_proj(R3D.viewState.camera);
     Matrix viewProj = MatrixMultiply(view, proj);
 
-    R3D.viewState.frustum = r3d_frustum_create(viewProj);
+    R3D.viewState.frustum = R3D_ComputeFrustum(viewProj);
     R3D.viewState.view = view;
     R3D.viewState.proj = proj;
     R3D.viewState.invView = MatrixInvert(view);
@@ -1383,7 +1382,7 @@ void pass_scene_shadow(void)
                 r3d_light_shadow_bind_fbo(light->type, light->shadowLayer, iFace);
                 glClear(GL_DEPTH_BUFFER_BIT);
 
-                const r3d_frustum_t* frustum = &light->frustum[iFace];
+                const R3D_Frustum* frustum = &light->frustum[iFace];
                 r3d_render_cull_groups(frustum);
 
                 #define COND (call->mesh.instance.shadowCastMode != R3D_SHADOW_CAST_DISABLED)
@@ -1399,7 +1398,7 @@ void pass_scene_shadow(void)
             r3d_light_shadow_bind_fbo(light->type, light->shadowLayer, 0);
             glClear(GL_DEPTH_BUFFER_BIT);
 
-            const r3d_frustum_t* frustum = &light->frustum[0];
+            const R3D_Frustum* frustum = &light->frustum[0];
             r3d_render_cull_groups(frustum);
 
             #define COND (call->mesh.instance.shadowCastMode != R3D_SHADOW_CAST_DISABLED)
@@ -1428,7 +1427,7 @@ void pass_scene_probes(void)
         {
             /* --- Generates the list of visible groups for the current face of the capture --- */
 
-            const r3d_frustum_t* frustum = &probe->frustum[iFace];
+            const R3D_Frustum* frustum = &probe->frustum[iFace];
             r3d_render_cull_groups(frustum);
 
             /* --- Render scene --- */
@@ -1513,7 +1512,7 @@ void pass_scene_geometry(void)
 
     r3d_driver_set_depth_mask(GL_TRUE);
 
-    const r3d_frustum_t* frustum = &R3D.viewState.frustum;
+    const R3D_Frustum* frustum = &R3D.viewState.frustum;
     R3D_RENDER_FOR_EACH(call, true, frustum, R3D_RENDER_LIST_OPAQUE_INST, R3D_RENDER_LIST_OPAQUE) {
         if (!call->mesh.material.unlit) {
             raster_geometry(call, false);
@@ -1535,7 +1534,7 @@ void pass_scene_prepass(void)
 
     r3d_driver_set_depth_mask(GL_TRUE);
 
-    const r3d_frustum_t* frustum = &R3D.viewState.frustum;
+    const R3D_Frustum* frustum = &R3D.viewState.frustum;
     R3D_RENDER_FOR_EACH(call, true, frustum, R3D_RENDER_LIST_TRANSPARENT_INST, R3D_RENDER_LIST_TRANSPARENT) {
         if (r3d_render_is_prepass(call)) {
             raster_depth(call, &R3D.viewState.viewProj, NULL);
@@ -1576,7 +1575,7 @@ void pass_scene_decals(void)
 
     r3d_driver_set_cull_face(GL_FRONT); // Only render back faces to avoid clipping issues
 
-    const r3d_frustum_t* frustum = &R3D.viewState.frustum;
+    const R3D_Frustum* frustum = &R3D.viewState.frustum;
     R3D_RENDER_FOR_EACH(call, true, frustum, R3D_RENDER_LIST_DECAL_INST, R3D_RENDER_LIST_DECAL) {
         raster_decal(call);
     }
@@ -2079,7 +2078,7 @@ void pass_scene_forward(r3d_target_t sceneTarget)
 
     r3d_driver_set_depth_mask(GL_TRUE);
 
-    const r3d_frustum_t* frustum = &R3D.viewState.frustum;
+    const R3D_Frustum* frustum = &R3D.viewState.frustum;
     R3D_RENDER_FOR_EACH(call, true, frustum, R3D_RENDER_LIST_OPAQUE_INST, R3D_RENDER_LIST_OPAQUE) {
         if (call->mesh.material.unlit) {
             raster_unlit(call);

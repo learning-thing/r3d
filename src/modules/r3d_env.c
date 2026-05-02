@@ -8,13 +8,13 @@
 
 #include "./r3d_env.h"
 
+#include <r3d/r3d_frustum.h>
 #include <r3d_config.h>
 #include <raymath.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
-#include "../common/r3d_frustum.h"
 #include "../common/r3d_helper.h"
 #include "../common/r3d_math.h"
 
@@ -302,7 +302,7 @@ static void update_probe_matrix_frustum(r3d_env_probe_t* probe)
         Vector3 target = Vector3Add(probe->position, dirs[face]);
         probe->view[face] = MatrixLookAt(probe->position, target, ups[face]);
         probe->viewProj[face] = MatrixMultiply(probe->view[face], proj);
-        probe->frustum[face] = r3d_frustum_create(probe->viewProj[face]);
+        probe->frustum[face] = R3D_ComputeFrustum(probe->viewProj[face]);
         probe->invView[face] = MatrixInvert(probe->view[face]);
     }
 }
@@ -468,7 +468,7 @@ bool r3d_env_probe_iter(r3d_env_probe_t** probe, r3d_env_probe_array_enum_t arra
     return true;
 }
 
-void r3d_env_probe_update_and_cull(const r3d_frustum_t* viewFrustum, bool* hasVisibleProbes)
+void r3d_env_probe_update_and_cull(const R3D_Frustum* viewFrustum, bool* hasVisibleProbes)
 {
     r3d_env_probe_array_t* visibleProbes = &R3D_MOD_ENV.arrays[R3D_ENV_PROBE_ARRAY_VISIBLE];
     r3d_env_probe_array_t* validProbes = &R3D_MOD_ENV.arrays[R3D_ENV_PROBE_ARRAY_VALID];
@@ -499,7 +499,7 @@ void r3d_env_probe_update_and_cull(const r3d_frustum_t* viewFrustum, bool* hasVi
             }
         };
 
-        if (r3d_frustum_is_aabb_in(viewFrustum, aabb)) {
+        if (R3D_FrustumIntersectsBoundingBox(viewFrustum, aabb)) {
             visibleProbes->probes[visibleProbes->count++] = index;
             if (hasVisibleProbes) *hasVisibleProbes = true;
         }

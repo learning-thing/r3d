@@ -6,16 +6,18 @@
  * For conditions of distribution and use, see accompanying LICENSE file.
  */
 
-#include "./r3d_frustum.h"
-#include "r3d_math.h"
-#include "raylib.h"
-
+#include <r3d/r3d_frustum.h>
 #include <raymath.h>
 #include <float.h>
 
-/* === Internal functions === */
+#include "./common/r3d_math.h"
+#include "./r3d_core_state.h"
 
-static inline Vector4 r3d_frustum_normalize_plane(Vector4 plane)
+// ========================================
+// INLINE FUNCTIONS
+// ========================================
+
+static inline Vector4 normalize_plane(Vector4 plane)
 {
     float len = sqrtf(plane.x*plane.x + plane.y*plane.y + plane.z*plane.z);
     if (len <= 1e-6f) return (Vector4) {0};
@@ -29,53 +31,60 @@ static inline Vector4 r3d_frustum_normalize_plane(Vector4 plane)
     return plane;
 }
 
-static inline float r3d_frustum_distance_to_plane(Vector4 plane, Vector3 position)
+static inline float distance_to_plane(Vector4 plane, Vector3 position)
 {
     return plane.x*position.x + plane.y*position.y + plane.z*position.z + plane.w;
 }
 
-/* === Public functions === */
+// ========================================
+// PUBLIC API
+// ========================================
 
-r3d_frustum_t r3d_frustum_create(Matrix viewProj)
+R3D_Frustum R3D_GetFrustum(void)
 {
-    r3d_frustum_t frustum = {0};
+    return R3D.viewState.frustum;
+}
 
-    frustum.planes[R3D_PLANE_RIGHT] = r3d_frustum_normalize_plane((Vector4) {
+R3D_Frustum R3D_ComputeFrustum(Matrix viewProj)
+{
+    R3D_Frustum frustum = {0};
+
+    frustum.planes[R3D_PLANE_RIGHT] = normalize_plane((Vector4) {
         viewProj.m3 - viewProj.m0,
         viewProj.m7 - viewProj.m4,
         viewProj.m11 - viewProj.m8,
         viewProj.m15 - viewProj.m12
     });
 
-    frustum.planes[R3D_PLANE_LEFT] = r3d_frustum_normalize_plane((Vector4) {
+    frustum.planes[R3D_PLANE_LEFT] = normalize_plane((Vector4) {
         viewProj.m3 + viewProj.m0,
         viewProj.m7 + viewProj.m4,
         viewProj.m11 + viewProj.m8,
         viewProj.m15 + viewProj.m12
     });
 
-    frustum.planes[R3D_PLANE_TOP] = r3d_frustum_normalize_plane((Vector4) {
+    frustum.planes[R3D_PLANE_TOP] = normalize_plane((Vector4) {
         viewProj.m3 - viewProj.m1,
         viewProj.m7 - viewProj.m5,
         viewProj.m11 - viewProj.m9,
         viewProj.m15 - viewProj.m13
     });
 
-    frustum.planes[R3D_PLANE_BOTTOM] = r3d_frustum_normalize_plane((Vector4) {
+    frustum.planes[R3D_PLANE_BOTTOM] = normalize_plane((Vector4) {
         viewProj.m3 + viewProj.m1,
         viewProj.m7 + viewProj.m5,
         viewProj.m11 + viewProj.m9,
         viewProj.m15 + viewProj.m13
     });
 
-    frustum.planes[R3D_PLANE_BACK] = r3d_frustum_normalize_plane((Vector4) {
+    frustum.planes[R3D_PLANE_BACK] = normalize_plane((Vector4) {
         viewProj.m3 - viewProj.m2,
         viewProj.m7 - viewProj.m6,
         viewProj.m11 - viewProj.m10,
         viewProj.m15 - viewProj.m14
     });
 
-    frustum.planes[R3D_PLANE_FRONT] = r3d_frustum_normalize_plane((Vector4) {
+    frustum.planes[R3D_PLANE_FRONT] = normalize_plane((Vector4) {
         viewProj.m3 + viewProj.m2,
         viewProj.m7 + viewProj.m6,
         viewProj.m11 + viewProj.m10,
@@ -85,7 +94,7 @@ r3d_frustum_t r3d_frustum_create(Matrix viewProj)
     return frustum;
 }
 
-BoundingBox r3d_frustum_get_bounding_box(Matrix invViewProj)
+BoundingBox R3D_ComputeFrustumBoundingBox(Matrix invViewProj)
 {
     Vector4 clipCorners[8] = {
         {-1, -1, -1, 1}, {1, -1, -1, 1}, {1, 1, -1, 1}, {-1, 1, -1, 1}, // Near
@@ -112,7 +121,7 @@ BoundingBox r3d_frustum_get_bounding_box(Matrix invViewProj)
     return bbox;
 }
 
-void r3d_frustum_get_corners(Matrix invViewProj, Vector3* corners)
+void R3D_ComputeFrustumCorners(Matrix invViewProj, Vector3* corners)
 {
     Vector4 clipCorners[8] = {
         {-1, -1, -1, 1}, {1, -1, -1, 1}, {1, 1, -1, 1}, {-1, 1, -1, 1}, // Near
@@ -131,20 +140,21 @@ void r3d_frustum_get_corners(Matrix invViewProj, Vector3* corners)
     }
 }
 
-bool r3d_frustum_is_point_in(const r3d_frustum_t* frustum, Vector3 position)
+bool R3D_FrustumContainsPoint(const R3D_Frustum* frustum, Vector3 position)
 {
     for (int i = 0; i < R3D_PLANE_COUNT; i++) {
-        if (r3d_frustum_distance_to_plane(frustum->planes[i], position) <= 0) {
+        if (distance_to_plane(frustum->planes[i], position) <= 0) {
             return false;
         }
     }
+
     return true;
 }
 
-bool r3d_frustum_is_points_in(const r3d_frustum_t* frustum, const Vector3* positions, int count)
+bool R3D_FrustumContainsAnyPoint(const R3D_Frustum* frustum, const Vector3* positions, int count)
 {
     for (int i = 0; i < count; i++) {
-        if (r3d_frustum_is_point_in(frustum, positions[i])) {
+        if (R3D_FrustumContainsPoint(frustum, positions[i])) {
             return true;
         }
     }
@@ -152,17 +162,18 @@ bool r3d_frustum_is_points_in(const r3d_frustum_t* frustum, const Vector3* posit
     return false;
 }
 
-bool r3d_frustum_is_sphere_in(const r3d_frustum_t* frustum, Vector3 position, float radius)
+bool R3D_FrustumIntersectsSphere(const R3D_Frustum* frustum, Vector3 position, float radius)
 {
     for (int i = 0; i < R3D_PLANE_COUNT; i++) {
-        if (r3d_frustum_distance_to_plane(frustum->planes[i], position) < -radius) {
+        if (distance_to_plane(frustum->planes[i], position) < -radius) {
             return false;
         }
     }
+
     return true;
 }
 
-bool r3d_frustum_is_aabb_in(const r3d_frustum_t* frustum, BoundingBox aabb)
+bool R3D_FrustumIntersectsBoundingBox(const R3D_Frustum* frustum, BoundingBox aabb)
 {
     float xMin = aabb.min.x, yMin = aabb.min.y, zMin = aabb.min.z;
     float xMax = aabb.max.x, yMax = aabb.max.y, zMax = aabb.max.z;
@@ -172,7 +183,7 @@ bool r3d_frustum_is_aabb_in(const r3d_frustum_t* frustum, BoundingBox aabb)
         const Vector4* plane = &frustum->planes[i];
 
         // Choose the optimal coordinates according to the sign of the normal
-        float distance = r3d_frustum_distance_to_plane(*plane, (Vector3) {
+        float distance = distance_to_plane(*plane, (Vector3) {
             .x = (plane->x >= 0.0f) ? xMax : xMin,
             .y = (plane->y >= 0.0f) ? yMax : yMin,
             .z = (plane->z >= 0.0f) ? zMax : zMin
@@ -182,10 +193,11 @@ bool r3d_frustum_is_aabb_in(const r3d_frustum_t* frustum, BoundingBox aabb)
             return false;
         }
     }
+
     return true;
 }
 
-bool r3d_frustum_is_obb_in(const r3d_frustum_t* frustum, r3d_oriented_box_t obb)
+bool R3D_FrustumIntersectsOrientedBox(const R3D_Frustum* frustum, R3D_OrientedBox obb)
 {
     for (int i = 0; i < R3D_PLANE_COUNT; i++)
     {
