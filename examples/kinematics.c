@@ -92,8 +92,8 @@ int main(void)
         }
 
         // Check grounded
-        bool isGrounded = R3D_IsCapsuleGroundedBox(capsule, 0.01f, groundBox, NULL) ||
-                          R3D_IsCapsuleGroundedMesh(capsule, 0.3f, slopeMeshData, slopeTransform, NULL);
+        bool isGrounded = R3D_CheckCapsuleSupportBoundingBox(capsule, (Vector3) {0,-1,0}, 0.01f, groundBox, NULL) ||
+                          R3D_CheckCapsuleSupportMesh(capsule, (Vector3) {0,-1,0}, 0.3f, slopeMeshData, slopeTransform, NULL);
 
         // Jump and apply gravity
         if (isGrounded && IsKeyPressed(KEY_SPACE)) velocity.y = JUMP_FORCE;

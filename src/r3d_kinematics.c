@@ -14,116 +14,26 @@
 #include "./common/r3d_math.h"
 
 // ========================================
-// INLINE FUNCTIONS
-// ========================================
-
-static inline bool raycast_triangle(
-    float* outT, Vector3* outEdge1,  Vector3* outEdge2,
-    Vector3 localOrigin, Vector3 localDirection,
-    Vector3 v0, Vector3 v1, Vector3 v2)
-{
-    // Möller-Trumbore ray triangle intersection algorithm
-    // See: https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
-
-    Vector3 edge1 = Vector3Subtract(v1, v0);
-    Vector3 edge2 = Vector3Subtract(v2, v0);
-
-    // If negative: it's a backface
-    // If zero: ray parallel to triangle
-    Vector3 h = Vector3CrossProduct(localDirection, edge2);
-    float a = Vector3DotProduct(edge1, h);
-    if (a < 1e-5f) return false;
-
-    float f = 1.0f / a;
-
-    Vector3 s = Vector3Subtract(localOrigin, v0);
-    float u = f * Vector3DotProduct(s, h);
-    if (u < 0.0f || u > 1.0f) return false;
-
-    Vector3 q = Vector3CrossProduct(s, edge1);
-    float v = f * Vector3DotProduct(localDirection, q);
-    if (v < 0.0f || u + v > 1.0f) return false;
-
-    float t = f * Vector3DotProduct(edge2, q);
-    if (t < 1e-5f) return false;
-
-    *outT = t;
-    *outEdge1 = edge1;
-    *outEdge2 = edge2;
-
-    return true;
-}
-
-static inline void raycast_mesh_vertices(
-    float* closestT, Vector3* closestEdge1,  Vector3* closestEdge2,
-    const R3D_Vertex* vertices, int triangleCount,
-    Vector3 localOrigin, Vector3 localDirection)
-{
-    for (int i = 0; i < triangleCount; i++)
-    {
-        int baseIdx = i * 3;
-        Vector3 v0 = vertices[baseIdx].position;
-        Vector3 v1 = vertices[baseIdx + 1].position;
-        Vector3 v2 = vertices[baseIdx + 2].position;
-
-        float t;
-        Vector3 edge1, edge2;
-        if (raycast_triangle(&t, &edge1, &edge2, localOrigin, localDirection, v0, v1, v2)) {
-            if (t < *closestT) {
-                *closestT = t;
-                *closestEdge1 = edge1;
-                *closestEdge2 = edge2;
-            }
-        }
-    }
-}
-
-static inline void raycast_mesh_indexed(
-    float* closestT, Vector3* closestEdge1,  Vector3* closestEdge2,
-    const R3D_Vertex* vertices, const uint32_t* indices, int triangleCount,
-    Vector3 localOrigin, Vector3 localDirection)
-{
-    for (int i = 0; i < triangleCount; i++)
-    {
-        int baseIdx = i * 3;
-        Vector3 v0 = vertices[indices[baseIdx]].position;
-        Vector3 v1 = vertices[indices[baseIdx + 1]].position;
-        Vector3 v2 = vertices[indices[baseIdx + 2]].position;
-
-        float t;
-        Vector3 edge1, edge2;
-        if (raycast_triangle(&t, &edge1, &edge2, localOrigin, localDirection, v0, v1, v2)) {
-            if (t < *closestT) {
-                *closestT = t;
-                *closestEdge1 = edge1;
-                *closestEdge2 = edge2;
-            }
-        }
-    }
-}
-
-// ========================================
 // PUBLIC API
 // ========================================
 
-Vector3 R3D_SlideVelocity(Vector3 velocity, Vector3 normal)
+Vector3 R3D_ClipVelocity(Vector3 velocity, Vector3 normal)
 {
     float dot = Vector3DotProduct(velocity, normal);
     return Vector3Subtract(velocity, Vector3Scale(normal, dot));
 }
 
-Vector3 R3D_BounceVelocity(Vector3 velocity, Vector3 normal, float bounciness)
+Vector3 R3D_ReflectVelocity(Vector3 velocity, Vector3 normal, float bounciness)
 {
     float dot = Vector3DotProduct(velocity, normal);
     Vector3 reflection = Vector3Subtract(velocity, Vector3Scale(normal, 2.0f * dot));
     return Vector3Scale(reflection, bounciness);
 }
 
-Vector3 R3D_SlideSphereBoundingBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box, Vector3* outNormal)
+Vector3 R3D_SlideVelocity(Vector3 velocity, R3D_SweepCollision collision, Vector3* outNormal)
 {
-    R3D_SweepCollision collision = R3D_SweepSphereBoundingBox(center, radius, velocity, box);
     if (!collision.hit) {
-        if (outNormal) *outNormal = (Vector3){0, 0, 0};
+        if (outNormal) *outNormal = (Vector3){0};
         return velocity;
     }
 
@@ -132,63 +42,29 @@ Vector3 R3D_SlideSphereBoundingBox(Vector3 center, float radius, Vector3 velocit
     float safeTime = fmaxf(0.0f, collision.time - 0.001f);
     Vector3 safeVelocity = Vector3Scale(velocity, safeTime);
     Vector3 remainingVelocity = Vector3Scale(velocity, 1.0f - safeTime);
-    Vector3 slidedRemaining = R3D_SlideVelocity(remainingVelocity, collision.normal);
+    Vector3 slidedRemaining = R3D_ClipVelocity(remainingVelocity, collision.normal);
 
     return Vector3Add(safeVelocity, slidedRemaining);
+}
+
+Vector3 R3D_SlideSphereBoundingBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box, Vector3* outNormal)
+{
+    return R3D_SlideVelocity(velocity, R3D_SweepSphereBoundingBox(center, radius, velocity, box), outNormal);
 }
 
 Vector3 R3D_SlideSphereMesh(Vector3 center, float radius, Vector3 velocity, R3D_MeshData mesh, Matrix transform, Vector3* outNormal)
 {
-    R3D_SweepCollision collision = R3D_SweepSphereMesh(center, radius, velocity, mesh, transform);
-    if (!collision.hit) {
-        if (outNormal) *outNormal = (Vector3){0, 0, 0};
-        return velocity;
-    }
-
-    if (outNormal) *outNormal = collision.normal;
-
-    float safeTime = fmaxf(0.0f, collision.time - 0.001f);
-    Vector3 safeVelocity = Vector3Scale(velocity, safeTime);
-    Vector3 remainingVelocity = Vector3Scale(velocity, 1.0f - safeTime);
-    Vector3 slidedRemaining = R3D_SlideVelocity(remainingVelocity, collision.normal);
-
-    return Vector3Add(safeVelocity, slidedRemaining);
+    return R3D_SlideVelocity(velocity, R3D_SweepSphereMesh(center, radius, velocity, mesh, transform), outNormal);
 }
 
 Vector3 R3D_SlideCapsuleBoundingBox(R3D_Capsule capsule, Vector3 velocity, BoundingBox box, Vector3* outNormal)
 {
-    R3D_SweepCollision collision = R3D_SweepCapsuleBoundingBox(capsule, velocity, box);
-    if (!collision.hit) {
-        if (outNormal) *outNormal = (Vector3){0, 0, 0};
-        return velocity;
-    }
-
-    if (outNormal) *outNormal = collision.normal;
-
-    float safeTime = fmaxf(0.0f, collision.time - 0.001f);
-    Vector3 safeVelocity = Vector3Scale(velocity, safeTime);
-    Vector3 remainingVelocity = Vector3Scale(velocity, 1.0f - safeTime);
-    Vector3 slidedRemaining = R3D_SlideVelocity(remainingVelocity, collision.normal);
-
-    return Vector3Add(safeVelocity, slidedRemaining);
+    return R3D_SlideVelocity(velocity, R3D_SweepCapsuleBoundingBox(capsule, velocity, box), outNormal);
 }
 
 Vector3 R3D_SlideCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R3D_MeshData mesh, Matrix transform, Vector3* outNormal)
 {
-    R3D_SweepCollision collision = R3D_SweepCapsuleMesh(capsule, velocity, mesh, transform);
-    if (!collision.hit) {
-        if (outNormal) *outNormal = (Vector3){0, 0, 0};
-        return velocity;
-    }
-
-    if (outNormal) *outNormal = collision.normal;
-
-    float safeTime = fmaxf(0.0f, collision.time - 0.001f);
-    Vector3 safeVelocity = Vector3Scale(velocity, safeTime);
-    Vector3 remainingVelocity = Vector3Scale(velocity, 1.0f - safeTime);
-    Vector3 slidedRemaining = R3D_SlideVelocity(remainingVelocity, collision.normal);
-
-    return Vector3Add(safeVelocity, slidedRemaining);
+    return R3D_SlideVelocity(velocity, R3D_SweepCapsuleMesh(capsule, velocity, mesh, transform), outNormal);
 }
 
 bool R3D_DepenetrateSphereBoundingBox(Vector3* center, float radius, BoundingBox box, float* outPenetration)
@@ -236,6 +112,38 @@ bool R3D_DepenetrateCapsuleBoundingBox(R3D_Capsule* capsule, BoundingBox box, fl
 
     if (outPenetration) *outPenetration = penetration;
     return true;
+}
+
+bool R3D_CheckSphereSupportBoundingBox(Vector3 center, float radius, Vector3 direction, float distance, R3D_BoundingBox box, RayCollision* outHit)
+{
+    RayCollision hit = R3D_RaycastBoundingBox((Ray) {center, direction}, box);
+    bool supported = hit.hit && hit.distance <= (radius + distance);
+    if (outHit) *outHit = hit;
+    return supported;
+}
+
+bool R3D_CheckSphereSupportMesh(Vector3 center, float radius, Vector3 direction, float distance, R3D_MeshData mesh, Matrix transform, RayCollision* outHit)
+{
+    RayCollision hit = R3D_RaycastMesh((Ray) {center, direction}, mesh, transform);
+    bool supported = hit.hit && hit.distance <= (radius + distance);
+    if (outHit) *outHit = hit;
+    return supported;
+}
+
+bool R3D_CheckCapsuleSupportBoundingBox(R3D_Capsule capsule, Vector3 direction, float distance, R3D_BoundingBox box, RayCollision* outHit)
+{
+    RayCollision hit = R3D_RaycastBoundingBox((Ray) {capsule.start, direction}, box);
+    bool supported = hit.hit && hit.distance <= (capsule.radius + distance);
+    if (outHit) *outHit = hit;
+    return supported;
+}
+
+bool R3D_CheckCapsuleSupportMesh(R3D_Capsule capsule, Vector3 direction, float distance, R3D_MeshData mesh, Matrix transform, RayCollision* outHit)
+{
+    RayCollision hit = R3D_RaycastMesh((Ray) {capsule.start, direction}, mesh, transform);
+    bool supported = hit.hit && hit.distance <= (capsule.radius + distance);
+    if (outHit) *outHit = hit;
+    return supported;
 }
 
 R3D_SweepCollision R3D_SweepSpherePoint(Vector3 center, float radius, Vector3 velocity, Vector3 point)
@@ -523,72 +431,4 @@ R3D_SweepCollision R3D_SweepCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R
     }
 
     return result;
-}
-
-bool R3D_IsSphereGroundedBoundingBox(Vector3 center, float radius, float checkDistance, BoundingBox ground, RayCollision *outGround)
-{
-    Ray ray = {
-        .position = center,
-        .direction = {0, -1, 0}
-    };
-
-    RayCollision collision = GetRayCollisionBox(ray, ground);
-    bool grounded = collision.hit && collision.distance <= (radius + checkDistance);
-
-    if (outGround) {
-        *outGround = collision;
-    }
-
-    return grounded;
-}
-
-bool R3D_IsSphereGroundedMesh(Vector3 center, float radius, float checkDistance, R3D_MeshData mesh, Matrix transform, RayCollision *outGround)
-{
-    Ray ray = {
-        .position = center,
-        .direction = {0, -1, 0}
-    };
-
-    RayCollision collision = R3D_RaycastMesh(ray, mesh, transform);
-    bool grounded = collision.hit && collision.distance <= (radius + checkDistance);
-
-    if (outGround) {
-        *outGround = collision;
-    }
-
-    return grounded;
-}
-
-bool R3D_IsCapsuleGroundedBoundingBox(R3D_Capsule capsule, float checkDistance, BoundingBox ground, RayCollision *outGround)
-{
-    Ray ray = {
-        .position = capsule.start,
-        .direction = {0, -1, 0}
-    };
-
-    RayCollision collision = GetRayCollisionBox(ray, ground);
-    bool grounded = collision.hit && collision.distance <= (capsule.radius + checkDistance);
-
-    if (outGround) {
-        *outGround = collision;
-    }
-
-    return grounded;
-}
-
-bool R3D_IsCapsuleGroundedMesh(R3D_Capsule capsule, float checkDistance, R3D_MeshData mesh, Matrix transform, RayCollision *outGround)
-{
-    Ray ray = {
-        .position = capsule.start,
-        .direction = {0, -1, 0}
-    };
-
-    RayCollision collision = R3D_RaycastMesh(ray, mesh, transform);
-    bool grounded = collision.hit && collision.distance <= (capsule.radius + checkDistance);
-
-    if (outGround) {
-        *outGround = collision;
-    }
-
-    return grounded;
 }

@@ -43,21 +43,30 @@ extern "C" {
 #endif
 
 /**
- * @brief Calculate slide velocity along surface
- * @param velocity Original velocity
+ * @brief Remove the normal component from a velocity vector (project onto a plane)
+ * @param velocity Incoming velocity
  * @param normal Surface normal (must be normalized)
- * @return Velocity sliding along surface (perpendicular component removed)
+ * @return Velocity with the component along normal removed
  */
-R3DAPI Vector3 R3D_SlideVelocity(Vector3 velocity, Vector3 normal);
+R3DAPI Vector3 R3D_ClipVelocity(Vector3 velocity, Vector3 normal);
 
 /**
- * @brief Calculate bounce velocity after collision
+ * @brief Reflect a velocity vector off a surface
  * @param velocity Incoming velocity
  * @param normal Surface normal (must be normalized)
  * @param bounciness Coefficient of restitution (0=no bounce, 1=perfect bounce)
- * @return Reflected velocity
+ * @return Reflected velocity scaled by bounciness
  */
-R3DAPI Vector3 R3D_BounceVelocity(Vector3 velocity, Vector3 normal, float bounciness);
+R3DAPI Vector3 R3D_ReflectVelocity(Vector3 velocity, Vector3 normal, float bounciness);
+
+/**
+ * @brief Resolve a velocity vector against a sweep collision, sliding along the hit surface
+ * @param velocity Desired movement vector
+ * @param collision Sweep collision result to resolve against
+ * @param outNormal Optional: receives the collision normal if a hit occurred
+ * @return Resolved velocity (safe movement + clipped remainder)
+ */
+R3DAPI Vector3 R3D_SlideVelocity(Vector3 velocity, R3D_SweepCollision collision, Vector3* outNormal);
 
 /**
  * @brief Slide sphere along bounding box surface, resolving collisions
@@ -121,6 +130,54 @@ R3DAPI bool R3D_DepenetrateSphereBoundingBox(Vector3* center, float radius, R3D_
  * @return true if depenetration occurred
  */
 R3DAPI bool R3D_DepenetrateCapsuleBoudningBox(R3D_Capsule* capsule, R3D_BoundingBox box, float* outPenetration);
+
+/**
+ * @brief Check if a sphere is supported by a bounding box in a given direction
+ * @param center Sphere center
+ * @param radius Sphere radius
+ * @param direction Ray direction to probe (must be normalized)
+ * @param distance Maximum probe distance beyond the sphere surface
+ * @param box Bounding box to test against
+ * @param outHit Optional: receives raycast hit info
+ * @return true if a surface is within reach in the given direction
+ */
+R3DAPI bool R3D_CheckSphereSupportBoundingBox(Vector3 center, float radius, Vector3 direction, float distance, R3D_BoundingBox box, RayCollision* outHit);
+
+/**
+ * @brief Check if a sphere is supported by mesh geometry in a given direction
+ * @param center Sphere center
+ * @param radius Sphere radius
+ * @param direction Ray direction to probe (must be normalized)
+ * @param distance Maximum probe distance beyond the sphere surface
+ * @param mesh Mesh data to test against
+ * @param transform Mesh world transform
+ * @param outHit Optional: receives raycast hit info
+ * @return true if a surface is within reach in the given direction
+ */
+R3DAPI bool R3D_CheckSphereSupportMesh(Vector3 center, float radius, Vector3 direction, float distance, R3D_MeshData mesh, Matrix transform, RayCollision* outHit);
+
+/**
+ * @brief Check if a capsule is supported by a bounding box in a given direction
+ * @param capsule Capsule shape
+ * @param direction Ray direction to probe (must be normalized)
+ * @param distance Maximum probe distance beyond the capsule surface
+ * @param box Bounding box to test against
+ * @param outHit Optional: receives raycast hit info
+ * @return true if a surface is within reach in the given direction
+ */
+R3DAPI bool R3D_CheckCapsuleSupportBoundingBox(R3D_Capsule capsule, Vector3 direction, float distance, R3D_BoundingBox box, RayCollision* outHit);
+
+/**
+ * @brief Check if a capsule is supported by mesh geometry in a given direction
+ * @param capsule Capsule shape
+ * @param direction Ray direction to probe (must be normalized)
+ * @param distance Maximum probe distance beyond the capsule surface
+ * @param mesh Mesh data to test against
+ * @param transform Mesh world transform
+ * @param outHit Optional: receives raycast hit info
+ * @return true if a surface is within reach in the given direction
+ */
+R3DAPI bool R3D_CheckCapsuleSupportMesh(R3D_Capsule capsule, Vector3 direction, float distance, R3D_MeshData mesh, Matrix transform, RayCollision* outHit);
 
 /**
  * @brief Sweep sphere against single point
@@ -206,50 +263,6 @@ R3DAPI R3D_SweepCollision R3D_SweepCapsuleBoundingBox(R3D_Capsule capsule, Vecto
  * @return Sweep collision info (hit, time, point, normal)
  */
 R3DAPI R3D_SweepCollision R3D_SweepCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R3D_MeshData mesh, Matrix transform);
-
-/**
- * @brief Check if sphere is grounded against a box
- * @param center Sphere center
- * @param radius Sphere radius
- * @param checkDistance How far below to check
- * @param ground Ground box to test against
- * @param outGround Optional: receives raycast hit info
- * @return true if grounded within checkDistance
- */
-R3DAPI bool R3D_IsSphereGroundedBoundingBox(Vector3 center, float radius, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
-
-/**
- * @brief Check if sphere is grounded against mesh geometry
- * @param center Sphere center
- * @param radius Sphere radius
- * @param checkDistance How far below to check
- * @param mesh Mesh data to test against
- * @param transform Mesh world transform
- * @param outGround Optional: receives raycast hit info
- * @return true if grounded within checkDistance
- */
-R3DAPI bool R3D_IsSphereGroundedMesh(Vector3 center, float radius, float checkDistance, R3D_MeshData mesh, Matrix transform, RayCollision* outGround);
-
-/**
- * @brief Check if capsule is grounded against a box
- * @param capsule Character capsule
- * @param checkDistance How far below to check (e.g., 0.1)
- * @param ground Ground box to test against
- * @param outGround Optional: receives raycast hit info
- * @return true if grounded within checkDistance
- */
-R3DAPI bool R3D_IsCapsuleGroundedBoundingBox(R3D_Capsule capsule, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
-
-/**
- * @brief Check if capsule is grounded against mesh geometry
- * @param capsule Character capsule
- * @param checkDistance How far below to check
- * @param mesh Mesh data to test against
- * @param transform Mesh world transform
- * @param outGround Optional: receives raycast hit info
- * @return true if grounded within checkDistance
- */
-R3DAPI bool R3D_IsCapsuleGroundedMesh(R3D_Capsule capsule, float checkDistance, R3D_MeshData mesh, Matrix transform, RayCollision* outGround);
 
 #ifdef __cplusplus
 } // extern "C"
