@@ -291,6 +291,7 @@ add_library(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/src/r3d_model.c"
     "${R3D_ROOT_PATH}/src/r3d_probe.c"
     "${R3D_ROOT_PATH}/src/r3d_skeleton.c"
+    "${R3D_ROOT_PATH}/src/r3d_shape.c"
     "${R3D_ROOT_PATH}/src/r3d_sky.c"
     "${R3D_ROOT_PATH}/src/r3d_utils.c"
     "${R3D_ROOT_PATH}/src/r3d_vertex.c"
