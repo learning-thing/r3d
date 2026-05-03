@@ -80,12 +80,64 @@ R3DAPI R3D_BoundingBox R3D_GetBoundingBox(Vector3 center, Vector3 halfExtents);
 R3DAPI R3D_OrientedBox R3D_GetOrientedBox(R3D_BoundingBox aabb, Matrix transform);
 
 /**
- * @brief Check if capsule intersects with box
+ * @brief Check if two axis-aligned bounding boxes intersect
+ * @param box1 First bounding box
+ * @param box2 Second bounding box
+ * @return true if collision detected
+ */
+R3DAPI bool R3D_CheckCollisionBoundingBoxes(R3D_BoundingBox box1, R3D_BoundingBox box2);
+
+/**
+ * @brief Check if an axis-aligned bounding box intersects a sphere
+ * @param box Bounding box
+ * @param center Sphere center
+ * @param radius Sphere radius
+ * @return true if collision detected
+ */
+R3DAPI bool R3D_CheckCollisionBoundingBoxSphere(R3D_BoundingBox box, Vector3 center, float radius);
+
+/**
+ * @brief Check if two oriented bounding boxes intersect
+ * @param box1 First oriented box
+ * @param box2 Second oriented box
+ * @return true if collision detected
+ */
+R3DAPI bool R3D_CheckCollisionOrientedBoxes(R3D_OrientedBox box1, R3D_OrientedBox box2);
+
+/**
+ * @brief Check if an oriented bounding box intersects a sphere
+ * @param box Oriented bounding box
+ * @param center Sphere center
+ * @param radius Sphere radius
+ * @return true if collision detected
+ */
+R3DAPI bool R3D_CheckCollisionOrientedBoxSphere(R3D_OrientedBox box, Vector3 center, float radius);
+
+/**
+ * @brief Check if two spheres intersect
+ * @param center1 First sphere center
+ * @param radius1 First sphere radius
+ * @param center2 Second sphere center
+ * @param radius2 Second sphere radius
+ * @return true if collision detected
+ */
+R3DAPI bool R3D_CheckCollisionSpheres(Vector3 center1, float radius1, Vector3 center2, float radius2);
+
+/**
+ * @brief Check if capsule intersects with bounding box
  * @param capsule Capsule shape
  * @param box Bounding box
  * @return true if collision detected
  */
-R3DAPI bool R3D_CheckCollisionCapsuleBox(R3D_Capsule capsule, R3D_BoundingBox box);
+R3DAPI bool R3D_CheckCollisionCapsuleBoundingBox(R3D_Capsule capsule, R3D_BoundingBox box);
+
+/**
+ * @brief Check if capsule intersects with oriented box
+ * @param capsule Capsule shape
+ * @param box Oriented box
+ * @return true if collision detected
+ */
+R3DAPI bool R3D_CheckCollisionCapsuleOrientedBox(R3D_Capsule capsule, R3D_OrientedBox box);
 
 /**
  * @brief Check if capsule intersects with sphere
@@ -114,12 +166,64 @@ R3DAPI bool R3D_CheckCollisionCapsules(R3D_Capsule a, R3D_Capsule b);
 R3DAPI bool R3D_CheckCollisionCapsuleMesh(R3D_Capsule capsule, R3D_MeshData mesh, Matrix transform);
 
 /**
- * @brief Check penetration between capsule and box
+ * @brief Check penetration between two axis-aligned bounding boxes
+ * @param box1 First bounding box
+ * @param box2 Second bounding box
+ * @return Penetration information
+ */
+R3DAPI R3D_Penetration R3D_CheckPenetrationBoundingBoxes(R3D_BoundingBox box1, R3D_BoundingBox box2);
+
+/**
+ * @brief Check penetration between an axis-aligned bounding box and a sphere
+ * @param box Bounding box
+ * @param center Sphere center
+ * @param radius Sphere radius
+ * @return Penetration information
+ */
+R3DAPI R3D_Penetration R3D_CheckPenetrationBoundingBoxSphere(R3D_BoundingBox box, Vector3 center, float radius);
+
+/**
+ * @brief Check penetration between two oriented bounding boxes
+ * @param box1 First oriented box
+ * @param box2 Second oriented box
+ * @return Penetration information
+ */
+R3DAPI R3D_Penetration R3D_CheckPenetrationOrientedBoxes(R3D_OrientedBox box1, R3D_OrientedBox box2);
+
+/**
+ * @brief Check penetration between an oriented bounding box and a sphere
+ * @param box Oriented bounding box
+ * @param center Sphere center
+ * @param radius Sphere radius
+ * @return Penetration information
+ */
+R3DAPI R3D_Penetration R3D_CheckPenetrationOrientedBoxSphere(R3D_OrientedBox box, Vector3 center, float radius);
+
+/**
+ * @brief Check penetration between two spheres
+ * @param center1 First sphere center
+ * @param radius1 First sphere radius
+ * @param center2 Second sphere center
+ * @param radius2 Second sphere radius
+ * @return Penetration information
+ */
+R3DAPI R3D_Penetration R3D_CheckPenetrationSpheres(Vector3 center1, float radius1, Vector3 center2, float radius2);
+
+/**
+ * @brief Check penetration between a capsule and a bounding box
  * @param capsule Capsule shape
  * @param box Bounding box
- * @return Penetration information.
+ * @return Penetration information
  */
-R3DAPI R3D_Penetration R3D_CheckPenetrationCapsuleBox(R3D_Capsule capsule, R3D_BoundingBox box);
+R3DAPI R3D_Penetration R3D_CheckPenetrationCapsuleBoundingBox(R3D_Capsule capsule, R3D_BoundingBox box);
+
+/**
+ * @brief Check penetration between a capsule and an oriented bounding box
+ * @param capsule Capsule shape
+ * @param box Oriented bounding box
+ * @return Penetration information
+ */
+R3DAPI R3D_Penetration R3D_CheckPenetrationCapsuleOrientedBox(R3D_Capsule capsule, R3D_OrientedBox box);
 
 /**
  * @brief Check penetration between capsule and sphere
@@ -137,6 +241,61 @@ R3DAPI R3D_Penetration R3D_CheckPenetrationCapsuleSphere(R3D_Capsule capsule, Ve
  * @return Penetration information.
  */
 R3DAPI R3D_Penetration R3D_CheckPenetrationCapsules(R3D_Capsule a, R3D_Capsule b);
+
+/**
+ * @brief Cast a ray against a triangle
+ * @param ray Ray to cast
+ * @param p1 First triangle vertex
+ * @param p2 Second triangle vertex
+ * @param p3 Third triangle vertex
+ * @return Ray collision info (hit, distance, point, normal)
+ */
+R3DAPI RayCollision R3D_RaycastTriangle(Ray ray, Vector3 p1, Vector3 p2, Vector3 p3);
+
+/**
+ * @brief Cast a ray against a quad
+ * @param ray Ray to cast
+ * @param p1 First quad vertex
+ * @param p2 Second quad vertex
+ * @param p3 Third quad vertex
+ * @param p4 Fourth quad vertex
+ * @note The quad must be strictly planar and non-self-intersecting
+ * @return Ray collision info (hit, distance, point, normal)
+ */
+R3DAPI RayCollision R3D_RaycastQuad(Ray ray, Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4);
+
+/**
+ * @brief Cast a ray against an axis-aligned bounding box
+ * @param ray Ray to cast
+ * @param box Bounding box to test against
+ * @return Ray collision info (hit, distance, point, normal)
+ */
+R3DAPI RayCollision R3D_RaycastBoundingBox(Ray ray, R3D_BoundingBox box);
+
+/**
+ * @brief Cast a ray against an oriented bounding box
+ * @param ray Ray to cast
+ * @param box Oriented bounding box to test against
+ * @return Ray collision info (hit, distance, point, normal)
+ */
+R3DAPI RayCollision R3D_RaycastOrientedBox(Ray ray, R3D_OrientedBox box);
+
+/**
+ * @brief Cast a ray against a sphere
+ * @param ray Ray to cast
+ * @param center Sphere center
+ * @param radius Sphere radius
+ * @return Ray collision info (hit, distance, point, normal)
+ */
+R3DAPI RayCollision R3D_RaycastSphere(Ray ray, Vector3 center, float radius);
+
+/**
+ * @brief Cast a ray against a capsule
+ * @param ray Ray to cast
+ * @param capsule Capsule shape to test against
+ * @return Ray collision info (hit, distance, point, normal)
+ */
+R3DAPI RayCollision R3D_RaycastCapsule(Ray ray, R3D_Capsule capsule);
 
 /**
  * @brief Cast a ray against mesh geometry
