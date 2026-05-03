@@ -77,7 +77,7 @@ R3DAPI R3D_BoundingBox R3D_GetBoundingBox(Vector3 center, Vector3 halfExtents);
 /**
  * @brief Compute an oriented bounding box from an AABB and transform.
  */
-R3DAPI R3D_OrientedBox R3D_GetOrientedBox(BoundingBox aabb, Matrix transform);
+R3DAPI R3D_OrientedBox R3D_GetOrientedBox(R3D_BoundingBox aabb, Matrix transform);
 
 /**
  * @brief Check if capsule intersects with box
@@ -85,7 +85,7 @@ R3DAPI R3D_OrientedBox R3D_GetOrientedBox(BoundingBox aabb, Matrix transform);
  * @param box Bounding box
  * @return true if collision detected
  */
-R3DAPI bool R3D_CheckCollisionCapsuleBox(R3D_Capsule capsule, BoundingBox box);
+R3DAPI bool R3D_CheckCollisionCapsuleBox(R3D_Capsule capsule, R3D_BoundingBox box);
 
 /**
  * @brief Check if capsule intersects with sphere
@@ -119,7 +119,7 @@ R3DAPI bool R3D_CheckCollisionCapsuleMesh(R3D_Capsule capsule, R3D_MeshData mesh
  * @param box Bounding box
  * @return Penetration information.
  */
-R3DAPI R3D_Penetration R3D_CheckPenetrationCapsuleBox(R3D_Capsule capsule, BoundingBox box);
+R3DAPI R3D_Penetration R3D_CheckPenetrationCapsuleBox(R3D_Capsule capsule, R3D_BoundingBox box);
 
 /**
  * @brief Check penetration between capsule and sphere
@@ -181,7 +181,7 @@ R3DAPI Vector3 R3D_ClosestPointOnTriangle(Vector3 p, Vector3 a, Vector3 b, Vecto
  * @param box Bounding box
  * @return Closest point on/in box (clamped to box bounds)
  */
-R3DAPI Vector3 R3D_ClosestPointOnBox(Vector3 point, BoundingBox box);
+R3DAPI Vector3 R3D_ClosestPointOnBox(Vector3 point, R3D_BoundingBox box);
 
 #ifdef __cplusplus
 } // extern "C"

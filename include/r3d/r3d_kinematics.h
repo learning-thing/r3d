@@ -68,7 +68,7 @@ R3DAPI Vector3 R3D_BounceVelocity(Vector3 velocity, Vector3 normal, float bounci
  * @param outNormal Optional: receives collision normal if collision occurred
  * @return Actual movement applied (may be reduced/redirected by collision)
  */
-R3DAPI Vector3 R3D_SlideSphereBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box, Vector3* outNormal);
+R3DAPI Vector3 R3D_SlideSphereBox(Vector3 center, float radius, Vector3 velocity, R3D_BoundingBox box, Vector3* outNormal);
 
 /**
  * @brief Slide sphere along mesh surface, resolving collisions
@@ -90,7 +90,7 @@ R3DAPI Vector3 R3D_SlideSphereMesh(Vector3 center, float radius, Vector3 velocit
  * @param outNormal Optional: receives collision normal if collision occurred
  * @return Actual movement applied (may be reduced/redirected by collision)
  */
-R3DAPI Vector3 R3D_SlideCapsuleBox(R3D_Capsule capsule, Vector3 velocity, BoundingBox box, Vector3* outNormal);
+R3DAPI Vector3 R3D_SlideCapsuleBox(R3D_Capsule capsule, Vector3 velocity, R3D_BoundingBox box, Vector3* outNormal);
 
 /**
  * @brief Slide capsule along mesh surface, resolving collisions
@@ -111,7 +111,7 @@ R3DAPI Vector3 R3D_SlideCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R3D_M
  * @param outPenetration Optional: receives penetration depth
  * @return true if depenetration occurred
  */
-R3DAPI bool R3D_DepenetrateSphereBox(Vector3* center, float radius, BoundingBox box, float* outPenetration);
+R3DAPI bool R3D_DepenetrateSphereBox(Vector3* center, float radius, R3D_BoundingBox box, float* outPenetration);
 
 /**
  * @brief Push capsule out of box if penetrating
@@ -120,7 +120,7 @@ R3DAPI bool R3D_DepenetrateSphereBox(Vector3* center, float radius, BoundingBox 
  * @param outPenetration Optional: receives penetration depth
  * @return true if depenetration occurred
  */
-R3DAPI bool R3D_DepenetrateCapsuleBox(R3D_Capsule* capsule, BoundingBox box, float* outPenetration);
+R3DAPI bool R3D_DepenetrateCapsuleBox(R3D_Capsule* capsule, R3D_BoundingBox box, float* outPenetration);
 
 /**
  * @brief Sweep sphere against single point
@@ -175,7 +175,7 @@ R3DAPI R3D_SweepCollision R3D_SweepSphereTriangle(Vector3 center, float radius, 
  * @param box Obstacle bounding box
  * @return Sweep collision info (hit, distance, point, normal)
  */
-R3DAPI R3D_SweepCollision R3D_SweepSphereBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box);
+R3DAPI R3D_SweepCollision R3D_SweepSphereBox(Vector3 center, float radius, Vector3 velocity, R3D_BoundingBox box);
 
 /**
  * @brief Sweep sphere along velocity vector against mesh geometry
@@ -195,7 +195,7 @@ R3DAPI R3D_SweepCollision R3D_SweepSphereMesh(Vector3 center, float radius, Vect
  * @param box Obstacle bounding box
  * @return Sweep collision info (hit, distance, point, normal)
  */
-R3DAPI R3D_SweepCollision R3D_SweepCapsuleBox(R3D_Capsule capsule, Vector3 velocity, BoundingBox box);
+R3DAPI R3D_SweepCollision R3D_SweepCapsuleBox(R3D_Capsule capsule, Vector3 velocity, R3D_BoundingBox box);
 
 /**
  * @brief Sweep capsule along velocity vector against mesh geometry
@@ -216,7 +216,7 @@ R3DAPI R3D_SweepCollision R3D_SweepCapsuleMesh(R3D_Capsule capsule, Vector3 velo
  * @param outGround Optional: receives raycast hit info
  * @return true if grounded within checkDistance
  */
-R3DAPI bool R3D_IsSphereGroundedBox(Vector3 center, float radius, float checkDistance, BoundingBox ground, RayCollision* outGround);
+R3DAPI bool R3D_IsSphereGroundedBox(Vector3 center, float radius, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
 
 /**
  * @brief Check if sphere is grounded against mesh geometry
@@ -238,7 +238,7 @@ R3DAPI bool R3D_IsSphereGroundedMesh(Vector3 center, float radius, float checkDi
  * @param outGround Optional: receives raycast hit info
  * @return true if grounded within checkDistance
  */
-R3DAPI bool R3D_IsCapsuleGroundedBox(R3D_Capsule capsule, float checkDistance, BoundingBox ground, RayCollision* outGround);
+R3DAPI bool R3D_IsCapsuleGroundedBox(R3D_Capsule capsule, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
 
 /**
  * @brief Check if capsule is grounded against mesh geometry
