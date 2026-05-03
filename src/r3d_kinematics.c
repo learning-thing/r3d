@@ -119,9 +119,9 @@ Vector3 R3D_BounceVelocity(Vector3 velocity, Vector3 normal, float bounciness)
     return Vector3Scale(reflection, bounciness);
 }
 
-Vector3 R3D_SlideSphereBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box, Vector3* outNormal)
+Vector3 R3D_SlideSphereBoundingBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box, Vector3* outNormal)
 {
-    R3D_SweepCollision collision = R3D_SweepSphereBox(center, radius, velocity, box);
+    R3D_SweepCollision collision = R3D_SweepSphereBoundingBox(center, radius, velocity, box);
     if (!collision.hit) {
         if (outNormal) *outNormal = (Vector3){0, 0, 0};
         return velocity;
@@ -155,9 +155,9 @@ Vector3 R3D_SlideSphereMesh(Vector3 center, float radius, Vector3 velocity, R3D_
     return Vector3Add(safeVelocity, slidedRemaining);
 }
 
-Vector3 R3D_SlideCapsuleBox(R3D_Capsule capsule, Vector3 velocity, BoundingBox box, Vector3* outNormal)
+Vector3 R3D_SlideCapsuleBoundingBox(R3D_Capsule capsule, Vector3 velocity, BoundingBox box, Vector3* outNormal)
 {
-    R3D_SweepCollision collision = R3D_SweepCapsuleBox(capsule, velocity, box);
+    R3D_SweepCollision collision = R3D_SweepCapsuleBoundingBox(capsule, velocity, box);
     if (!collision.hit) {
         if (outNormal) *outNormal = (Vector3){0, 0, 0};
         return velocity;
@@ -191,7 +191,7 @@ Vector3 R3D_SlideCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R3D_MeshData
     return Vector3Add(safeVelocity, slidedRemaining);
 }
 
-bool R3D_DepenetrateSphereBox(Vector3* center, float radius, BoundingBox box, float* outPenetration)
+bool R3D_DepenetrateSphereBoundingBox(Vector3* center, float radius, BoundingBox box, float* outPenetration)
 {
     Vector3 closestPoint = R3D_ClosestPointOnBox(*center, box);
     Vector3 delta = Vector3Subtract(*center, closestPoint);
@@ -210,7 +210,7 @@ bool R3D_DepenetrateSphereBox(Vector3* center, float radius, BoundingBox box, fl
     return true;
 }
 
-bool R3D_DepenetrateCapsuleBox(R3D_Capsule* capsule, BoundingBox box, float* outPenetration)
+bool R3D_DepenetrateCapsuleBoundingBox(R3D_Capsule* capsule, BoundingBox box, float* outPenetration)
 {
     Vector3 closestOnSegment = R3D_ClosestPointOnSegment(
         R3D_ClosestPointOnBox(capsule->start, box),
@@ -370,7 +370,7 @@ R3D_SweepCollision R3D_SweepSphereTriangle(Vector3 center, float radius, Vector3
     return result;
 }
 
-R3D_SweepCollision R3D_SweepSphereBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box)
+R3D_SweepCollision R3D_SweepSphereBoundingBox(Vector3 center, float radius, Vector3 velocity, BoundingBox box)
 {
     R3D_SweepCollision collision = {0};
 
@@ -429,7 +429,7 @@ R3D_SweepCollision R3D_SweepSphereMesh(Vector3 center, float radius, Vector3 vel
     return result;
 }
 
-R3D_SweepCollision R3D_SweepCapsuleBox(R3D_Capsule capsule, Vector3 velocity, BoundingBox box)
+R3D_SweepCollision R3D_SweepCapsuleBoundingBox(R3D_Capsule capsule, Vector3 velocity, BoundingBox box)
 {
     R3D_SweepCollision collision = {0};
 
@@ -525,7 +525,7 @@ R3D_SweepCollision R3D_SweepCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R
     return result;
 }
 
-bool R3D_IsSphereGroundedBox(Vector3 center, float radius, float checkDistance, BoundingBox ground, RayCollision *outGround)
+bool R3D_IsSphereGroundedBoundingBox(Vector3 center, float radius, float checkDistance, BoundingBox ground, RayCollision *outGround)
 {
     Ray ray = {
         .position = center,
@@ -559,7 +559,7 @@ bool R3D_IsSphereGroundedMesh(Vector3 center, float radius, float checkDistance,
     return grounded;
 }
 
-bool R3D_IsCapsuleGroundedBox(R3D_Capsule capsule, float checkDistance, BoundingBox ground, RayCollision *outGround)
+bool R3D_IsCapsuleGroundedBoundingBox(R3D_Capsule capsule, float checkDistance, BoundingBox ground, RayCollision *outGround)
 {
     Ray ray = {
         .position = capsule.start,

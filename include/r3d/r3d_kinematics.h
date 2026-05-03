@@ -60,7 +60,7 @@ R3DAPI Vector3 R3D_SlideVelocity(Vector3 velocity, Vector3 normal);
 R3DAPI Vector3 R3D_BounceVelocity(Vector3 velocity, Vector3 normal, float bounciness);
 
 /**
- * @brief Slide sphere along box surface, resolving collisions
+ * @brief Slide sphere along bounding box surface, resolving collisions
  * @param center Sphere center position
  * @param radius Sphere radius
  * @param velocity Desired movement vector
@@ -68,7 +68,7 @@ R3DAPI Vector3 R3D_BounceVelocity(Vector3 velocity, Vector3 normal, float bounci
  * @param outNormal Optional: receives collision normal if collision occurred
  * @return Actual movement applied (may be reduced/redirected by collision)
  */
-R3DAPI Vector3 R3D_SlideSphereBox(Vector3 center, float radius, Vector3 velocity, R3D_BoundingBox box, Vector3* outNormal);
+R3DAPI Vector3 R3D_SlideSphereBoundingBox(Vector3 center, float radius, Vector3 velocity, R3D_BoundingBox box, Vector3* outNormal);
 
 /**
  * @brief Slide sphere along mesh surface, resolving collisions
@@ -83,14 +83,14 @@ R3DAPI Vector3 R3D_SlideSphereBox(Vector3 center, float radius, Vector3 velocity
 R3DAPI Vector3 R3D_SlideSphereMesh(Vector3 center, float radius, Vector3 velocity, R3D_MeshData mesh, Matrix transform, Vector3* outNormal);
 
 /**
- * @brief Slide capsule along box surface, resolving collisions
+ * @brief Slide capsule along bounding box surface, resolving collisions
  * @param capsule Capsule shape
  * @param velocity Desired movement vector
  * @param box Obstacle bounding box
  * @param outNormal Optional: receives collision normal if collision occurred
  * @return Actual movement applied (may be reduced/redirected by collision)
  */
-R3DAPI Vector3 R3D_SlideCapsuleBox(R3D_Capsule capsule, Vector3 velocity, R3D_BoundingBox box, Vector3* outNormal);
+R3DAPI Vector3 R3D_SlideCapsuleBoundingBox(R3D_Capsule capsule, Vector3 velocity, R3D_BoundingBox box, Vector3* outNormal);
 
 /**
  * @brief Slide capsule along mesh surface, resolving collisions
@@ -104,23 +104,23 @@ R3DAPI Vector3 R3D_SlideCapsuleBox(R3D_Capsule capsule, Vector3 velocity, R3D_Bo
 R3DAPI Vector3 R3D_SlideCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R3D_MeshData mesh, Matrix transform, Vector3* outNormal);
 
 /**
- * @brief Push sphere out of box if penetrating
+ * @brief Push sphere out of bounding box if penetrating
  * @param center Sphere center (modified in place if penetrating)
  * @param radius Sphere radius
  * @param box Obstacle box
  * @param outPenetration Optional: receives penetration depth
  * @return true if depenetration occurred
  */
-R3DAPI bool R3D_DepenetrateSphereBox(Vector3* center, float radius, R3D_BoundingBox box, float* outPenetration);
+R3DAPI bool R3D_DepenetrateSphereBoundingBox(Vector3* center, float radius, R3D_BoundingBox box, float* outPenetration);
 
 /**
- * @brief Push capsule out of box if penetrating
+ * @brief Push capsule out of bounding box if penetrating
  * @param capsule Capsule shape (modified in place if penetrating)
  * @param box Obstacle box
  * @param outPenetration Optional: receives penetration depth
  * @return true if depenetration occurred
  */
-R3DAPI bool R3D_DepenetrateCapsuleBox(R3D_Capsule* capsule, R3D_BoundingBox box, float* outPenetration);
+R3DAPI bool R3D_DepenetrateCapsuleBoudningBox(R3D_Capsule* capsule, R3D_BoundingBox box, float* outPenetration);
 
 /**
  * @brief Sweep sphere against single point
@@ -175,7 +175,7 @@ R3DAPI R3D_SweepCollision R3D_SweepSphereTriangle(Vector3 center, float radius, 
  * @param box Obstacle bounding box
  * @return Sweep collision info (hit, distance, point, normal)
  */
-R3DAPI R3D_SweepCollision R3D_SweepSphereBox(Vector3 center, float radius, Vector3 velocity, R3D_BoundingBox box);
+R3DAPI R3D_SweepCollision R3D_SweepSphereBoundingBox(Vector3 center, float radius, Vector3 velocity, R3D_BoundingBox box);
 
 /**
  * @brief Sweep sphere along velocity vector against mesh geometry
@@ -195,7 +195,7 @@ R3DAPI R3D_SweepCollision R3D_SweepSphereMesh(Vector3 center, float radius, Vect
  * @param box Obstacle bounding box
  * @return Sweep collision info (hit, distance, point, normal)
  */
-R3DAPI R3D_SweepCollision R3D_SweepCapsuleBox(R3D_Capsule capsule, Vector3 velocity, R3D_BoundingBox box);
+R3DAPI R3D_SweepCollision R3D_SweepCapsuleBoundingBox(R3D_Capsule capsule, Vector3 velocity, R3D_BoundingBox box);
 
 /**
  * @brief Sweep capsule along velocity vector against mesh geometry
@@ -216,7 +216,7 @@ R3DAPI R3D_SweepCollision R3D_SweepCapsuleMesh(R3D_Capsule capsule, Vector3 velo
  * @param outGround Optional: receives raycast hit info
  * @return true if grounded within checkDistance
  */
-R3DAPI bool R3D_IsSphereGroundedBox(Vector3 center, float radius, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
+R3DAPI bool R3D_IsSphereGroundedBoundingBox(Vector3 center, float radius, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
 
 /**
  * @brief Check if sphere is grounded against mesh geometry
@@ -238,7 +238,7 @@ R3DAPI bool R3D_IsSphereGroundedMesh(Vector3 center, float radius, float checkDi
  * @param outGround Optional: receives raycast hit info
  * @return true if grounded within checkDistance
  */
-R3DAPI bool R3D_IsCapsuleGroundedBox(R3D_Capsule capsule, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
+R3DAPI bool R3D_IsCapsuleGroundedBoundingBox(R3D_Capsule capsule, float checkDistance, R3D_BoundingBox ground, RayCollision* outGround);
 
 /**
  * @brief Check if capsule is grounded against mesh geometry
