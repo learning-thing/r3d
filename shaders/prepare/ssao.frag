@@ -113,7 +113,7 @@ void main()
     aoSum /= (temp * temp);
 
     // Attenuate intensity proportionally when ssRadius was clamped, preventing over-darkening at close range
-    float ao = max(0.0, 1.0 - (aoSum / float(uSampleCount)) * uIntensity * radiusScale);
+    float ao = max(0.0, 1.0 - aoSum * uIntensity * (2.0 / float(uSampleCount)) * radiusScale);
 
     // 1-pixel bilateral filter using derivatives (almost free)
     if (abs(dFdx(depth)) < 0.2) ao -= dFdx(ao) * (float(pixelCoord.x & 1) - 0.5);
