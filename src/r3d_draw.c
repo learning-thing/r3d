@@ -1702,36 +1702,30 @@ r3d_target_t pass_prepare_ssil(void)
     r3d_target_t src = R3D_TARGET_SSIL_0;
     r3d_target_t dst = R3D_TARGET_SSIL_1;
 
-    int steps = 4;//R3D.environment.ssil.denoiseSteps;
+    R3D_SHADER_USE(prepare.atrousWavelet);
 
-    if (steps > 0)
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+
+    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 20.0f);
+    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 200.0f);
+
+    int stepWidth[] = {4, 2, 1};
+
+    for (int i = 0; i < ARRAY_SIZE(stepWidth); i++)
     {
-        R3D_SHADER_USE(prepare.atrousWavelet);
+        float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
 
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+        R3D_TARGET_BIND(false, dst);
+        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(src));
+        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
+        R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
+        R3D_RENDER_SCREEN();
 
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 50.0f);
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 150.0f);
-
-        int stepWidth[] = {8, 4, 2, 1};
-        steps = MIN(steps, ARRAY_SIZE(stepWidth));
-
-        for (int i = 0; i < steps; i++)
-        {
-            float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
-
-            R3D_TARGET_BIND(false, dst);
-            R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(src));
-            R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
-            R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
-            R3D_RENDER_SCREEN();
-
-            SWAP(r3d_target_t, src, dst);
-        }
+        SWAP(r3d_target_t, src, dst);
     }
 
-    return dst;
+    return src;
 }
 
 r3d_target_t pass_prepare_ssgi(void)
