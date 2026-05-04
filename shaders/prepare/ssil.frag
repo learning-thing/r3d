@@ -6,7 +6,7 @@
  * For conditions of distribution and use, see accompanying LICENSE file.
  */
 
-// Based on Screen Space Directional Occlusion by Tobias Ritschel et al
+// Based on Screen Space Directional Occlusion by Tobias Ritschel et al.
 // SEE: https://web.archive.org/web/20140725130649/https://people.mpi-inf.mpg.de/~ritschel/Papers/SSDO.pdf
 
 // And on Scalable Ambient Obscurance method by Morgan McGuire et al.
