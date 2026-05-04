@@ -75,13 +75,13 @@
             .enabled = false,                           \
         },                                              \
         .ssil = {                                       \
-            .sampleCount = 2,                           \
-            .sliceCount = 4,                            \
-            .radius = 2.0f,                             \
-            .thickness = 1.0f,                          \
-            .intensity = 1.0f,                          \
-            .aoPower = 1.0f,                            \
-            .denoiseSteps = 4,                          \
+            .sampleCount = 16,                          \
+            .giIntensity = 4.0f,                        \
+            .aoIntensity = 0.5f,                        \
+            .aoPower = 1.5f,                            \
+            .maxRadius = 0.2f,                          \
+            .radius = 4.0f,                             \
+            .bias = 0.02f,                              \
             .enabled = false,                           \
         },                                              \
         .ssgi = {                                       \
@@ -241,14 +241,14 @@ typedef struct R3D_EnvSSAO {
  * reinforcing indirect lighting over a wider area.
  */
 typedef struct R3D_EnvSSIL {
-    int sampleCount;        ///< Number of samples to compute indirect lighting (default: 2)
-    int sliceCount;         ///< Number of depth slices for accumulation (default: 4)
-    float radius;           ///< Maximum distance to gather light from (default: 2.0)
-    float thickness;        ///< Thickness threshold for occluders (default: 1.0)
-    float intensity;        ///< IL intensity multiplier (default: 1.0)
-    float aoPower;          ///< AO exponent/power (default: 1.0)
-    int denoiseSteps;       ///< Number of denoiser iterations (default: 4)
-    bool enabled;           ///< Enable/disable SSIL effect (default: false)
+    int sampleCount;        ///< Number of samples to compute SSAO (default: 16)
+    float giIntensity;      ///< 
+    float aoIntensity;      ///< Base occlusion strength multiplier (default: 1.0)
+    float aoPower;          ///< Exponential falloff for sharper darkening (default: 1.5)
+    float maxRadius;        ///< Fraction of screen height beyond which the sampling radius is clamped (default: 0.2)
+    float radius;           ///< Sampling radius in world space (default: 0.25)
+    float bias;             ///< Depth bias to prevent self-shadowing, good value is ~2% of the radius (default: 0.007)
+    bool enabled;           ///< Enable/disable SSAO effect (default: false)
 } R3D_EnvSSIL;
 
 /**
