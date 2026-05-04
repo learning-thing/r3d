@@ -1628,6 +1628,11 @@ r3d_target_t pass_prepare_ssao(void)
     R3D_SHADER_SET_FLOAT(prepare.ssao, uBias, R3D.environment.ssao.bias);
     R3D_SHADER_SET_FLOAT(prepare.ssao, uIntensity, R3D.environment.ssao.intensity);
 
+    int wSsao = 0, hSsao = 0;
+    r3d_target_get_resolution(&wSsao, &hSsao, R3D_TARGET_SSAO_0, 0);
+    float maxScreenRadius = (float)MIN(wSsao, hSsao) * R3D.environment.ssao.maxRadius;
+    R3D_SHADER_SET_FLOAT(prepare.ssao, uMaxSSRadius, maxScreenRadius);
+
     R3D_SHADER_BIND_SAMPLER(prepare.ssao, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssao, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 

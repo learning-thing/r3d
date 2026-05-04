@@ -29,6 +29,7 @@ uniform int uSampleCount;
 uniform float uRadius;
 uniform float uBias;
 uniform float uIntensity;
+uniform float uMaxSSRadius;
 
 /* === Constants === */
 
@@ -78,7 +79,10 @@ void main()
     vec3 normal = V_GetViewNormal(uNormalTex, pixelCoord);
 
     float projScale = abs(uView.proj[1][1]) * textureSize(uDepthTex, 0).y * 0.5;
-    float ssRadius = projScale * uRadius / max(depth, 0.1);
+    float ssRadiusRaw = projScale * uRadius / max(depth, 0.1);
+    float ssRadius = min(ssRadiusRaw, uMaxSSRadius);
+
+    float radiusScale = ssRadius / max(ssRadiusRaw, 1e-4);
     float radiusSq = uRadius * uRadius;
 
     // Here we use an IGN instead of the hash from the HPG12 AlchemyAO paper.
@@ -107,13 +111,13 @@ void main()
 
     float temp = radiusSq * uRadius;
     aoSum /= (temp * temp);
-    
-    float A = max(0.0, 1.0 - aoSum * uIntensity * (4.0 / float(uSampleCount)));
+
+    // Attenuate intensity proportionally when ssRadius was clamped, preventing over-darkening at close range
+    float ao = max(0.0, 1.0 - aoSum * uIntensity * (4.0 / float(uSampleCount)) * radiusScale);
 
     // 1-pixel bilateral filter using derivatives (almost free)
-	if (abs(dFdx(depth)) < 0.2) A -= dFdx(A) * (float(pixelCoord.x & 1) - 0.5);
-    if (abs(dFdy(depth)) < 0.2) A -= dFdy(A) * (float(pixelCoord.y & 1) - 0.5);
+    if (abs(dFdx(depth)) < 0.2) ao -= dFdx(ao) * (float(pixelCoord.x & 1) - 0.5);
+    if (abs(dFdy(depth)) < 0.2) ao -= dFdy(ao) * (float(pixelCoord.y & 1) - 0.5);
 
-    // SAO tends to over-darken near surfaces; smoothly fade it out
-    FragOcclusion = mix(A, 1.0, 1.0 - clamp(0.5 * depth, 0.0, 1.0));
+    FragOcclusion = ao;
 }

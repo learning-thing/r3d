@@ -620,6 +620,7 @@ typedef struct {
     r3d_shader_uniform_float_t uRadius;
     r3d_shader_uniform_float_t uBias;
     r3d_shader_uniform_float_t uIntensity;
+    r3d_shader_uniform_float_t uMaxSSRadius;
 } r3d_shader_prepare_ssao_t;
 
 typedef struct {

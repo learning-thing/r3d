@@ -333,6 +333,7 @@ bool r3d_shader_load_prepare_ssao(r3d_shader_custom_t* custom)
     GET_LOCATION(ssao, uRadius);
     GET_LOCATION(ssao, uBias);
     GET_LOCATION(ssao, uIntensity);
+    GET_LOCATION(ssao, uMaxSSRadius);
 
     USE_SHADER(ssao);
 
