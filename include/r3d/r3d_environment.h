@@ -67,21 +67,21 @@
         },                                              \
         .ssao = {                                       \
             .sampleCount = 16,                          \
-            .intensity = 0.5f,                          \
-            .power = 1.5f,                              \
+            .intensity = 1.0f,                          \
+            .power = 1.0f,                              \
             .maxRadius = 0.2f,                          \
-            .radius = 0.5f,                             \
-            .bias = 0.02f,                              \
+            .radius = 1.0f,                             \
+            .bias = 0.03f,                              \
             .enabled = false,                           \
         },                                              \
         .ssil = {                                       \
             .sampleCount = 16,                          \
-            .giIntensity = 4.0f,                        \
-            .aoIntensity = 0.5f,                        \
-            .aoPower = 1.5f,                            \
+            .giIntensity = 1.0f,                        \
+            .aoIntensity = 1.0f,                        \
+            .aoPower = 1.0f,                            \
             .maxRadius = 0.2f,                          \
             .radius = 4.0f,                             \
-            .bias = 0.02f,                              \
+            .bias = 0.03f,                              \
             .enabled = false,                           \
         },                                              \
         .ssgi = {                                       \
@@ -222,10 +222,10 @@ typedef struct R3D_EnvAmbient {
 typedef struct R3D_EnvSSAO {
     int sampleCount;        ///< Number of samples to compute SSAO (default: 16)
     float intensity;        ///< Base occlusion strength multiplier (default: 1.0)
-    float power;            ///< Exponential falloff for sharper darkening (default: 1.5)
+    float power;            ///< Exponential falloff for sharper darkening (default: 1.0)
     float maxRadius;        ///< Fraction of screen height beyond which the sampling radius is clamped (default: 0.2)
-    float radius;           ///< Sampling radius in world space (default: 0.25)
-    float bias;             ///< Depth bias to prevent self-shadowing, good value is ~2% of the radius (default: 0.007)
+    float radius;           ///< Sampling radius in world space (default: 1.0)
+    float bias;             ///< Depth bias to prevent self-shadowing (default: 0.03)
     bool enabled;           ///< Enable/disable SSAO effect (default: false)
 } R3D_EnvSSAO;
 
@@ -242,12 +242,12 @@ typedef struct R3D_EnvSSAO {
  */
 typedef struct R3D_EnvSSIL {
     int sampleCount;        ///< Number of samples to compute SSAO (default: 16)
-    float giIntensity;      ///< 
+    float giIntensity;      ///< Base lighting strength multiplier (default: 1.0)
     float aoIntensity;      ///< Base occlusion strength multiplier (default: 1.0)
-    float aoPower;          ///< Exponential falloff for sharper darkening (default: 1.5)
+    float aoPower;          ///< Exponential falloff for sharper darkening (default: 1.0)
     float maxRadius;        ///< Fraction of screen height beyond which the sampling radius is clamped (default: 0.2)
-    float radius;           ///< Sampling radius in world space (default: 0.25)
-    float bias;             ///< Depth bias to prevent self-shadowing, good value is ~2% of the radius (default: 0.007)
+    float radius;           ///< Sampling radius in world space (default: 4.0)
+    float bias;             ///< Depth bias to prevent self-shadowing (default: 0.03)
     bool enabled;           ///< Enable/disable SSAO effect (default: false)
 } R3D_EnvSSIL;
 
