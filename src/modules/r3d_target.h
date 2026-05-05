@@ -38,7 +38,6 @@ typedef enum {
     R3D_TARGET_SSIL_1,          //< Half - Mip 1 - RGBA16F
     R3D_TARGET_SSGI_0,          //< Half - Mip 1 - RGB16F
     R3D_TARGET_SSGI_1,          //< Half - Mip 1 - RGB16F
-    R3D_TARGET_SSGI_2,          //< Half - Mip 1 - RGB16F
     R3D_TARGET_SSR,             //< Half - Mip N - RGBA16F
     R3D_TARGET_DOF_COC,         //< Full - Mip 1 - R16F
     R3D_TARGET_DOF_0,           //< Half - Mip 1 - RGBA16F

@@ -1743,16 +1743,6 @@ r3d_target_t pass_prepare_ssil(void)
 
 r3d_target_t pass_prepare_ssgi(void)
 {
-    /* --- Check if we need history --- */
-
-    static r3d_target_t SSGI_HISTORY  = R3D_TARGET_SSGI_0;
-    static r3d_target_t SSGI_RAW      = R3D_TARGET_SSGI_1;
-    static r3d_target_t SSGI_FILTERED = R3D_TARGET_SSGI_2;
-
-    if (r3d_target_get_or_null(SSGI_HISTORY) == 0) {
-        R3D_TARGET_CLEAR(false, SSGI_HISTORY);
-    }
-
     /* --- Setup OpenGL pipeline --- */
 
     r3d_driver_disable(GL_STENCIL_TEST);
@@ -1773,10 +1763,9 @@ r3d_target_t pass_prepare_ssgi(void)
 
     /* --- Calculate SSGI (RAW) --- */
 
-    R3D_TARGET_BIND_LEVEL(0, SSGI_RAW);
+    R3D_TARGET_BIND_LEVEL(0, R3D_TARGET_SSGI_0);
     R3D_SHADER_USE(prepare.ssgi);
 
-    R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uHistoryTex, r3d_target_get(SSGI_HISTORY));
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uDiffuseTex, r3d_target_get_level(R3D_TARGET_DIFFUSE, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
@@ -1816,8 +1805,8 @@ r3d_target_t pass_prepare_ssgi(void)
             3 steps : 32 16  8
     */
 
-    r3d_target_t* src = &SSGI_RAW;
-    r3d_target_t* dst = &SSGI_FILTERED;
+    r3d_target_t src = R3D_TARGET_SSGI_0;
+    r3d_target_t dst = R3D_TARGET_SSGI_1;
 
     int steps = R3D.environment.ssgi.denoiseSteps;
 
@@ -1838,19 +1827,17 @@ r3d_target_t pass_prepare_ssgi(void)
         {
             float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
 
-            R3D_TARGET_BIND(false, *dst);
-            R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(*src));
+            R3D_TARGET_BIND(false, dst);
+            R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(src));
             R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
             R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
             R3D_RENDER_SCREEN();
 
-            SWAP(r3d_target_t, *src, *dst);
+            SWAP(r3d_target_t, src, dst);
         }
     }
 
-    SWAP(r3d_target_t, SSGI_HISTORY, *src);
-
-    return SSGI_HISTORY;
+    return src;
 }
 
 r3d_target_t pass_prepare_ssr(void)
