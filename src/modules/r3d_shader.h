@@ -625,13 +625,6 @@ typedef struct {
 
 typedef struct {
     GLuint id;
-    r3d_shader_uniform_sampler_t uSsaoTex;
-    r3d_shader_uniform_sampler_t uDepthTex;
-    r3d_shader_uniform_vec2_t uDirection;
-} r3d_shader_prepare_ssao_blur_t;
-
-typedef struct {
-    GLuint id;
     r3d_shader_uniform_sampler_t uSelectorTex;
     r3d_shader_uniform_sampler_t uDiffuseTex;
     r3d_shader_uniform_sampler_t uNormalTex;
@@ -1168,7 +1161,6 @@ extern struct r3d_mod_shader {
         r3d_shader_prepare_depth_pyramid_t depthPyramid;
         r3d_shader_prepare_ssao_in_down_t ssaoInDown;
         r3d_shader_prepare_ssao_t ssao;
-        r3d_shader_prepare_ssao_blur_t ssaoBlur;
         r3d_shader_prepare_ssil_in_down_t ssilInDown;
         r3d_shader_prepare_ssil_t ssil;
         r3d_shader_prepare_ssgi_in_down_t ssgiInDown;
@@ -1242,7 +1234,6 @@ bool r3d_shader_load_prepare_blur_up(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_depth_pyramid(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_ssao_in_down(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_ssao(r3d_shader_custom_t* custom);
-bool r3d_shader_load_prepare_ssao_blur(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_ssil_in_down(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_ssil(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_ssgi_in_down(r3d_shader_custom_t* custom);
@@ -1380,7 +1371,6 @@ static const struct r3d_shader_loader {
         .depthPyramid = r3d_shader_load_prepare_depth_pyramid,
         .ssaoInDown = r3d_shader_load_prepare_ssao_in_down,
         .ssao = r3d_shader_load_prepare_ssao,
-        .ssaoBlur = r3d_shader_load_prepare_ssao_blur,
         .ssilInDown = r3d_shader_load_prepare_ssil_in_down,
         .ssil = r3d_shader_load_prepare_ssil,
         .ssgiInDown = r3d_shader_load_prepare_ssgi_in_down,

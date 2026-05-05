@@ -317,7 +317,6 @@ embed_shaders(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/shaders/prepare/depth_pyramid.frag"
     "${R3D_ROOT_PATH}/shaders/prepare/ssao_in_down.frag"
     "${R3D_ROOT_PATH}/shaders/prepare/ssao.frag"
-    "${R3D_ROOT_PATH}/shaders/prepare/ssao_blur.frag"
     "${R3D_ROOT_PATH}/shaders/prepare/ssil_in_down.frag"
     "${R3D_ROOT_PATH}/shaders/prepare/ssil.frag"
     "${R3D_ROOT_PATH}/shaders/prepare/ssgi_in_down.frag"

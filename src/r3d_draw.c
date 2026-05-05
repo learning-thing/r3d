@@ -1638,22 +1638,35 @@ r3d_target_t pass_prepare_ssao(void)
 
     R3D_RENDER_SCREEN();
 
-    /* --- Blur SSAO --- */
+    /* --- Denoise SSAO --- */
 
-    R3D_SHADER_USE(prepare.ssaoBlur);
-    R3D_SHADER_BIND_SAMPLER(prepare.ssaoBlur, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+    r3d_target_t src = R3D_TARGET_SSAO_0;
+    r3d_target_t dst = R3D_TARGET_SSAO_1;
 
-    R3D_TARGET_BIND(false, R3D_TARGET_SSAO_1);
-    R3D_SHADER_SET_VEC2(prepare.ssaoBlur, uDirection, (Vector2){1,0});
-    R3D_SHADER_BIND_SAMPLER(prepare.ssaoBlur, uSsaoTex, r3d_target_get(R3D_TARGET_SSAO_0));
-    R3D_RENDER_SCREEN();
+    R3D_SHADER_USE(prepare.atrousWavelet);
 
-    R3D_TARGET_BIND(false, R3D_TARGET_SSAO_0);
-    R3D_SHADER_SET_VEC2(prepare.ssaoBlur, uDirection, (Vector2){0,1});
-    R3D_SHADER_BIND_SAMPLER(prepare.ssaoBlur, uSsaoTex, r3d_target_get(R3D_TARGET_SSAO_1));
-    R3D_RENDER_SCREEN();
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-    return R3D_TARGET_SSAO_0;
+    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 20.0f);
+    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 100.0f);
+
+    int stepWidth[] = {2, 1};
+
+    for (int i = 0; i < ARRAY_SIZE(stepWidth); i++)
+    {
+        float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
+
+        R3D_TARGET_BIND(false, dst);
+        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(src));
+        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
+        R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
+        R3D_RENDER_SCREEN();
+
+        SWAP(r3d_target_t, src, dst);
+    }
+
+    return src;
 }
 
 r3d_target_t pass_prepare_ssil(void)

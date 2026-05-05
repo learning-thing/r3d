@@ -341,21 +341,6 @@ bool r3d_shader_load_prepare_ssao(r3d_shader_custom_t* custom)
     return true;
 }
 
-bool r3d_shader_load_prepare_ssao_blur(r3d_shader_custom_t* custom)
-{
-    DECL_SHADER(r3d_shader_prepare_ssao_blur_t, prepare, ssaoBlur);
-    LOAD_SHADER(ssaoBlur, SCREEN_VERT, SSAO_BLUR_FRAG);
-
-    GET_LOCATION(ssaoBlur, uDirection);
-
-    USE_SHADER(ssaoBlur);
-
-    SET_SAMPLER(ssaoBlur, uSsaoTex, R3D_SHADER_SAMPLER_BUFFER_SSAO);
-    SET_SAMPLER(ssaoBlur, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
-
-    return true;
-}
-
 bool r3d_shader_load_prepare_ssil_in_down(r3d_shader_custom_t* custom)
 {
     DECL_SHADER(r3d_shader_prepare_ssil_in_down_t, prepare, ssilInDown);
@@ -1582,7 +1567,6 @@ void r3d_shader_quit()
     UNLOAD_SHADER(prepare.depthPyramid);
     UNLOAD_SHADER(prepare.ssaoInDown);
     UNLOAD_SHADER(prepare.ssao);
-    UNLOAD_SHADER(prepare.ssaoBlur);
     UNLOAD_SHADER(prepare.ssilInDown);
     UNLOAD_SHADER(prepare.ssil);
     UNLOAD_SHADER(prepare.ssgiInDown);
