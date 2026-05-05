@@ -50,13 +50,7 @@ const float WEIGHTS[8] = float[8](
 
 /* === Helpers === */
 
-ivec2 MirrorCoord(ivec2 coord, ivec2 resolution)
-{
-    ivec2 result = abs(coord);
-    ivec2 wrapped = result % (2 * resolution);
-    ivec2 mask = -(wrapped / resolution);
-    return (wrapped & ~mask) | ((2 * resolution - wrapped - 1) & mask);
-}
+#define OFFSCREEN(sc, res) (any(lessThan(sc, ivec2(0))) || any(greaterThanEqual(sc, res)))
 
 /* === Main === */
 
@@ -69,22 +63,20 @@ void main()
     float centerDepth = texelFetch(uDepthTex,  pixCoord, 0).r;
     vec4 centerColor = texelFetch(uSourceTex, pixCoord, 0);
 
-    bool nearBorder = any(lessThan(pixCoord, ivec2(uStepWidth))) || any(greaterThanEqual(pixCoord, resolution - uStepWidth));
-    float invDepth = 1.0 / (abs(centerDepth) + 1e-4);
     vec4 result = centerColor * 0.25;
     float weightSum = 0.25;
 
     for (int i = 0; i < KERNEL_SIZE; i++)
     {
         ivec2 sampleCoord = pixCoord + OFFSETS[i] * uStepWidth;
-        if (nearBorder) sampleCoord = MirrorCoord(sampleCoord, resolution);
+        if (OFFSCREEN(sampleCoord, resolution)) continue;
 
         vec3 sn = M_DecodeOctahedral(texelFetch(uNormalTex, sampleCoord, 0).rg);
         float sd = texelFetch(uDepthTex,  sampleCoord, 0).r;
         vec4 sc = texelFetch(uSourceTex, sampleCoord, 0);
 
         vec3 nt = centerNormal - sn;
-        float dz = (centerDepth - sd) * invDepth;
+        float dz = (centerDepth - sd);
         float dist2 = dot(nt, nt) * uInvStepWidth2;
 
         float w = WEIGHTS[i] * exp(

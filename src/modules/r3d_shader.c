@@ -258,8 +258,6 @@ bool r3d_shader_load_prepare_atrous_wavelet(r3d_shader_custom_t* custom)
     DECL_SHADER(r3d_shader_prepare_atrous_wavelet_t, prepare, atrousWavelet);
     LOAD_SHADER(atrousWavelet, SCREEN_VERT, ATROUS_WAVELET_FRAG);
 
-    SET_UNIFORM_BUFFER(atrousWavelet, ViewBlock, R3D_SHADER_BLOCK_SLOT_VIEW);
-
     GET_LOCATION(atrousWavelet, uInvNormalSharp);
     GET_LOCATION(atrousWavelet, uInvDepthSharp);
     GET_LOCATION(atrousWavelet, uInvStepWidth2);
