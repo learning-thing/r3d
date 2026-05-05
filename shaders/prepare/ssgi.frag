@@ -68,14 +68,14 @@ vec3 FibonacciHemisphere(float fidx, float invTotal, vec2 cpOffset)
     return vec3(cosPhi * sinT, sinPhi * sinT, cosT);
 }
 
-vec3 TraceRay(vec3 startViewPos, vec3 dirVS)
+vec3 TraceRay(vec3 startViewPos, vec3 dirVS, vec3 normalVS)
 {
-    vec3 stepVS = dirVS * uStepSize;
-    float stepLenSq = dot(stepVS, stepVS);
-    float maxLenSq = uMaxDistance * uMaxDistance;
+    float normalBias = uStepSize * max(1.0, -startViewPos.z * 0.1);
+    vec3 posVS = startViewPos + normalVS * normalBias + dirVS * uStepSize;
 
-    vec3 posVS = startViewPos + stepVS;
+    float stepLenSq = dot(dirVS * uStepSize, dirVS * uStepSize);
     float distSq = stepLenSq;
+    float maxLenSq = uMaxDistance * uMaxDistance;
 
     vec2 hitUV = vec2(0.0);
     bool hit = false;
@@ -96,7 +96,7 @@ vec3 TraceRay(vec3 startViewPos, vec3 dirVS)
             break;
         }
 
-        posVS += stepVS;
+        posVS += dirVS * uStepSize;
         distSq += stepLenSq;
     }
 
@@ -134,7 +134,7 @@ void main()
 
     for (uint s = 0u; s < S; s++) {
         vec3 localDir = FibonacciHemisphere(fidx, invTotal, cpOffset);
-        gi += TraceRay(Pvs, TBN * localDir);
+        gi += TraceRay(Pvs, TBN * localDir, Nvs);
         fidx += F_PIXELS_PER_TILE;
     }
 
