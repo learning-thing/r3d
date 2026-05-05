@@ -87,7 +87,6 @@ static const target_config_t TARGET_CONFIG[] = {
     [R3D_TARGET_SSAO_1]      = { FORMAT_R8,      0.5f, GL_LINEAR,               GL_LINEAR,  1, {0} },
     [R3D_TARGET_SSIL_0]      = { FORMAT_RGBA16F, 0.5f, GL_LINEAR,               GL_LINEAR,  1, {0} },
     [R3D_TARGET_SSIL_1]      = { FORMAT_RGBA16F, 0.5f, GL_LINEAR,               GL_LINEAR,  1, {0} },
-    [R3D_TARGET_SSIL_2]      = { FORMAT_RGBA16F, 0.5f, GL_LINEAR,               GL_LINEAR,  1, {0} },
     [R3D_TARGET_SSGI_0]      = { FORMAT_RGB16F,  0.5f, GL_LINEAR,               GL_LINEAR,  1, {0} },
     [R3D_TARGET_SSGI_1]      = { FORMAT_RGB16F,  0.5f, GL_LINEAR,               GL_LINEAR,  1, {0} },
     [R3D_TARGET_SSGI_2]      = { FORMAT_RGB16F,  0.5f, GL_LINEAR,               GL_LINEAR,  1, {0} },

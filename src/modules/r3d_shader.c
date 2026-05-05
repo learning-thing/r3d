@@ -333,6 +333,7 @@ bool r3d_shader_load_prepare_ssao(r3d_shader_custom_t* custom)
     GET_LOCATION(ssao, uRadius);
     GET_LOCATION(ssao, uBias);
     GET_LOCATION(ssao, uIntensity);
+    GET_LOCATION(ssao, uMaxSSRadius);
 
     USE_SHADER(ssao);
 
@@ -378,14 +379,14 @@ bool r3d_shader_load_prepare_ssil(r3d_shader_custom_t* custom)
     SET_UNIFORM_BUFFER(ssil, ViewBlock, R3D_SHADER_BLOCK_SLOT_VIEW);
 
     GET_LOCATION(ssil, uSampleCount);
-    GET_LOCATION(ssil, uSliceCount);
     GET_LOCATION(ssil, uRadius);
-    GET_LOCATION(ssil, uThickness);
+    GET_LOCATION(ssil, uBias);
+    GET_LOCATION(ssil, uAoIntensity);
+    GET_LOCATION(ssil, uMaxSSRadius);
 
     USE_SHADER(ssil);
 
     SET_SAMPLER(ssil, uDiffuseTex, R3D_SHADER_SAMPLER_BUFFER_DIFFUSE);
-    SET_SAMPLER(ssil, uHistoryTex, R3D_SHADER_SAMPLER_BUFFER_SSIL);
     SET_SAMPLER(ssil, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
     SET_SAMPLER(ssil, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
 
@@ -1249,8 +1250,8 @@ bool r3d_shader_load_deferred_ambient(r3d_shader_custom_t* custom)
     SET_UNIFORM_BUFFER(ambient, EnvBlock, R3D_SHADER_BLOCK_SLOT_ENV);
 
     GET_LOCATION(ambient, uSsaoPower);
-    GET_LOCATION(ambient, uSsilIntensity);
     GET_LOCATION(ambient, uSsilAoPower);
+    GET_LOCATION(ambient, uSsilIntensity);
     GET_LOCATION(ambient, uSsgiIntensity);
 
     USE_SHADER(ambient);

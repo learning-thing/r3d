@@ -1628,6 +1628,11 @@ r3d_target_t pass_prepare_ssao(void)
     R3D_SHADER_SET_FLOAT(prepare.ssao, uBias, R3D.environment.ssao.bias);
     R3D_SHADER_SET_FLOAT(prepare.ssao, uIntensity, R3D.environment.ssao.intensity);
 
+    int wSsao = 0, hSsao = 0;
+    r3d_target_get_resolution(&wSsao, &hSsao, R3D_TARGET_SSAO_0, 0);
+    float maxScreenRadius = (float)MIN(wSsao, hSsao) * R3D.environment.ssao.maxRadius;
+    R3D_SHADER_SET_FLOAT(prepare.ssao, uMaxSSRadius, maxScreenRadius);
+
     R3D_SHADER_BIND_SAMPLER(prepare.ssao, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssao, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
@@ -1653,16 +1658,6 @@ r3d_target_t pass_prepare_ssao(void)
 
 r3d_target_t pass_prepare_ssil(void)
 {
-    /* --- Check if we need history --- */
-
-    static r3d_target_t SSIL_HISTORY  = R3D_TARGET_SSIL_0;
-    static r3d_target_t SSIL_RAW      = R3D_TARGET_SSIL_1;
-    static r3d_target_t SSIL_FILTERED = R3D_TARGET_SSIL_2;
-
-    if (r3d_target_get_or_null(SSIL_HISTORY) == 0) {
-        R3D_TARGET_CLEAR(false, SSIL_HISTORY);
-    }
-
     /* --- Setup OpenGL pipeline --- */
 
     r3d_driver_disable(GL_STENCIL_TEST);
@@ -1681,58 +1676,56 @@ r3d_target_t pass_prepare_ssil(void)
 
     R3D_RENDER_SCREEN();
 
-    /* --- Calculate SSIL (RAW) --- */
+    /* --- Calculate SSIL --- */
 
-    R3D_TARGET_BIND(false, SSIL_RAW);
+    R3D_TARGET_BIND(false, R3D_TARGET_SSIL_0);
     R3D_SHADER_USE(prepare.ssil);
 
+    R3D_SHADER_SET_INT(prepare.ssil, uSampleCount, R3D.environment.ssil.sampleCount);
+    R3D_SHADER_SET_FLOAT(prepare.ssil, uRadius,  R3D.environment.ssil.radius);
+    R3D_SHADER_SET_FLOAT(prepare.ssil, uBias, R3D.environment.ssil.bias);
+    R3D_SHADER_SET_FLOAT(prepare.ssil, uAoIntensity, R3D.environment.ssil.aoIntensity);
+
+    int wSsil = 0, hSsil = 0;
+    r3d_target_get_resolution(&wSsil, &hSsil, R3D_TARGET_SSIL_0, 0);
+    float maxScreenRadius = (float)MIN(wSsil, hSsil) * R3D.environment.ssil.maxRadius;
+    R3D_SHADER_SET_FLOAT(prepare.ssil, uMaxSSRadius, maxScreenRadius);
+
     R3D_SHADER_BIND_SAMPLER(prepare.ssil, uDiffuseTex, r3d_target_get_level(R3D_TARGET_DIFFUSE, 1));
-    R3D_SHADER_BIND_SAMPLER(prepare.ssil, uHistoryTex, R3D_TEXTURE_SELECT(r3d_target_get_or_null(SSIL_HISTORY), BLACK));
     R3D_SHADER_BIND_SAMPLER(prepare.ssil, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssil, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-    R3D_SHADER_SET_FLOAT(prepare.ssil, uSampleCount, (float)R3D.environment.ssil.sampleCount);
-    R3D_SHADER_SET_FLOAT(prepare.ssil, uSliceCount, (float)R3D.environment.ssil.sliceCount);
-    R3D_SHADER_SET_FLOAT(prepare.ssil, uRadius, R3D.environment.ssil.radius);
-    R3D_SHADER_SET_FLOAT(prepare.ssil, uThickness, R3D.environment.ssil.thickness);
-
     R3D_RENDER_SCREEN();
 
-    /* --- Atrous denoise: RAW -> FILTERED --- */
+    /* --- Denoise SSIL --- */
 
-    r3d_target_t* src = &SSIL_RAW;
-    r3d_target_t* dst = &SSIL_FILTERED;
+    r3d_target_t src = R3D_TARGET_SSIL_0;
+    r3d_target_t dst = R3D_TARGET_SSIL_1;
 
-    int steps = R3D.environment.ssil.denoiseSteps;
+    R3D_SHADER_USE(prepare.atrousWavelet);
 
-    if (steps > 0)
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+
+    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 20.0f);
+    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 200.0f);
+
+    int stepWidth[] = {4, 2, 1};
+
+    for (int i = 0; i < ARRAY_SIZE(stepWidth); i++)
     {
-        R3D_SHADER_USE(prepare.atrousWavelet);
+        float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
 
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+        R3D_TARGET_BIND(false, dst);
+        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(src));
+        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
+        R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
+        R3D_RENDER_SCREEN();
 
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 25.0f);
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 50.0f);
-
-        for (int i = 0; i < steps; i++)
-        {
-            int stepWidth = 1 << ((steps - 1) - i);
-            float invStepWidth2 = 1.0f / (stepWidth*stepWidth);
-
-            R3D_TARGET_BIND(false, *dst);
-            R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(*src));
-            R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
-            R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth);
-            R3D_RENDER_SCREEN();
-
-            SWAP(r3d_target_t, *src, *dst);
-        }
+        SWAP(r3d_target_t, src, dst);
     }
 
-    SWAP(r3d_target_t, SSIL_HISTORY, *src);
-
-    return SSIL_HISTORY;
+    return src;
 }
 
 r3d_target_t pass_prepare_ssgi(void)
@@ -2016,8 +2009,8 @@ void pass_deferred_ambient(r3d_target_t ssaoSource, r3d_target_t ssilSource, r3d
     R3D_SHADER_BIND_SAMPLER(deferred.ambient, uOrmTex, r3d_target_get_level(R3D_TARGET_ORM, 0));
 
     R3D_SHADER_SET_FLOAT(deferred.ambient, uSsaoPower, R3D.environment.ssao.power);
-    R3D_SHADER_SET_FLOAT(deferred.ambient, uSsilIntensity, R3D.environment.ssil.intensity);
     R3D_SHADER_SET_FLOAT(deferred.ambient, uSsilAoPower, R3D.environment.ssil.aoPower);
+    R3D_SHADER_SET_FLOAT(deferred.ambient, uSsilIntensity, R3D.environment.ssil.giIntensity);
     R3D_SHADER_SET_FLOAT(deferred.ambient, uSsgiIntensity, R3D.environment.ssgi.intensity);
 
     R3D_RENDER_SCREEN();

@@ -1,4 +1,4 @@
-/* ssil.frag -- Screen space indirect lihgting with visibility mask
+/* ssil.frag -- Screen Space Directional Occlusion (SSDO)
  *
  * Copyright (c) 2025-2026 Le Juez Victor
  *
@@ -6,11 +6,11 @@
  * For conditions of distribution and use, see accompanying LICENSE file.
  */
 
-// Original version adapted from "Screen Space Indirect Lighting with Visibility Bitmask" by Olivier Therrien, et al.
-// https://cdrinmatane.github.io/posts/cgspotlight-slides/
+// Based on Screen Space Directional Occlusion by Tobias Ritschel et al.
+// SEE: https://web.archive.org/web/20140725130649/https://people.mpi-inf.mpg.de/~ritschel/Papers/SSDO.pdf
 
-// This is version is adapted from the Cyberealty's blog post (big thanks for for this discovery!):
-// https://cybereality.com/screen-space-indirect-lighting-with-visibility-bitmask-improvement-to-gtao-ssao-real-time-ambient-occlusion-algorithm-glsl-shader-implementation/
+// And on Scalable Ambient Obscurance method by Morgan McGuire et al.
+// SEE: https://research.nvidia.com/publication/2012-06_scalable-ambient-obscurance
 
 #version 330 core
 
@@ -19,143 +19,118 @@
 #include "../include/blocks/view.glsl"
 #include "../include/math.glsl"
 
-/* === Varyings == */
+/* === Varyings === */
 
 noperspective in vec2 vTexCoord;
 
 /* === Uniforms === */
 
 uniform sampler2D uDiffuseTex;
-uniform sampler2D uHistoryTex;
 uniform sampler2D uNormalTex;
 uniform sampler2D uDepthTex;
 
-uniform float uSampleCount;
-uniform float uSliceCount;
+uniform int uSampleCount;
 uniform float uRadius;
-uniform float uThickness;
+uniform float uBias;
+uniform float uAoIntensity;
+uniform float uMaxSSRadius;
+
+/* === Constants === */
+
+// Number of spiral turns for each sample count, ensuring coprime relationship.
+// Each entry ROTATIONS[i] is chosen such that GCD(i+1, ROTATIONS[i]) = 1,
+// preventing sample alignment artifacts in the spiral pattern.
+// Indexed by (sampleCount - 1). Supports 1 to 98 samples.
+const int ROTATIONS[98] = int[98](
+    1, 1, 2, 3, 2, 5, 2, 3, 2,
+    3, 3, 5, 5, 3, 4, 7, 5, 5, 7,
+    9, 8, 5, 5, 7, 7, 7, 8, 5, 8,
+    11, 12, 7, 10, 13, 8, 11, 8, 7, 14,
+    11, 11, 13, 12, 13, 19, 17, 13, 11, 18,
+    19, 11, 11, 14, 17, 21, 15, 16, 17, 18,
+    13, 17, 11, 17, 19, 18, 25, 18, 19, 19,
+    29, 21, 19, 27, 31, 29, 21, 18, 17, 29,
+    31, 31, 23, 18, 25, 26, 25, 23, 19, 34,
+    19, 27, 21, 25, 39, 29, 17, 21, 27
+);
 
 /* === Fragments === */
 
-layout(location = 0) out vec4 FragColor;
+out vec4 FragColor;
 
-/* === Helper Functions === */
+/* === Helper functions === */
 
-uint BitCount(uint value)
+vec2 TapLocation(int i, float numSpiralTurns, float spin, out float rNorm)
 {
-    // https://graphics.stanford.edu/%7Eseander/bithacks.html
-    value = value - ((value >> 1u) & 0x55555555u);
-    value = (value & 0x33333333u) + ((value >> 2u) & 0x33333333u);
-    return ((value + (value >> 4u) & 0xF0F0F0Fu) * 0x1010101u) >> 24u;
+    float alpha = (float(i) + 0.5) / float(uSampleCount);
+    float angle = alpha * (numSpiralTurns * M_TAU) + spin;
+
+    rNorm = alpha;
+    return vec2(cos(angle), sin(angle));
 }
 
-const uint SECTOR_COUNT = 32u;
-uint UpdateSectors(float minHorizon, float maxHorizon)
-{
-    uint b = uint(ceil((maxHorizon - minHorizon) * float(SECTOR_COUNT))); // Horizon angle
-    uint a = uint(minHorizon * float(SECTOR_COUNT)); // Start bit
-    uint mask = b > 0u ? ((1u << b) - 1u) : 0u;
-    return mask << a;
-}
-
-vec3 SampleLight(vec2 texCoord)
-{
-    vec3 indirect = texture(uHistoryTex, texCoord).rgb;
-    vec3 direct = texture(uDiffuseTex, texCoord).rgb;
-    float edgeMask = float(!V_OffScreen(texCoord));
-    return (direct + indirect) * edgeMask;
-}
-
-float FastAcos(float x)
-{
-    // Lagrange polynomial approximation, maximum error around 0.18 rad
-    return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + 1.5707963267948966;
-}
-
-vec2 FastAcos(vec2 x)
-{
-    // Lagrange polynomial approximation, maximum error around 0.18 rad
-    return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + 1.5707963267948966;
-}
-
-/* === Program === */
+/* === Main program === */
 
 void main()
 {
-    vec3 position = V_GetViewPosition(uDepthTex, ivec2(gl_FragCoord.xy));
-    vec3 normal = V_GetViewNormal(uNormalTex, ivec2(gl_FragCoord.xy));
-    vec3 camera = normalize(-position);
+    FragColor = vec4(vec3(0.0), 1.0);
 
-    vec2 screenSize = vec2(textureSize(uDiffuseTex, 0));
-    vec2 aspect = screenSize.yx / screenSize.x;
-    float jitter = M_HashIGN(gl_FragCoord.xy);
+    ivec2 pixelCoord = ivec2(gl_FragCoord.xy);
+    float depth = texture(uDepthTex, vTexCoord).r;
+    if (depth >= uView.far) return;
 
-    float sliceRotation = M_TAU / uSliceCount;
-    float jitterRotation = M_TAU * jitter;
+    vec3 position = V_GetViewPosition(vTexCoord, depth);
+    vec3 normal = V_GetViewNormal(uNormalTex, pixelCoord);
 
-    float sampleScale = uRadius * uView.proj[0][0] / -position.z;
-    float sampleOffset = 0.01;
+    float projScale = abs(uView.proj[1][1]) * textureSize(uDepthTex, 0).y * 0.5;
+    float ssRadiusRaw = projScale * uRadius / max(depth, 0.1);
+    float ssRadius = min(ssRadiusRaw, uMaxSSRadius);
 
-    // Indirect + visiblity accumulator
-    vec4 indirect = vec4(0.0);
+    float radiusScale = ssRadius / max(ssRadiusRaw, 1e-4);
+    float radiusSq = uRadius * uRadius;
 
-    // Iterate over angular slices around the hemisphere
-    for (int slice = 0; slice < uSliceCount; slice++)
+    // Here we use an IGN instead of the hash from the HPG12 AlchemyAO paper.
+    // The result is much more pleasing and blurs much better.
+
+    float spin = M_TAU * M_HashR2(gl_FragCoord.xy);
+    int numSpiralTurns = ROTATIONS[clamp(uSampleCount - 1, 0, 97)];
+
+    float aoSum = 0.0;
+    vec3 giSum = vec3(0.0);
+
+    for (int i = 0; i < uSampleCount; ++i)
     {
-        float phi = jitterRotation + sliceRotation * float(slice);
-        vec2 omega = vec2(cos(phi), sin(phi));
+        float rNorm;
+        vec2 unitDir = TapLocation(i, float(numSpiralTurns), spin, rNorm);
+        ivec2 pixelOffset = pixelCoord + ivec2(unitDir * ssRadius * rNorm);
 
-        vec3 direction = vec3(omega.x, omega.y, 0.0);
-        vec3 orthoDirection = direction - dot(direction, camera) * camera;  // Project onto plane perpendicular to view
-        vec3 axis = cross(direction, camera);
+        vec3 samplePos = V_GetViewPosition(uDepthTex, pixelOffset);
+        vec3 v = samplePos - position;
 
-        // Project surface normal onto the sampling plane
-        vec3 projNormal = normal - axis * dot(normal, axis);
-        float projLength = length(projNormal);
+        float vv = dot(v, v);
+        float vn = dot(v, normal);
 
-        // Compute signed angle offset from camera direction
-        float signN = sign(dot(orthoDirection, projNormal));
-        float cosN = clamp(dot(projNormal, camera) / projLength, 0.0, 1.0);
-        float n = signN * FastAcos(cosN);
+        const float epsilon = 0.02;
+        float f = max(radiusSq - vv, 0.0);
+        float w = f * f * f * max((vn - uBias) / (epsilon + vv), 0.0);
 
-        // Occlusion accumulator for this slice
-        uint occlusion = 0u;
-
-        // Trace radial samples outward along this slice
-        for (int currentSample = 0; currentSample < uSampleCount; currentSample++)
-        {
-            float sampleStep = (float(currentSample) + jitter) / uSampleCount + sampleOffset;
-            vec2 sampleUV = vTexCoord - sampleStep * sampleScale * omega * aspect;
-
-            vec3 samplePosition = V_GetViewPosition(uDepthTex, sampleUV);
-            vec3 sampleNormal = V_GetViewNormal(uNormalTex, sampleUV);
-            vec3 sampleLight = SampleLight(sampleUV);
-
-            vec3 sampleDistance = samplePosition - position;
-            vec3 sampleHorizon = sampleDistance / length(sampleDistance);
-
-            // Compute horizon angles: front (actual position) and back (with thickness offset)
-            vec3 backSample = normalize(sampleDistance - camera * uThickness);
-            vec2 frontBackHorizon = vec2(dot(sampleHorizon, camera), dot(backSample, camera));
-            frontBackHorizon = FastAcos(clamp(frontBackHorizon, -1.0, 1.0));
-            frontBackHorizon = clamp((frontBackHorizon + n + M_HPI) / M_PI, 0.0, 1.0);
-
-            // Mark visible sectors for this sample
-            uint sampleBitmask = UpdateSectors(frontBackHorizon.x, frontBackHorizon.y);
-
-            // Weight lighting by newly visible sectors (those not already occluded) and by geometric terms (surface angles)
-            float newlyVisible = 1.0 - float(BitCount(sampleBitmask & ~occlusion)) / float(SECTOR_COUNT);
-            float eNdotL = max(dot(sampleNormal, -sampleHorizon), 0.0); // emitter
-            float rNdotL = max(dot(normal, sampleHorizon), 0.0); // receiver
-            indirect.rgb += sampleLight * newlyVisible * eNdotL * rNdotL;
-
-            // Accumulate occlusion across samples
-            occlusion |= sampleBitmask;
-        }
-
-        indirect.a += 1.0 - float(BitCount(occlusion)) / float(SECTOR_COUNT);
+        aoSum += w;
+        giSum += texelFetch(uDiffuseTex, pixelOffset, 0).rgb * w;
     }
 
-    FragColor = indirect / uSliceCount;
-    FragColor.a = min(FragColor.a, 1.0);
+    float temp = radiusSq * uRadius;
+    float normFactor = 1.0 / (temp * temp);
+
+    aoSum *= normFactor;
+    giSum *= normFactor;
+
+    // Attenuate intensity proportionally when ssRadius was clamped, preventing over-darkening at close range
+    float ao = max(0.0, 1.0 - aoSum * uAoIntensity * (2.0 / float(uSampleCount)) * radiusScale);
+    vec3  gi = giSum * (16.0 / float(uSampleCount)) * radiusScale;
+
+    // 1-pixel bilateral filter using derivatives (almost free)
+	if (abs(dFdx(depth)) < 0.2) ao -= dFdx(ao) * (float(pixelCoord.x & 1) - 0.5);
+    if (abs(dFdy(depth)) < 0.2) ao -= dFdy(ao) * (float(pixelCoord.y & 1) - 0.5);
+
+    FragColor = vec4(gi, ao);
 }

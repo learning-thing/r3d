@@ -36,8 +36,8 @@ uniform samplerCubeArray uPrefilterTex;
 uniform sampler2D uBrdfLutTex;
 
 uniform float uSsaoPower;
-uniform float uSsilIntensity;
 uniform float uSsilAoPower;
+uniform float uSsilIntensity;
 uniform float uSsgiIntensity;
 
 /* === Blocks === */
