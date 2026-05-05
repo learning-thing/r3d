@@ -30,7 +30,6 @@
 #include <shaders/depth_pyramid.frag.h>
 #include <shaders/ssao_in_down.frag.h>
 #include <shaders/ssao.frag.h>
-#include <shaders/ssao_blur.frag.h>
 #include <shaders/ssil_in_down.frag.h>
 #include <shaders/ssil.frag.h>
 #include <shaders/ssgi_in_down.frag.h>
