@@ -253,20 +253,44 @@ static GLuint load_shader(const char* vsCode, const char* fsCode)
 // SHADER LOADING FUNCTIONS
 // ========================================
 
-bool r3d_shader_load_prepare_atrous_wavelet(r3d_shader_custom_t* custom)
+bool r3d_shader_load_prepare_atrous_wavelet_smart(r3d_shader_custom_t* custom)
 {
-    DECL_SHADER(r3d_shader_prepare_atrous_wavelet_t, prepare, atrousWavelet);
-    LOAD_SHADER(atrousWavelet, SCREEN_VERT, ATROUS_WAVELET_FRAG);
+    DECL_SHADER(r3d_shader_prepare_atrous_wavelet_t, prepare, atrousWaveletSmart);
 
-    GET_LOCATION(atrousWavelet, uInvNormalSharp);
-    GET_LOCATION(atrousWavelet, uInvDepthSharp);
-    GET_LOCATION(atrousWavelet, uInvStepWidth2);
-    GET_LOCATION(atrousWavelet, uStepWidth);
+    const char* FS_DEFINES[] = {"SMART_FILTER"};
+    char* fragCode = inject_defines(ATROUS_WAVELET_FRAG, FS_DEFINES, ARRAY_SIZE(FS_DEFINES));
+    LOAD_SHADER(atrousWaveletSmart, SCREEN_VERT, fragCode);
+    RL_FREE(fragCode);
 
-    USE_SHADER(atrousWavelet);
-    SET_SAMPLER(atrousWavelet, uSourceTex, R3D_SHADER_SAMPLER_SOURCE_2D_0);
-    SET_SAMPLER(atrousWavelet, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
-    SET_SAMPLER(atrousWavelet, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
+    SET_UNIFORM_BUFFER(atrousWaveletSmart, ViewBlock, R3D_SHADER_BLOCK_SLOT_VIEW);
+
+    GET_LOCATION(atrousWaveletSmart, uInvNormalSharp);
+    GET_LOCATION(atrousWaveletSmart, uInvDepthSharp);
+    GET_LOCATION(atrousWaveletSmart, uInvStepWidth2);
+    GET_LOCATION(atrousWaveletSmart, uStepWidth);
+
+    USE_SHADER(atrousWaveletSmart);
+    SET_SAMPLER(atrousWaveletSmart, uSourceTex, R3D_SHADER_SAMPLER_SOURCE_2D_0);
+    SET_SAMPLER(atrousWaveletSmart, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
+    SET_SAMPLER(atrousWaveletSmart, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
+
+    return true;
+}
+
+bool r3d_shader_load_prepare_atrous_wavelet_fast(r3d_shader_custom_t* custom)
+{
+    DECL_SHADER(r3d_shader_prepare_atrous_wavelet_t, prepare, atrousWaveletFast);
+    LOAD_SHADER(atrousWaveletFast, SCREEN_VERT, ATROUS_WAVELET_FRAG);
+
+    GET_LOCATION(atrousWaveletFast, uInvNormalSharp);
+    GET_LOCATION(atrousWaveletFast, uInvDepthSharp);
+    GET_LOCATION(atrousWaveletFast, uInvStepWidth2);
+    GET_LOCATION(atrousWaveletFast, uStepWidth);
+
+    USE_SHADER(atrousWaveletFast);
+    SET_SAMPLER(atrousWaveletFast, uSourceTex, R3D_SHADER_SAMPLER_SOURCE_2D_0);
+    SET_SAMPLER(atrousWaveletFast, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
+    SET_SAMPLER(atrousWaveletFast, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
 
     return true;
 }
@@ -1560,7 +1584,8 @@ void r3d_shader_quit()
 {
     glDeleteBuffers(R3D_SHADER_BLOCK_COUNT, R3D_MOD_SHADER.uniformBuffers);
 
-    UNLOAD_SHADER(prepare.atrousWavelet);
+    UNLOAD_SHADER(prepare.atrousWaveletSmart);
+    UNLOAD_SHADER(prepare.atrousWaveletFast);
     UNLOAD_SHADER(prepare.blurDown);
     UNLOAD_SHADER(prepare.blurUp);
     UNLOAD_SHADER(prepare.depthPyramid);

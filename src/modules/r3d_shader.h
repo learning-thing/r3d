@@ -1154,7 +1154,8 @@ extern struct r3d_mod_shader {
 
     // Prepare shaders
     struct {
-        r3d_shader_prepare_atrous_wavelet_t atrousWavelet;
+        r3d_shader_prepare_atrous_wavelet_t atrousWaveletSmart;
+        r3d_shader_prepare_atrous_wavelet_t atrousWaveletFast;
         r3d_shader_prepare_blur_down_t blurDown;
         r3d_shader_prepare_blur_up_t blurUp;
         r3d_shader_prepare_depth_pyramid_t depthPyramid;
@@ -1227,7 +1228,8 @@ extern struct r3d_mod_shader {
 
 typedef bool (*r3d_shader_loader_func)(r3d_shader_custom_t* custom);
 
-bool r3d_shader_load_prepare_atrous_wavelet(r3d_shader_custom_t* custom);
+bool r3d_shader_load_prepare_atrous_wavelet_smart(r3d_shader_custom_t* custom);
+bool r3d_shader_load_prepare_atrous_wavelet_fast(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_blur_down(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_blur_up(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_depth_pyramid(r3d_shader_custom_t* custom);
@@ -1293,7 +1295,8 @@ static const struct r3d_shader_loader {
 
     // Prepare shaders
     struct {
-        r3d_shader_loader_func atrousWavelet;
+        r3d_shader_loader_func atrousWaveletSmart;
+        r3d_shader_loader_func atrousWaveletFast;
         r3d_shader_loader_func blurDown;
         r3d_shader_loader_func blurUp;
         r3d_shader_loader_func depthPyramid;
@@ -1364,7 +1367,8 @@ static const struct r3d_shader_loader {
 } R3D_MOD_SHADER_LOADER = {
 
     .prepare = {
-        .atrousWavelet = r3d_shader_load_prepare_atrous_wavelet,
+        .atrousWaveletSmart = r3d_shader_load_prepare_atrous_wavelet_smart,
+        .atrousWaveletFast = r3d_shader_load_prepare_atrous_wavelet_fast,
         .blurDown = r3d_shader_load_prepare_blur_down,
         .blurUp = r3d_shader_load_prepare_blur_up,
         .depthPyramid = r3d_shader_load_prepare_depth_pyramid,
