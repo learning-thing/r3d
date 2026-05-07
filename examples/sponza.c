@@ -16,6 +16,7 @@ int main(void)
 
     // Post-processing setup
     R3D_ENVIRONMENT_SET(bloom.mode, R3D_BLOOM_MIX);
+    R3D_ENVIRONMENT_SET(ssgi.intensity, 8.0f);
     R3D_ENVIRONMENT_SET(ssao.enabled, true);
 
     // Background and ambient

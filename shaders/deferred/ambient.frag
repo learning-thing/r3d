@@ -76,8 +76,7 @@ void main()
     vec3 specular = vec3(0.0);
     E_ComputeAmbientAndProbes(diffuse, specular, kD, orm, F0, P, N, V, NdotV);
 
-    // Apply AO to SSGI to restore contrast lost in far/blurred regions
-    vec3 gi = ssgi.rgb * uSsgiIntensity * orm.x;
+    vec3 gi = ssgi.rgb * uSsgiIntensity;
     gi += ssil.rgb * uSsilIntensity;
     gi *= kD;
 

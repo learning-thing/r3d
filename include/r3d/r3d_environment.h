@@ -85,15 +85,12 @@
             .enabled = false,                           \
         },                                              \
         .ssgi = {                                       \
-            .sampleCount = 2,                           \
-            .maxRaySteps = 32,                          \
-            .stepSize = 0.125f,                         \
-            .thickness = 1.0f,                          \
-            .maxDistance = 4.0f,                        \
-            .intensity = 3.0f,                          \
-            .fadeStart = 8.0f,                          \
-            .fadeEnd = 16.0f,                           \
-            .denoiseSteps = 5,                          \
+            .sliceCount = 4,                            \
+            .edgeFade = 0.1f,                           \
+            .distanceFalloff = 1.0f,                    \
+            .normalRejection = 0.0f,                    \
+            .intensity = 1.0f,                          \
+            .denoiseSteps = 4,                          \
             .enabled = false,                           \
         },                                              \
         .ssr = {                                        \
@@ -251,20 +248,16 @@ typedef struct R3D_EnvSSIL {
 /**
  * @brief Screen Space Global Illumination (SSGI) settings.
  *
- * Real-time global illlumination calculated in screen space.
- * @note Best suited for enclosed/indoor environments.
+ * Computes indirect lighting from the scene's visible surfaces in real time.
  */
 typedef struct R3D_EnvSSGI {
-    int sampleCount;        ///< Number of rays per pixel (default: 2)
-    int maxRaySteps;        ///< Maximum ray marching steps (default: 32)
-    float stepSize;         ///< Ray step size (default: 0.125)
-    float thickness;        ///< Depth tolerance for valid hits (default: 1.0)
-    float maxDistance;      ///< Maximum ray distance (default: 4.0)
-    float intensity;        ///< GI intensity multiplier (default: 3.0)
-    float fadeStart;        ///< Distance at which the GI fade begins (default: 8.0)
-    float fadeEnd;          ///< Distance at which GI is fully faded (default: 16.0)
-    int denoiseSteps;       ///< Number of denoiser iterations (default: 5)
-    bool enabled;           ///< Enable/disable SSGI (default: false)
+    int sliceCount;         ///< Number of directions sampled per pixel. Higher = fewer noise streaks, higher cost. (default: 4)
+    float edgeFade;         ///< Fades out GI near screen edges to hide emissive objects partially off-screen. (default: 0.1)
+    float distanceFalloff;  ///< How quickly indirect light fades with distance. Higher = shorter reach, darker result. (default: 1.0)
+    float normalRejection;  ///< Prevents surfaces from receiving light through their own backside. 0 = off, 1 = physically correct. May look inconsistent with non-directional emissives. (default: 0.0)
+    float intensity;        ///< Brightness of the indirect lighting. Dimly lit scenes may require significantly higher values to show probable contribution. (default: 1.0)
+    int denoiseSteps;       ///< Number of denoiser passes. Higher = smoother result, slightly higher cost. (default: 4)
+    bool enabled;           ///< Enable or disable SSGI entirely. (default: false)
 } R3D_EnvSSGI;
 
 /**

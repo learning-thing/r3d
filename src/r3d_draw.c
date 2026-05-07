@@ -1643,13 +1643,13 @@ r3d_target_t pass_prepare_ssao(void)
     r3d_target_t src = R3D_TARGET_SSAO_0;
     r3d_target_t dst = R3D_TARGET_SSAO_1;
 
-    R3D_SHADER_USE(prepare.atrousWavelet);
+    R3D_SHADER_USE(prepare.atrousWaveletFast);
 
-    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
-    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletFast, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletFast, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 20.0f);
-    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 100.0f);
+    R3D_SHADER_SET_FLOAT(prepare.atrousWaveletFast, uInvNormalSharp, 20.0f);
+    R3D_SHADER_SET_FLOAT(prepare.atrousWaveletFast, uInvDepthSharp, 100.0f);
 
     int stepWidth[] = {2, 1};
 
@@ -1658,9 +1658,9 @@ r3d_target_t pass_prepare_ssao(void)
         float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
 
         R3D_TARGET_BIND(false, dst);
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(src));
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
-        R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
+        R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletFast, uSourceTex, r3d_target_get(src));
+        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletFast, uInvStepWidth2, invStepWidth2);
+        R3D_SHADER_SET_INT(prepare.atrousWaveletFast, uStepWidth, stepWidth[i]);
         R3D_RENDER_SCREEN();
 
         SWAP(r3d_target_t, src, dst);
@@ -1715,13 +1715,13 @@ r3d_target_t pass_prepare_ssil(void)
     r3d_target_t src = R3D_TARGET_SSIL_0;
     r3d_target_t dst = R3D_TARGET_SSIL_1;
 
-    R3D_SHADER_USE(prepare.atrousWavelet);
+    R3D_SHADER_USE(prepare.atrousWaveletFast);
 
-    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
-    R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletFast, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
+    R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletFast, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 20.0f);
-    R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 200.0f);
+    R3D_SHADER_SET_FLOAT(prepare.atrousWaveletFast, uInvNormalSharp, 20.0f);
+    R3D_SHADER_SET_FLOAT(prepare.atrousWaveletFast, uInvDepthSharp, 200.0f);
 
     int stepWidth[] = {4, 2, 1};
 
@@ -1730,9 +1730,9 @@ r3d_target_t pass_prepare_ssil(void)
         float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
 
         R3D_TARGET_BIND(false, dst);
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(src));
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
-        R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
+        R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletFast, uSourceTex, r3d_target_get(src));
+        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletFast, uInvStepWidth2, invStepWidth2);
+        R3D_SHADER_SET_INT(prepare.atrousWaveletFast, uStepWidth, stepWidth[i]);
         R3D_RENDER_SCREEN();
 
         SWAP(r3d_target_t, src, dst);
@@ -1743,16 +1743,6 @@ r3d_target_t pass_prepare_ssil(void)
 
 r3d_target_t pass_prepare_ssgi(void)
 {
-    /* --- Check if we need history --- */
-
-    static r3d_target_t SSGI_HISTORY  = R3D_TARGET_SSGI_0;
-    static r3d_target_t SSGI_RAW      = R3D_TARGET_SSGI_1;
-    static r3d_target_t SSGI_FILTERED = R3D_TARGET_SSGI_2;
-
-    if (r3d_target_get_or_null(SSGI_HISTORY) == 0) {
-        R3D_TARGET_CLEAR(false, SSGI_HISTORY);
-    }
-
     /* --- Setup OpenGL pipeline --- */
 
     r3d_driver_disable(GL_STENCIL_TEST);
@@ -1773,28 +1763,24 @@ r3d_target_t pass_prepare_ssgi(void)
 
     /* --- Calculate SSGI (RAW) --- */
 
-    R3D_TARGET_BIND_LEVEL(0, SSGI_RAW);
+    R3D_TARGET_BIND_LEVEL(0, R3D_TARGET_SSGI_0);
     R3D_SHADER_USE(prepare.ssgi);
 
-    R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uHistoryTex, r3d_target_get(SSGI_HISTORY));
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uDiffuseTex, r3d_target_get_level(R3D_TARGET_DIFFUSE, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-    R3D_SHADER_SET_INT(prepare.ssgi, uSampleCount, R3D.environment.ssgi.sampleCount);
-    R3D_SHADER_SET_INT(prepare.ssgi, uMaxRaySteps, R3D.environment.ssgi.maxRaySteps);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uStepSize, R3D.environment.ssgi.stepSize);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uThickness, R3D.environment.ssgi.thickness);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uMaxDistance, R3D.environment.ssgi.maxDistance);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uFadeStart, R3D.environment.ssgi.fadeStart);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uFadeEnd, R3D.environment.ssgi.fadeEnd);
+    R3D_SHADER_SET_INT(prepare.ssgi, uSliceCount, R3D.environment.ssgi.sliceCount);
+    R3D_SHADER_SET_INT(prepare.ssgi, uEdgeFade, R3D.environment.ssgi.edgeFade);
+    R3D_SHADER_SET_FLOAT(prepare.ssgi, uDistanceFalloff, R3D.environment.ssgi.distanceFalloff);
+    R3D_SHADER_SET_FLOAT(prepare.ssgi, uNormalRejection, R3D.environment.ssgi.normalRejection);
 
     R3D_RENDER_SCREEN();
 
     /*
         A-trous step schedule (largest -> smallest).
 
-        We use a fixed pyramid: {32, 16, 8, 4, 2, 1}.
+        We use a fixed pyramid: {16, 8, 4, 2, 1}.
         When fewer iterations are requested we simply truncate the list.
 
         The largest steps are what stabilize the filter in motion.
@@ -1806,51 +1792,48 @@ r3d_target_t pass_prepare_ssgi(void)
         noticeably less stable when the camera moves.
 
         Keeping the same large radii and only dropping the final refinement
-        passes preserves the temporal stability of the 6-step filter while
+        passes preserves the spatial stability of the 5-step filter while
         allowing cheaper configurations.
 
         Examples:
-            6 steps : 32 16  8  4  2  1
-            5 steps : 32 16  8  4  2
-            4 steps : 32 16  8  4
-            3 steps : 32 16  8
+            5 steps : 16  8  4  2  1
+            4 steps : 16  8  4  2
+            3 steps : 16  8  4
     */
 
-    r3d_target_t* src = &SSGI_RAW;
-    r3d_target_t* dst = &SSGI_FILTERED;
+    r3d_target_t src = R3D_TARGET_SSGI_0;
+    r3d_target_t dst = R3D_TARGET_SSGI_1;
 
     int steps = R3D.environment.ssgi.denoiseSteps;
 
     if (steps > 0)
     {
-        R3D_SHADER_USE(prepare.atrousWavelet);
+        R3D_SHADER_USE(prepare.atrousWaveletSmart);
 
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
-        R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
+        R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletSmart, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
+        R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletSmart, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvNormalSharp, 2.5f);
-        R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvDepthSharp, 20.0f);
+        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletSmart, uInvNormalSharp, 20.0f);
+        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletSmart, uInvDepthSharp, 200.0f);
 
-        int stepWidth[] = {32, 16, 8, 4, 2, 1};
+        int stepWidth[] = {16, 8, 4, 2, 1};
         steps = MIN(steps, ARRAY_SIZE(stepWidth));
 
         for (int i = 0; i < steps; i++)
         {
             float invStepWidth2 = 1.0f / (stepWidth[i]*stepWidth[i]);
 
-            R3D_TARGET_BIND(false, *dst);
-            R3D_SHADER_BIND_SAMPLER(prepare.atrousWavelet, uSourceTex, r3d_target_get(*src));
-            R3D_SHADER_SET_FLOAT(prepare.atrousWavelet, uInvStepWidth2, invStepWidth2);
-            R3D_SHADER_SET_INT(prepare.atrousWavelet, uStepWidth, stepWidth[i]);
+            R3D_TARGET_BIND(false, dst);
+            R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletSmart, uSourceTex, r3d_target_get(src));
+            R3D_SHADER_SET_FLOAT(prepare.atrousWaveletSmart, uInvStepWidth2, invStepWidth2);
+            R3D_SHADER_SET_INT(prepare.atrousWaveletSmart, uStepWidth, stepWidth[i]);
             R3D_RENDER_SCREEN();
 
-            SWAP(r3d_target_t, *src, *dst);
+            SWAP(r3d_target_t, src, dst);
         }
     }
 
-    SWAP(r3d_target_t, SSGI_HISTORY, *src);
-
-    return SSGI_HISTORY;
+    return src;
 }
 
 r3d_target_t pass_prepare_ssr(void)

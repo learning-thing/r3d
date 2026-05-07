@@ -10,7 +10,6 @@
 
 /* === Includes === */
 
-#include "../include/blocks/view.glsl"
 #include "../include/math.glsl"
 
 /* === Varyings === */
@@ -54,16 +53,68 @@ const float WEIGHTS[8] = float[8](
 
 /* === Main === */
 
+#ifdef SMART_FILTER
+
+#include "../include/blocks/view.glsl"
+
 void main()
 {
     ivec2 resolution = textureSize(uSourceTex, 0);
     ivec2 pixCoord = ivec2(gl_FragCoord.xy);
 
-    vec3 centerNormal = M_DecodeOctahedral(texelFetch(uNormalTex, pixCoord, 0).rg);
-    float centerDepth = texelFetch(uDepthTex,  pixCoord, 0).r;
-    vec4 centerColor = texelFetch(uSourceTex, pixCoord, 0);
+    vec3 cp = V_GetViewPosition(uDepthTex, pixCoord);
+    vec3 cn = V_GetViewNormal(uNormalTex, pixCoord);
+    vec4 cc = texelFetch(uSourceTex, pixCoord, 0);
 
-    vec4 result = centerColor * 0.25;
+    float invScale2 = 1.0 / dot(cp, cp);
+    float viewCos = max(abs(dot(cn, cp)) * sqrt(invScale2), 0.05);
+    float angleFactor = min(1.0 / viewCos, 4.0);
+
+    float planeSharp = invScale2 * (angleFactor * angleFactor) * uInvDepthSharp;
+    float tangSharp = invScale2 * uInvDepthSharp * 0.1;
+
+    vec4 result = cc * 0.25;
+    float weightSum = 0.25;
+
+    for (int i = 0; i < KERNEL_SIZE; i++)
+    {
+        ivec2 sampleCoord = pixCoord + OFFSETS[i] * uStepWidth;
+        if (OFFSCREEN(sampleCoord, resolution)) continue;
+
+        vec3 sp = V_GetViewPosition(uDepthTex, sampleCoord);
+        vec3 sn = V_GetViewNormal(uNormalTex, sampleCoord);
+        vec4 sc = texelFetch(uSourceTex, sampleCoord, 0);
+
+        vec3 delta = sp - cp;
+        float pd = dot(delta, cn);
+        float td2 = max(dot(delta, delta) - pd * pd, 0.0);
+        float nDiff = dot(cn - sn, cn - sn) * uInvStepWidth2;
+
+        float w = WEIGHTS[i] * exp(
+            -nDiff * uInvNormalSharp
+            -pd * pd * planeSharp
+            -td2 * tangSharp
+        );
+
+        result += sc * w;
+        weightSum += w;
+    }
+
+    FragColor = result / max(weightSum, 1e-4);
+}
+
+#else
+
+void main()
+{
+    ivec2 resolution = textureSize(uSourceTex, 0);
+    ivec2 pixCoord = ivec2(gl_FragCoord.xy);
+
+    vec3 cn = M_DecodeOctahedral(texelFetch(uNormalTex, pixCoord, 0).rg);
+    float cz = texelFetch(uDepthTex,  pixCoord, 0).r;
+    vec4 cc = texelFetch(uSourceTex, pixCoord, 0);
+
+    vec4 result = cc * 0.25;
     float weightSum = 0.25;
 
     for (int i = 0; i < KERNEL_SIZE; i++)
@@ -72,12 +123,12 @@ void main()
         if (OFFSCREEN(sampleCoord, resolution)) continue;
 
         vec3 sn = M_DecodeOctahedral(texelFetch(uNormalTex, sampleCoord, 0).rg);
-        float sd = texelFetch(uDepthTex,  sampleCoord, 0).r;
+        float sz = texelFetch(uDepthTex,  sampleCoord, 0).r;
         vec4 sc = texelFetch(uSourceTex, sampleCoord, 0);
 
-        vec3 nt = centerNormal - sn;
-        float dz = (centerDepth - sd);
-        float dist2 = dot(nt, nt) * uInvStepWidth2;
+        vec3 dn = cn - sn;
+        float dist2 = dot(dn, dn) * uInvStepWidth2;
+        float dz = cz - sz;
 
         float w = WEIGHTS[i] * exp(
             -dist2 * uInvNormalSharp
@@ -90,3 +141,5 @@ void main()
 
     FragColor = result / max(weightSum, 1e-4);
 }
+
+#endif // SMART_FILTER
