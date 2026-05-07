@@ -171,14 +171,15 @@ jobs:
       - name: Print ccache statistics
         run: ccache -s
 
-      - name: Run tests (Windows MSVC)
-        if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
-        working-directory: build
-        run: ctest --build-config ${{ matrix.build_type }}
+      - name: Run tests (MinGW)
+        if: runner.os == 'Windows' && matrix.c_compiler == 'gcc'
+        shell: msys2 {0}
+        run: |
+          cd build
+          ctest --build-config ${{ matrix.build_type }}
 
       - name: Run tests (Windows MSVC)
         if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
-        shell: cmd
         working-directory: build
         run: ctest --build-config ${{ matrix.build_type }}
 
