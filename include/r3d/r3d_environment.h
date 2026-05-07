@@ -89,7 +89,7 @@
             .edgeFade = 0.1f,                           \
             .distanceFalloff = 1.0f,                    \
             .normalRejection = 0.0f,                    \
-            .intensity = 8.0f,                          \
+            .intensity = 1.0f,                          \
             .denoiseSteps = 5,                          \
             .enabled = false,                           \
         },                                              \
@@ -255,7 +255,7 @@ typedef struct R3D_EnvSSGI {
     float edgeFade;         ///< Fades out GI near screen edges to hide emissive objects partially off-screen. (default: 0.1)
     float distanceFalloff;  ///< How quickly indirect light fades with distance. Higher = shorter reach, darker result. (default: 1.0)
     float normalRejection;  ///< Prevents surfaces from receiving light through their own backside. 0 = off, 1 = physically correct. May look inconsistent with non-directional emissives. (default: 0.0)
-    float intensity;        ///< Overall brightness of the indirect lighting contribution. (default: 8.0)
+    float intensity;        ///< Brightness of the indirect lighting. Dimly lit scenes may require significantly higher values to show probable contribution. (default: 1.0)
     int denoiseSteps;       ///< Number of denoiser passes. Higher = smoother result, slightly higher cost. (default: 5)
     bool enabled;           ///< Enable or disable SSGI entirely. (default: false)
 } R3D_EnvSSGI;
