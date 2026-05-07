@@ -256,6 +256,7 @@ R3D_SweepCollision R3D_SweepSphereTriangle(Vector3 center, float radius, Vector3
 
     R3D_SweepCollision faceHit = R3D_SweepSphereTrianglePlane(center, radius, velocity, a, b, c);
     if (faceHit.hit && faceHit.time < result.time) {
+        if (faceHit.time == 0.0f) return faceHit;
         result = faceHit;
     }
 
@@ -263,6 +264,7 @@ R3D_SweepCollision R3D_SweepSphereTriangle(Vector3 center, float radius, Vector3
     for (int i = 0; i < 3; i++) {
         R3D_SweepCollision edgeHit = R3D_SweepSphereSegment(center, radius, velocity, edges[i][0], edges[i][1]);
         if (edgeHit.hit && edgeHit.time < result.time) {
+            if (edgeHit.time == 0.0f) return edgeHit;
             result = edgeHit;
         }
     }
@@ -271,6 +273,7 @@ R3D_SweepCollision R3D_SweepSphereTriangle(Vector3 center, float radius, Vector3
     for (int i = 0; i < 3; i++) {
         R3D_SweepCollision vertHit = R3D_SweepSpherePoint(center, radius, velocity, verts[i]);
         if (vertHit.hit && vertHit.time < result.time) {
+            if (vertHit.time == 0.0f) return vertHit;
             result = vertHit;
         }
     }
