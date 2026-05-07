@@ -386,11 +386,27 @@ R3D_SweepCollision R3D_SweepCapsuleMesh(R3D_Capsule capsule, Vector3 velocity, R
     R3D_SweepCollision result = {0};
     result.time = 1.0f;
 
-    for (int i = 0; i < mesh.indexCount; i += 3)
+    bool useIndices = (mesh.indices != NULL);
+    int triangleCount = useIndices ? (mesh.indexCount / 3) : (mesh.vertexCount / 3);
+
+    for (int i = 0; i < triangleCount; i++)
     {
-        Vector3 a = r3d_vector3_transform(mesh.vertices[mesh.indices[i]].position, &transform);
-        Vector3 b = r3d_vector3_transform(mesh.vertices[mesh.indices[i+1]].position, &transform);
-        Vector3 c = r3d_vector3_transform(mesh.vertices[mesh.indices[i+2]].position, &transform);
+        Vector3 v0, v1, v2;
+
+        if (useIndices) {
+            v0 = mesh.vertices[mesh.indices[i * 3    ]].position;
+            v1 = mesh.vertices[mesh.indices[i * 3 + 1]].position;
+            v2 = mesh.vertices[mesh.indices[i * 3 + 2]].position;
+        }
+        else {
+            v0 = mesh.vertices[i * 3    ].position;
+            v1 = mesh.vertices[i * 3 + 1].position;
+            v2 = mesh.vertices[i * 3 + 2].position;
+        }
+
+        Vector3 a = r3d_vector3_transform(v0, &transform);
+        Vector3 b = r3d_vector3_transform(v1, &transform);
+        Vector3 c = r3d_vector3_transform(v2, &transform);
 
         // Face plane test
         R3D_SweepCollision faceHit = R3D_SweepSphereTrianglePlane(capsule.start, capsule.radius, velocity, a, b, c);
