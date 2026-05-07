@@ -89,7 +89,7 @@ void main()
 
         // Distance in pixels to the nearest screen edge along sliceDir
         vec2 t = mix((viewport - gl_FragCoord.xy) / sliceDir, -gl_FragCoord.xy / sliceDir, lessThan(sliceDir, vec2(0.0)));
-        int stepCount = int(log(min(t.x, t.y) * invStartStep) * invLogStepGrowth) + 1;
+        int stepCount = int(log(max(min(t.x, t.y), 1.0) * invStartStep) * invLogStepGrowth) + 1;
 
         vec3 giSlice = vec3(0.0);
         float pixelDistMult = 1.0;
@@ -123,11 +123,11 @@ void main()
                 float distFade = exp2(-dist * uDistanceFalloff);
 
                 // Reject light from back-facing emitters
-                float facing = -dot(sampleNorm, delta / dist);
+                float facing = -dot(sampleNorm, delta / max(dist, 1e-4));
                 float normalFade = mix(1.0, smoothstep(0.0, 0.1, facing), uNormalRejection);
 
                 giSlice += light * contrib * edgeFade * distFade * normalFade;
-                horizonAngle = sampleAngle; // raise the horizon
+                horizonAngle = sampleAngle; // tighten horizon
             }
         }
 
