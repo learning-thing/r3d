@@ -256,7 +256,7 @@ typedef struct R3D_EnvSSGI {
     float distanceFalloff;  ///< How quickly indirect light fades with distance. Higher = shorter reach, darker result. (default: 1.0)
     float normalRejection;  ///< Prevents surfaces from receiving light through their own backside. 0 = off, 1 = physically correct. May look inconsistent with non-directional emissives. (default: 0.0)
     float intensity;        ///< Brightness of the indirect lighting. Dimly lit scenes may require significantly higher values to show probable contribution. (default: 1.0)
-    int denoiseSteps;       ///< Number of denoiser passes. Higher = smoother result, slightly higher cost. (default: 5)
+    int denoiseSteps;       ///< Number of denoiser passes. Higher = smoother result, slightly higher cost. (default: 4)
     bool enabled;           ///< Enable or disable SSGI entirely. (default: false)
 } R3D_EnvSSGI;
 
