@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 /**
- * @defgroup Core Core
+ * @defgroup Core
  * @{
  */
 
