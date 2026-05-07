@@ -60,14 +60,14 @@ const float WEIGHTS[8] = float[8](
 void main()
 {
     ivec2 resolution = textureSize(uSourceTex, 0);
-    ivec2 pixCoord   = ivec2(gl_FragCoord.xy);
+    ivec2 pixCoord = ivec2(gl_FragCoord.xy);
 
     vec3 cp = V_GetViewPosition(uDepthTex, pixCoord);
     vec3 cn = V_GetViewNormal(uNormalTex, pixCoord);
     vec4 cc = texelFetch(uSourceTex, pixCoord, 0);
 
     float invScale2 = 1.0 / dot(cp, cp);
-    float viewCos = max(abs(dot(cn, normalize(-cp))), 0.05);
+    float viewCos = max(abs(dot(cn, cp)) * sqrt(invScale2), 0.05);
     float angleFactor = min(1.0 / viewCos, 4.0);
 
     float planeSharp = invScale2 * (angleFactor * angleFactor) * uInvDepthSharp;
@@ -87,13 +87,13 @@ void main()
 
         vec3 delta = sp - cp;
         float pd = dot(delta, cn);
-        float td = length(delta) - abs(pd);
+        float td2 = max(dot(delta, delta) - pd * pd, 0.0);
         float nDiff = dot(cn - sn, cn - sn) * uInvStepWidth2;
 
         float w = WEIGHTS[i] * exp(
             -nDiff * uInvNormalSharp
             -pd * pd * planeSharp
-            -td * td * tangSharp
+            -td2 * tangSharp
         );
 
         result += sc * w;
