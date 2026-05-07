@@ -88,27 +88,90 @@ bool R3D_DepenetrateSphereBoundingBox(Vector3* center, float radius, BoundingBox
 
 bool R3D_DepenetrateCapsuleBoundingBox(R3D_Capsule* capsule, BoundingBox box, float* outPenetration)
 {
-    Vector3 closestOnSegment = R3D_ClosestPointOnSegment(
-        R3D_ClosestPointOnBox(capsule->start, box),
-        capsule->start,
-        capsule->end
-    );
+    Vector3 start = capsule->start;
+    Vector3 end = capsule->end;
+    Vector3 seg = Vector3Subtract(end, start);
 
-    Vector3 closestOnBox = R3D_ClosestPointOnBox(closestOnSegment, box);
-    Vector3 delta = Vector3Subtract(closestOnSegment, closestOnBox);
-    float distSq = Vector3LengthSqr(delta);
-    float radiusSq = capsule->radius * capsule->radius;
+    float tCandidates[8];
+    int count = 0;
 
-    if (distSq >= radiusSq) return false;
+    tCandidates[count++] = 0.0f;
+    tCandidates[count++] = 1.0f;
 
-    float dist = sqrtf(distSq);
-    float penetration = capsule->radius - dist;
+#define ADD_T_FOR_AXIS(s, a, mn, mx) do {                         \
+        if (fabsf(s) > 1e-8f) {                                   \
+            float t0 = ((mn) - (a)) / (s);                        \
+            float t1 = ((mx) - (a)) / (s);                        \
+            if (t0 >= 0.0f && t0 <= 1.0f) tCandidates[count++] = t0; \
+            if (t1 >= 0.0f && t1 <= 1.0f) tCandidates[count++] = t1; \
+        }                                                         \
+    } while (0)
 
-    Vector3 direction = dist > 1e-6f ? Vector3Scale(delta, 1.0f / dist) : (Vector3){0, 1, 0};
-    Vector3 correction = Vector3Scale(direction, penetration);
+    ADD_T_FOR_AXIS(seg.x, start.x, box.min.x, box.max.x);
+    ADD_T_FOR_AXIS(seg.y, start.y, box.min.y, box.max.y);
+    ADD_T_FOR_AXIS(seg.z, start.z, box.min.z, box.max.z);
 
-    capsule->start = Vector3Add(capsule->start, correction);
-    capsule->end = Vector3Add(capsule->end, correction);
+#undef ADD_T_FOR_AXIS
+
+    float bestDistSq = FLT_MAX;
+    Vector3 bestDelta = {0};
+
+    for (int i = 0; i < count; i++) {
+        Vector3 onSeg = Vector3Add(start, Vector3Scale(seg, tCandidates[i]));
+        Vector3 onBox = R3D_ClosestPointOnBox(onSeg, box);
+        Vector3 delta = Vector3Subtract(onSeg, onBox);
+
+        float distSq = Vector3LengthSqr(delta);
+
+        if (distSq < bestDistSq) {
+            bestDistSq = distSq;
+            bestDelta = delta;
+        }
+    }
+
+    float radius = capsule->radius;
+    float radiusSq = radius * radius;
+
+    Vector3 correction = {0};
+    float penetration = 0.0f;
+
+    if (bestDistSq > 1e-12f) {
+        if (bestDistSq >= radiusSq) return false;
+
+        float dist = sqrtf(bestDistSq);
+        penetration = radius - dist;
+        correction = Vector3Scale(bestDelta, penetration / dist);
+    }
+    else {
+        float segMinX = fminf(start.x, end.x);
+        float segMaxX = fmaxf(start.x, end.x);
+        float segMinY = fminf(start.y, end.y);
+        float segMaxY = fmaxf(start.y, end.y);
+        float segMinZ = fminf(start.z, end.z);
+        float segMaxZ = fmaxf(start.z, end.z);
+
+        penetration = segMaxX - box.min.x + radius;
+        correction = (Vector3){-penetration, 0.0f, 0.0f};
+
+#define TRY_FACE(pen, corr) do {      \
+            float p = (pen);          \
+            if (p < penetration) {    \
+                penetration = p;      \
+                correction = (corr);  \
+            }                         \
+        } while (0)
+
+        TRY_FACE(box.max.x - segMinX + radius, ((Vector3){ penetration, 0.0f, 0.0f }));
+        TRY_FACE(segMaxY - box.min.y + radius, ((Vector3){ 0.0f, -penetration, 0.0f }));
+        TRY_FACE(box.max.y - segMinY + radius, ((Vector3){ 0.0f, penetration, 0.0f }));
+        TRY_FACE(segMaxZ - box.min.z + radius, ((Vector3){ 0.0f, 0.0f, -penetration }));
+        TRY_FACE(box.max.z - segMinZ + radius, ((Vector3){ 0.0f, 0.0f, penetration }));
+
+#undef TRY_FACE
+    }
+
+    capsule->start = Vector3Add(start, correction);
+    capsule->end = Vector3Add(end, correction);
 
     if (outPenetration) *outPenetration = penetration;
     return true;
