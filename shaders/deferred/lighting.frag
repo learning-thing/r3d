@@ -41,17 +41,19 @@ uniform samplerCubeArrayShadow uShadowOmniTex;
 
 /* === Fragments === */
 
-layout(location = 0) out vec4 FragDiffuse;
-layout(location = 1) out vec4 FragSpecular;
+layout(location = 0) out vec4 FragDiff;
+layout(location = 1) out vec4 FragSpec;
 
 /* === Main === */
 
 void main()
 {
+    ivec2 pixCoord = ivec2(gl_FragCoord.xy);
+
     /* Sample albedo and ORM texture and extract values */
-    
-    vec3 albedo = texelFetch(uAlbedoTex, ivec2(gl_FragCoord).xy, 0).rgb;
-    vec3 orm = texelFetch(uOrmTex, ivec2(gl_FragCoord).xy, 0).rgb;
+
+    vec3 albedo = texelFetch(uAlbedoTex, pixCoord, 0).rgb;
+    vec3 orm = texelFetch(uOrmTex, pixCoord, 0).rgb;
     float roughness = orm.g;
     float metalness = orm.b;
 
@@ -61,34 +63,36 @@ void main()
 
     /* Get position and normal in world space */
 
-    float depth = texelFetch(uDepthTex, ivec2(gl_FragCoord), 0).r;
+    float depth = texelFetch(uDepthTex, pixCoord, 0).r;
 
     vec3 P = V_GetWorldPosition(vTexCoord, depth);
-    vec3 N = V_GetWorldNormal(uNormalTex, ivec2(gl_FragCoord.xy));
+    vec3 N = V_GetWorldNormal(uNormalTex, pixCoord);
 
     /* Compute view direction and the dot product of the normal and view direction */
 
     vec3 V = normalize(uView.position - P);
-
-    float NdotV = dot(N, V);
-    float cNdotV = max(NdotV, 1e-4); // Clamped to avoid division by zero
+    float NdotV = max(dot(N, V), 1e-4);
 
     /* Compute light direction and the dot product of the normal and light direction */
 
-    vec3 L = (uLight.type == LIGHT_DIR) ? -uLight.direction : normalize(uLight.position - P);
+    vec3 Ldelta = uLight.position - P;
+    float Ldist = length(Ldelta);
 
-    float NdotL = max(dot(N, L), 0.0);
-    float cNdotL = min(NdotL, 1.0); // Clamped to avoid division by zero
+    vec3 L = (uLight.type == LIGHT_DIR) ? -uLight.direction : Ldelta / max(Ldist, 1e-4);
+    float NdotL = dot(N, L);
+
+    if (NdotL <= 0.0) {
+        FragDiff = vec4(0.0);
+        FragSpec = vec4(0.0);
+        return;
+    }
 
     /* Compute the halfway vector between the view and light directions */
 
     vec3 H = normalize(V + L);
 
     float LdotH = max(dot(L, H), 0.0);
-    float cLdotH = min(LdotH, 1.0);
-
     float NdotH = max(dot(N, H), 0.0);
-    float cNdotH = min(NdotH, 1.0);
 
     /* Compute light color energy */
 
@@ -96,36 +100,22 @@ void main()
 
     /* Compute diffuse lighting */
 
-    vec3 diffuse = L_Diffuse(cLdotH, cNdotV, cNdotL, roughness);
-    diffuse *= albedo * lightColE * (1.0 - metalness);
+    vec3 diff = L_Diffuse(LdotH, NdotV, NdotL, roughness);
+    diff *= albedo * lightColE * (1.0 - metalness);
 
     /* Compute specular lighting */
 
-    vec3 specular = L_Specular(F0, cLdotH, cNdotH, cNdotV, cNdotL, roughness);
-    specular *= lightColE * uLight.specular;
+    vec3 spec = L_Specular(F0, LdotH, NdotH, NdotV, NdotL, roughness);
+    spec *= lightColE * uLight.specular;
 
-    /* Apply shadow factor if the light casts shadows */
+    /* Compute shadow factor */
 
     float shadow = 1.0;
 
-    if (uLight.shadowLayer >= 0) {
-        mat2 diskRot  = L_ShadowDebandingMatrix(gl_FragCoord.xy);
-        switch (uLight.type) {
-        case LIGHT_DIR:  shadow = L_SampleShadowDir(P, depth, cNdotL, diskRot); break;
-        case LIGHT_SPOT: shadow = L_SampleShadowSpot(P, cNdotL, diskRot); break;
-        case LIGHT_OMNI: shadow = L_SampleShadowOmni(P, cNdotL, diskRot); break;
-        }
-    }
-
-    /* Apply attenuation based on the distance from the light */
-
     if (uLight.type != LIGHT_DIR) {
-        float dist = length(uLight.position - P);
-        float atten = 1.0 - clamp(dist / uLight.range, 0.0, 1.0);
+        float atten = 1.0 - clamp(Ldist / uLight.range, 0.0, 1.0);
         shadow *= atten * uLight.attenuation;
     }
-
-    /* Apply spotlight effect if the light is a spotlight */
 
     if (uLight.type == LIGHT_SPOT) {
         float theta = dot(L, -uLight.direction);
@@ -133,8 +123,17 @@ void main()
         shadow *= smoothstep(0.0, 1.0, (theta - uLight.outerCutOff) / epsilon);
     }
 
+    if (uLight.shadowLayer >= 0 && shadow > 1e-4) {
+        mat2 diskRot = L_ShadowDebandingMatrix(gl_FragCoord.xy);
+        switch (uLight.type) {
+        case LIGHT_DIR:  shadow *= L_SampleShadowDir(P, depth, NdotL, diskRot); break;
+        case LIGHT_SPOT: shadow *= L_SampleShadowSpot(P, NdotL, diskRot); break;
+        case LIGHT_OMNI: shadow *= L_SampleShadowOmni(P, NdotL, diskRot); break;
+        }
+    }
+
     /* Compute final lighting contribution */
 
-    FragDiffuse = vec4(diffuse * shadow, 1.0);
-    FragSpecular = vec4(specular * shadow, 1.0);
+    FragDiff = vec4(diff * shadow, 1.0);
+    FragSpec = vec4(spec * shadow, 1.0);
 }

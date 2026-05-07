@@ -88,50 +88,43 @@ void main()
     vec3 F0 = PBR_ComputeF0(METALNESS, 0.5, ALBEDO);
     vec3 kD = dielectric * ALBEDO;
 
-    /* Sample normal and compute view direction vector */
+    /* Sample normal map and compute final normal */
 
     vec3 N = normalize(TBN * M_NormalScale(texture(uNormalMap, vTexCoord).rgb * 2.0 - 1.0, uNormalScale));
     if (!gl_FrontFacing) N = -N; // Flip for back facing triangles with double sided meshes
 
+    /* Compute view direction and the dot product of the normal and view direction */
+
     vec3 V = normalize(uViewPosition - vPosition);
-
-    /* Compute the dot product of the normal and view direction */
-
-    float NdotV = dot(N, V);
-    float cNdotV = max(NdotV, 1e-4);  // Clamped to avoid division by zero
+    float NdotV = max(dot(N, V), 1e-4);
 
     /* Loop through all light sources accumulating diffuse and specular light */
 
     mat2 diskRot  = L_ShadowDebandingMatrix(gl_FragCoord.xy);
 
-    vec3 diffuse = vec3(0.0);
-    vec3 specular = vec3(0.0);
+    vec3 diff = vec3(0.0);
+    vec3 spec = vec3(0.0);
 
     for (int i = 0; i < uNumLights; i++)
     {
         Light light = uLights[i];
 
-        /* Compute light direction */
+        /* Compute light direction and the dot product of the normal and light direction */
 
-        vec3 L = vec3(0.0);
-        if (light.type == LIGHT_DIR) L = -light.direction;
-        else L = normalize(light.position - vPosition);
+        vec3 Ldelta = light.position - vPosition;
+        float Ldist = length(Ldelta);
 
-        /* Compute the dot product of the normal and light direction */
-
+        vec3 L = (light.type == LIGHT_DIR) ? -light.direction : Ldelta / max(Ldist, 1e-4);
         float NdotL = dot(N, L);
+
         if (NdotL <= 0.0) continue;
-        float cNdotL = min(NdotL, 1.0); // clamped NdotL
 
         /* Compute the halfway vector between the view and light directions */
 
         vec3 H = normalize(V + L);
 
         float LdotH = max(dot(L, H), 0.0);
-        float cLdotH = min(LdotH, 1.0);
-
         float NdotH = max(dot(N, H), 0.0);
-        float cNdotH = min(NdotH, 1.0);
 
         /* Compute light color energy */
 
@@ -139,35 +132,22 @@ void main()
 
         /* Compute diffuse lighting */
 
-        vec3 diffLight = L_Diffuse(cLdotH, cNdotV, cNdotL, ROUGHNESS);
+        vec3 diffLight = L_Diffuse(LdotH, NdotV, NdotL, ROUGHNESS);
         diffLight *= lightColE * dielectric;
 
         /* Compute specular lighting */
 
-        vec3 specLight =  L_Specular(F0, cLdotH, cNdotH, cNdotV, cNdotL, ROUGHNESS);
+        vec3 specLight =  L_Specular(F0, LdotH, NdotH, NdotV, NdotL, ROUGHNESS);
         specLight *= lightColE * light.specular;
 
-        /* Apply shadow factor if the light casts shadows */
+        /* Compute shadow factor */
 
         float shadow = 1.0;
 
-        if (light.shadowLayer >= 0) {
-            switch (light.type) {
-            case LIGHT_DIR:  shadow = L_SampleShadowDir(i, vPosLightSpace[i], vLinearDepth, cNdotL, diskRot); break;
-            case LIGHT_SPOT: shadow = L_SampleShadowSpot(i, vPosLightSpace[i], cNdotL, diskRot); break;
-            case LIGHT_OMNI: shadow = L_SampleShadowOmni(i, vPosition, cNdotL, diskRot); break;
-            }
-        }
-
-        /* Apply attenuation based on the distance from the light */
-
         if (light.type != LIGHT_DIR) {
-            float dist = length(light.position - vPosition);
-            float atten = 1.0 - clamp(dist / light.range, 0.0, 1.0);
+            float atten = 1.0 - clamp(Ldist / light.range, 0.0, 1.0);
             shadow *= atten * light.attenuation;
         }
-
-        /* Apply spotlight effect if the light is a spotlight */
 
         if (light.type == LIGHT_SPOT) {
             float theta = dot(L, -light.direction);
@@ -175,23 +155,31 @@ void main()
             shadow *= smoothstep(0.0, 1.0, (theta - light.outerCutOff) / epsilon);
         }
 
+        if (light.shadowLayer >= 0 && shadow > 1e-4) {
+            switch (light.type) {
+            case LIGHT_DIR:  shadow *= L_SampleShadowDir(i, vPosLightSpace[i], vLinearDepth, NdotL, diskRot); break;
+            case LIGHT_SPOT: shadow *= L_SampleShadowSpot(i, vPosLightSpace[i], NdotL, diskRot); break;
+            case LIGHT_OMNI: shadow *= L_SampleShadowOmni(i, vPosition, NdotL, diskRot); break;
+            }
+        }
+
         /* Accumulate the diffuse and specular lighting contributions */
 
-        diffuse += diffLight * shadow;
-        specular += specLight * shadow;
+        diff += diffLight * shadow;
+        spec += specLight * shadow;
     }
 
     /* Compute ambient */
 
 #if defined(PROBE)
-    if (uProbeInterior) E_ComputeAmbientColor(diffuse, kD, OCCLUSION);
-    else E_ComputeAmbientOnly(diffuse, specular, kD, ORM, F0, vPosition, N, V, cNdotV);
+    if (uProbeInterior) E_ComputeAmbientColor(diff, kD, OCCLUSION);
+    else E_ComputeAmbientOnly(diff, spec, kD, ORM, F0, vPosition, N, V, NdotV);
 #else
-    E_ComputeAmbientAndProbes(diffuse, specular, kD, ORM, F0, vPosition, N, V, cNdotV);
+    E_ComputeAmbientAndProbes(diff, spec, kD, ORM, F0, vPosition, N, V, NdotV);
 #endif
 
     /* Compute the final fragment color */
 
-    FragColor = vec4(ALBEDO * diffuse + specular + EMISSION, ALPHA);
+    FragColor = vec4(ALBEDO * diff + spec + EMISSION, ALPHA);
     FragColor = FogColorMix(FragColor, vLinearDepth);
 }

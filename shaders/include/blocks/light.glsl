@@ -14,14 +14,14 @@
 /* === Macros === */
 
 #if defined(NUM_FORWARD_LIGHTS)
-#   define DECL_SHADOW_DIR(name)  float name(int lightIndex, vec4 Pls, float Zvs, float cNdotL, mat2 diskRot)
-#   define DECL_SHADOW_SPOT(name) float name(int lightIndex, vec4 Pls, float cNdotL, mat2 diskRot)
-#   define DECL_SHADOW_OMNI(name) float name(int lightIndex, vec3 Pws, float cNdotL, mat2 diskRot)
+#   define DECL_SHADOW_DIR(name)  float name(int lightIndex, vec4 Pls, float Zvs, float NdotL, mat2 diskRot)
+#   define DECL_SHADOW_SPOT(name) float name(int lightIndex, vec4 Pls, float NdotL, mat2 diskRot)
+#   define DECL_SHADOW_OMNI(name) float name(int lightIndex, vec3 Pws, float NdotL, mat2 diskRot)
 #   define LIGHT uLights[lightIndex]
 #else
-#   define DECL_SHADOW_DIR(name)  float name(vec3 Pws, float Zvs, float cNdotL, mat2 diskRot)
-#   define DECL_SHADOW_SPOT(name) float name(vec3 Pws, float cNdotL, mat2 diskRot)
-#   define DECL_SHADOW_OMNI(name) float name(vec3 Pws, float cNdotL, mat2 diskRot)
+#   define DECL_SHADOW_DIR(name)  float name(vec3 Pws, float Zvs, float NdotL, mat2 diskRot)
+#   define DECL_SHADOW_SPOT(name) float name(vec3 Pws, float NdotL, mat2 diskRot)
+#   define DECL_SHADOW_OMNI(name) float name(vec3 Pws, float NdotL, mat2 diskRot)
 #   define LIGHT uLight
 #endif
 
@@ -84,28 +84,28 @@ layout(std140) uniform LightBlock {
 
 /* === Functions === */
 
-vec3 L_Diffuse(float cLdotH, float cNdotV, float cNdotL, float roughness)
+vec3 L_Diffuse(float LdotH, float NdotV, float NdotL, float roughness)
 {
-    float FD90_minus_1 = 2.0 * cLdotH * cLdotH * roughness - 0.5;
-    float FdV = 1.0 + FD90_minus_1 * PBR_SchlickFresnel(cNdotV);
-    float FdL = 1.0 + FD90_minus_1 * PBR_SchlickFresnel(cNdotL);
+    float FD90_minus_1 = 2.0 * LdotH * LdotH * roughness - 0.5;
+    float FdV = 1.0 + FD90_minus_1 * PBR_SchlickFresnel(NdotV);
+    float FdL = 1.0 + FD90_minus_1 * PBR_SchlickFresnel(NdotL);
 
-    return vec3(M_INV_PI * (FdV * FdL * cNdotL)); // Diffuse BRDF (Burley)
+    return vec3(M_INV_PI * (FdV * FdL * NdotL)); // Diffuse BRDF (Burley)
 }
 
-vec3 L_Specular(vec3 F0, float cLdotH, float cNdotH, float cNdotV, float cNdotL, float roughness)
+vec3 L_Specular(vec3 F0, float LdotH, float cNdotH, float NdotV, float NdotL, float roughness)
 {
     roughness = max(roughness, 0.02); // >0.01 to avoid FP16 overflow after GGX distribution
 
     float alphaGGX = roughness * roughness;
     float D = PBR_DistributionGGX(cNdotH, alphaGGX);
-    float G = PBR_GeometryGGX(cNdotL, cNdotV, alphaGGX);
+    float G = PBR_GeometryGGX(NdotL, NdotV, alphaGGX);
 
-    float cLdotH5 = PBR_SchlickFresnel(cLdotH);
+    float cLdotH5 = PBR_SchlickFresnel(LdotH);
     float F90 = clamp(50.0 * F0.g, 0.0, 1.0);
     vec3 F = F0 + (F90 - F0) * cLdotH5;
 
-    return cNdotL * D * F * G; // Specular BRDF (Schlick GGX)
+    return NdotL * D * F * G; // Specular BRDF (Schlick GGX)
 }
 
 #ifdef L_SHADOW_IMPL
@@ -124,7 +124,7 @@ DECL_SHADOW_DIR(L_SampleShadowDir)
 #endif
 
     vec3 projCoords = Pls.xyz / Pls.w * 0.5 + 0.5;
-    float bias = LIGHT.shadowDepthBias + LIGHT.shadowSlopeBias * (1.0 - cNdotL);
+    float bias = LIGHT.shadowDepthBias + LIGHT.shadowSlopeBias * (1.0 - NdotL);
     float compareDepth = projCoords.z - bias;
 
     float shadow = 0.0;
@@ -149,7 +149,7 @@ DECL_SHADOW_SPOT(L_SampleShadowSpot)
 #endif
 
     vec3 projCoords = Pls.xyz / Pls.w * 0.5 + 0.5;
-    float bias = LIGHT.shadowDepthBias + LIGHT.shadowSlopeBias * (1.0 - cNdotL);
+    float bias = LIGHT.shadowDepthBias + LIGHT.shadowSlopeBias * (1.0 - NdotL);
     float compareDepth = projCoords.z - bias;
 
     float shadow = 0.0;
@@ -166,7 +166,7 @@ DECL_SHADOW_OMNI(L_SampleShadowOmni)
     vec3 lightToFrag = Pws - LIGHT.position;
     float currentDepth = length(lightToFrag);
 
-    float bias = LIGHT.shadowDepthBias + LIGHT.shadowSlopeBias * (1.0 - cNdotL);
+    float bias = LIGHT.shadowDepthBias + LIGHT.shadowSlopeBias * (1.0 - NdotL);
     float compareDepth = (currentDepth - bias) / LIGHT.far;
 
     mat3 OBN = M_OrthonormalBasis(lightToFrag / currentDepth);
