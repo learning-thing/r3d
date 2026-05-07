@@ -1780,7 +1780,7 @@ r3d_target_t pass_prepare_ssgi(void)
     /*
         A-trous step schedule (largest -> smallest).
 
-        We use a fixed pyramid: {32, 16, 8, 4, 2, 1}.
+        We use a fixed pyramid: {16, 8, 4, 2, 1}.
         When fewer iterations are requested we simply truncate the list.
 
         The largest steps are what stabilize the filter in motion.
@@ -1792,14 +1792,13 @@ r3d_target_t pass_prepare_ssgi(void)
         noticeably less stable when the camera moves.
 
         Keeping the same large radii and only dropping the final refinement
-        passes preserves the temporal stability of the 6-step filter while
+        passes preserves the spatial stability of the 5-step filter while
         allowing cheaper configurations.
 
         Examples:
-            6 steps : 32 16  8  4  2  1
-            5 steps : 32 16  8  4  2
-            4 steps : 32 16  8  4
-            3 steps : 32 16  8
+            5 steps : 16  8  4  2  1
+            4 steps : 16  8  4  2
+            3 steps : 16  8  4
     */
 
     r3d_target_t src = R3D_TARGET_SSGI_0;
