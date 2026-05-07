@@ -26,10 +26,10 @@ uniform sampler2D uDiffuseTex;
 uniform sampler2D uNormalTex;
 uniform sampler2D uDepthTex;
 
-uniform int uSliceCount        = 4;
-uniform float uEdgeFade        = 0.1;
-uniform float uDistanceFalloff = 1.0;
-uniform float uNormalRejection = 0.0;
+uniform int uSliceCount;
+uniform float uEdgeFade;
+uniform float uDistanceFalloff;
+uniform float uNormalRejection;
 
 out vec4 FragColor;
 
@@ -70,12 +70,16 @@ void main()
     float pixelDistBase = startStep * pow(stepGrowth, linOffset);
     float pixelDistOffset = 1.0 - startStep;
 
+    // Slice constants
+    float sliceStep = M_TAU / float(uSliceCount);
+    float sliceWeight = 2.0 / float(uSliceCount);
+
     vec3 gi = vec3(0.0);
 
     for (int slice = 0; slice < uSliceCount; slice++)
     {
         // Slice direction in screen space
-        float sliceAngle = angOffset + M_TAU / float(uSliceCount) * float(slice);
+        float sliceAngle = angOffset + sliceStep * float(slice);
         vec2 sliceDir = vec2(cos(sliceAngle), sin(sliceAngle));
 
         // Tangent in view space derived from a small screen-space offset at the same depth
@@ -119,11 +123,11 @@ void main()
                 vec2 edge = min(sampleUV, 1.0 - sampleUV);
                 float edgeFade = smoothstep(0.0, uEdgeFade, min(edge.x, edge.y));
 
-                float dist = length(delta);
-                float distFade = exp2(-dist * uDistanceFalloff);
+                float dist2 = dot(delta, delta);
+                float distFade = 1.0 / (1.0 + dist2 * uDistanceFalloff);
 
                 // Reject light from back-facing emitters
-                float facing = -dot(sampleNorm, delta / max(dist, 1e-4));
+                float facing = -dot(sampleNorm, delta * inversesqrt(max(dist2, 1e-8)));
                 float normalFade = mix(1.0, smoothstep(0.0, 0.1, facing), uNormalRejection);
 
                 giSlice += light * contrib * edgeFade * distFade * normalFade;
@@ -131,7 +135,7 @@ void main()
             }
         }
 
-        gi += 2.0 * giSlice / float(uSliceCount);
+        gi += giSlice * sliceWeight;
     }
 
     FragColor = vec4(gi, 1.0);
