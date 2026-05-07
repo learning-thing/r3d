@@ -420,13 +420,10 @@ bool r3d_shader_load_prepare_ssgi(r3d_shader_custom_t* custom)
 
     SET_UNIFORM_BUFFER(ssgi, ViewBlock, R3D_SHADER_BLOCK_SLOT_VIEW);
 
-    GET_LOCATION(ssgi, uSampleCount);
-    GET_LOCATION(ssgi, uMaxRaySteps);
-    GET_LOCATION(ssgi, uStepSize);
-    GET_LOCATION(ssgi, uThickness);
-    GET_LOCATION(ssgi, uMaxDistance);
-    GET_LOCATION(ssgi, uFadeStart);
-    GET_LOCATION(ssgi, uFadeEnd);
+    GET_LOCATION(ssgi, uSliceCount);
+    GET_LOCATION(ssgi, uEdgeFade);
+    GET_LOCATION(ssgi, uDistanceFalloff);
+    GET_LOCATION(ssgi, uNormalRejection);
 
     USE_SHADER(ssgi);
 

@@ -1770,13 +1770,10 @@ r3d_target_t pass_prepare_ssgi(void)
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-    R3D_SHADER_SET_INT(prepare.ssgi, uSampleCount, R3D.environment.ssgi.sampleCount);
-    R3D_SHADER_SET_INT(prepare.ssgi, uMaxRaySteps, R3D.environment.ssgi.maxRaySteps);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uStepSize, R3D.environment.ssgi.stepSize);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uThickness, R3D.environment.ssgi.thickness);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uMaxDistance, R3D.environment.ssgi.maxDistance);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uFadeStart, R3D.environment.ssgi.fadeStart);
-    R3D_SHADER_SET_FLOAT(prepare.ssgi, uFadeEnd, R3D.environment.ssgi.fadeEnd);
+    R3D_SHADER_SET_INT(prepare.ssgi, uSliceCount, R3D.environment.ssgi.sliceCount);
+    R3D_SHADER_SET_INT(prepare.ssgi, uEdgeFade, R3D.environment.ssgi.edgeFade);
+    R3D_SHADER_SET_FLOAT(prepare.ssgi, uDistanceFalloff, R3D.environment.ssgi.distanceFalloff);
+    R3D_SHADER_SET_FLOAT(prepare.ssgi, uNormalRejection, R3D.environment.ssgi.normalRejection);
 
     R3D_RENDER_SCREEN();
 
@@ -1817,10 +1814,10 @@ r3d_target_t pass_prepare_ssgi(void)
         R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletSmart, uNormalTex, r3d_target_get_level(R3D_TARGET_NORMAL, 1));
         R3D_SHADER_BIND_SAMPLER(prepare.atrousWaveletSmart, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
-        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletSmart, uInvNormalSharp, 15.0f);
-        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletSmart, uInvDepthSharp, 150.0f);
+        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletSmart, uInvNormalSharp, 20.0f);
+        R3D_SHADER_SET_FLOAT(prepare.atrousWaveletSmart, uInvDepthSharp, 200.0f);
 
-        int stepWidth[] = {32, 16, 8, 4, 2, 1};
+        int stepWidth[] = {16, 8, 4, 2, 1};
         steps = MIN(steps, ARRAY_SIZE(stepWidth));
 
         for (int i = 0; i < steps; i++)

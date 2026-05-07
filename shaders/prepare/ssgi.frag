@@ -8,6 +8,9 @@
 
 #version 330 core
 
+// Adapted from SSVGI by Alexander Sannikov, available in his LegitEngine repository:
+// SEE: https://github.com/Raikiri/LegitEngine/tree/master/bin/data/Shaders/glsl/SSVGI
+
 /* === Includes === */
 
 #include "../include/blocks/view.glsl"
@@ -23,121 +26,113 @@ uniform sampler2D uDiffuseTex;
 uniform sampler2D uNormalTex;
 uniform sampler2D uDepthTex;
 
-uniform int uSampleCount;
-uniform int uMaxRaySteps;
-uniform float uStepSize;
-uniform float uThickness;
-uniform float uMaxDistance;
-uniform float uFadeStart;
-uniform float uFadeEnd;
-
-/* === Constants === */
-
-const uint TILE_LOG2          = 2u; // 1u
-const uint TILE_SIZE          = 1u << TILE_LOG2;
-const uint TILE_MASK          = TILE_SIZE - 1u;
-const uint PIXELS_PER_TILE    = TILE_SIZE * TILE_SIZE; // 16
-const float F_PIXELS_PER_TILE = float(PIXELS_PER_TILE);
-
-/* === Fragments === */
+uniform int uSliceCount        = 4;
+uniform float uEdgeFade        = 0.1;
+uniform float uDistanceFalloff = 1.0;
+uniform float uNormalRejection = 0.0;
 
 out vec4 FragColor;
 
 /* === Helper Functions === */
 
-vec2 TileCranleyPatterson(uvec2 cell)
+// Analytically integrates dot(N,w)*sin(th) over the horizon
+// arc [h0, h1] in the slice plane defined by eyeDir and tangent
+float HorizonContribution(float NdotE, float NdotT, float h0, float h1)
 {
-    uint a = cell.x * 0x9E3779B9u ^ cell.y * 0x85EBCA6Bu;
-    uint b = cell.y * 0xC2B2AE35u ^ cell.x * 0xBF58476Du;
-    a ^= a >> 16u;
-    b ^= b >> 16u;
-    return vec2(a, b) * (1.0 / 4294967296.0);
+    return 0.25 * NdotE * (cos(2.0 * h0) - cos(2.0 * h1))
+         + 0.25 * NdotT * (2.0 * (h1 - h0) - sin(2.0 * h1) + sin(2.0 * h0));
 }
 
-vec3 FibonacciHemisphere(float fidx, float invTotal, vec2 cpOffset)
-{
-    float u = fract((fidx + 0.5) * invTotal + cpOffset.x);
-    float phi = fract(fidx * M_PHI_FRAC + cpOffset.y) * M_TAU;
-
-    float cosT = sqrt(1.0 - u);
-    float sinT = sqrt(u);
-
-    float cosPhi = cos(phi);
-    float sinPhi = sin(phi);
-
-    return vec3(cosPhi * sinT, sinPhi * sinT, cosT);
-}
-
-vec3 TraceRay(vec3 startViewPos, vec3 dirVS, vec3 normalVS)
-{
-    float normalBias = uStepSize * max(1.0, -startViewPos.z * 0.1);
-    vec3 posVS = startViewPos + normalVS * normalBias + dirVS * uStepSize;
-
-    float stepLenSq = dot(dirVS * uStepSize, dirVS * uStepSize);
-    float distSq = stepLenSq;
-    float maxLenSq = uMaxDistance * uMaxDistance;
-
-    vec2 hitUV = vec2(0.0);
-    bool hit = false;
-
-    for (int i = 1; i < uMaxRaySteps; i++)
-    {
-        if (distSq > maxLenSq) break;
-
-        vec2 uv = V_ViewToScreen(posVS);
-        if (V_OffScreen(uv)) break;
-
-        float sceneZ = -textureLod(uDepthTex, uv, 0.0).r;
-        float dz = sceneZ - posVS.z;
-
-        if (dz > 0.0 && dz < uThickness) {
-            hitUV = uv;
-            hit = true;
-            break;
-        }
-
-        posVS += dirVS * uStepSize;
-        distSq += stepLenSq;
-    }
-
-    if (!hit) return vec3(0.0);
-
-    vec3 diffuse = textureLod(uDiffuseTex, hitUV, 0.0).rgb;
-    float distFade = smoothstep(uMaxDistance, 0.0, sqrt(distSq));
-
-    return diffuse * distFade;
-}
-
-/* === Main Program === */
+/* === Main Function === */
 
 void main()
 {
-    ivec2 pix = ivec2(gl_FragCoord.xy);
-    float depth = texelFetch(uDepthTex, pix, 0).r;
-    if (depth >= uFadeEnd) { FragColor = vec4(0.0); return; }
+    vec2 viewport = vec2(textureSize(uDiffuseTex, 0));
+    vec2 invViewport = 1.0 / viewport;
 
-    vec3 Nvs = V_GetViewNormal(uNormalTex, pix);
-    vec3 Pvs = V_GetViewPosition(vTexCoord, depth);
-    mat3 TBN = M_OrthonormalBasis(Nvs);
+    // Receiver geometry
+    float depth = texelFetch(uDepthTex, ivec2(gl_FragCoord.xy), 0).r;
+    vec3 viewPos = V_GetViewPosition(vTexCoord, depth);
+    vec3 viewNorm = V_GetViewNormal(uNormalTex, vTexCoord);
+    vec3 eyeDir = normalize(-viewPos);
+    float NdotE = dot(viewNorm, eyeDir);
 
-    uint tileIdx = (uint(pix.x) & TILE_MASK) | ((uint(pix.y) & TILE_MASK) << TILE_LOG2);
-    float fidx = float(tileIdx);
+    // Per-pixel jitter
+    float jitter = M_HashIGN(gl_FragCoord.xy);
+    float angOffset = M_TAU * jitter;
+    float linOffset = jitter;
 
-    uvec2 cell = uvec2(pix) >> TILE_LOG2;
-    vec2 cpOffset = TileCranleyPatterson(cell);
-
-    uint S = uint(max(uSampleCount, 1));
-    float invTotal = 1.0 / float(PIXELS_PER_TILE * S);
-    float invS = 1.0 / float(S);
+    // Exponential step size parameters
+    float startStep = viewport.x / 1000.0;
+    float invStartStep = 1.0 / startStep;
+    float stepGrowth = M_TAU / float(uSliceCount) + 1.0;
+    float invLogStepGrowth = 1.0 / log(stepGrowth);
+    float pixelDistBase = startStep * pow(stepGrowth, linOffset);
+    float pixelDistOffset = 1.0 - startStep;
 
     vec3 gi = vec3(0.0);
 
-    for (uint s = 0u; s < S; s++) {
-        vec3 localDir = FibonacciHemisphere(fidx, invTotal, cpOffset);
-        gi += TraceRay(Pvs, TBN * localDir, Nvs);
-        fidx += F_PIXELS_PER_TILE;
+    for (int slice = 0; slice < uSliceCount; slice++)
+    {
+        // Slice direction in screen space
+        float sliceAngle = angOffset + M_TAU / float(uSliceCount) * float(slice);
+        vec2 sliceDir = vec2(cos(sliceAngle), sin(sliceAngle));
+
+        // Tangent in view space derived from a small screen-space offset at the same depth
+        vec2 offsetUV = (gl_FragCoord.xy + sliceDir * 0.1) * invViewport;
+        vec3 offsetPos = V_GetViewPosition(offsetUV, depth);
+        vec3 tangent = normalize(normalize(offsetPos) + eyeDir);
+        float NdotT = dot(viewNorm, tangent);
+
+        // Initial horizon angle: projection of the surface normal into the slice plane
+        float horizonAngle = atan(NdotE, -NdotT);
+
+        // Distance in pixels to the nearest screen edge along sliceDir
+        vec2 t = mix((viewport - gl_FragCoord.xy) / sliceDir, -gl_FragCoord.xy / sliceDir, lessThan(sliceDir, vec2(0.0)));
+        int stepCount = int(log(min(t.x, t.y) * invStartStep) * invLogStepGrowth) + 1;
+
+        vec3 giSlice = vec3(0.0);
+        float pixelDistMult = 1.0;
+
+        for (int step = 0; step < stepCount; step++)
+        {
+            // Exponentially growing pixel offset + linear jitter
+            float pixelDist = pixelDistBase * pixelDistMult + pixelDistOffset;
+            pixelDistMult *= stepGrowth;
+
+            vec2 sampleUV = (gl_FragCoord.xy + sliceDir * pixelDist) * invViewport;
+            vec3 sampleViewPos = V_GetViewPosition(uDepthTex, sampleUV);
+            vec3 sampleNorm = V_GetViewNormal(uNormalTex, sampleUV);
+            vec3 delta = sampleViewPos - viewPos;
+
+            // Skip samples on the same continuous surface (coplanar + similar normal)
+            if (abs(dot(delta, viewNorm)) < 0.03 && dot(sampleNorm, viewNorm) > 0.95) continue;
+
+            float sampleAngle = atan(dot(tangent, delta), dot(eyeDir, delta));
+
+            // Only samples above the current horizon contribute
+            if (sampleAngle < horizonAngle)
+            {
+                vec3 light = textureLod(uDiffuseTex, sampleUV, 0.0).rgb;
+                float contrib = max(0.0, HorizonContribution(NdotE, NdotT, sampleAngle, horizonAngle));
+
+                vec2 edge = min(sampleUV, 1.0 - sampleUV);
+                float edgeFade = smoothstep(0.0, uEdgeFade, min(edge.x, edge.y));
+
+                float dist = length(delta);
+                float distFade = exp2(-dist * uDistanceFalloff);
+
+                // Reject light from back-facing emitters
+                float facing = -dot(sampleNorm, delta / dist);
+                float normalFade = mix(1.0, smoothstep(0.0, 0.1, facing), uNormalRejection);
+
+                giSlice += light * contrib * edgeFade * distFade * normalFade;
+                horizonAngle = sampleAngle; // raise the horizon
+            }
+        }
+
+        gi += 2.0 * giSlice / float(uSliceCount);
     }
 
-    float fade = smoothstep(uFadeEnd, uFadeStart, depth);
-    FragColor  = vec4(gi * invS * fade, 1.0);
+    FragColor = vec4(gi, 1.0);
 }

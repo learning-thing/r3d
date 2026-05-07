@@ -654,13 +654,10 @@ typedef struct {
     r3d_shader_uniform_sampler_t uDiffuseTex;
     r3d_shader_uniform_sampler_t uNormalTex;
     r3d_shader_uniform_sampler_t uDepthTex;
-    r3d_shader_uniform_int_t uSampleCount;
-    r3d_shader_uniform_int_t uMaxRaySteps;
-    r3d_shader_uniform_float_t uStepSize;
-    r3d_shader_uniform_float_t uThickness;
-    r3d_shader_uniform_float_t uMaxDistance;
-    r3d_shader_uniform_float_t uFadeStart;
-    r3d_shader_uniform_float_t uFadeEnd;
+    r3d_shader_uniform_int_t uSliceCount;
+    r3d_shader_uniform_float_t uEdgeFade;
+    r3d_shader_uniform_float_t uDistanceFalloff;
+    r3d_shader_uniform_float_t uNormalRejection;
 } r3d_shader_prepare_ssgi_t;
 
 typedef struct {
