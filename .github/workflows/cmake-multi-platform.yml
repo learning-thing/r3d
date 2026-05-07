@@ -73,8 +73,17 @@ jobs:
           submodules: recursive
 
       - name: Setup ccache
+        if: matrix.c_compiler != 'cl'
         uses: hendrikmuhs/ccache-action@v1.2
         with:
+          key: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}
+          max-size: 500M
+
+      - name: Setup sccache (MSVC)
+        if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          variant: sccache
           key: ${{ matrix.os }}-${{ matrix.c_compiler }}-${{ matrix.build_type }}
           max-size: 500M
 
