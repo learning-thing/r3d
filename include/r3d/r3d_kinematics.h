@@ -129,7 +129,7 @@ R3DAPI bool R3D_DepenetrateSphereBoundingBox(Vector3* center, float radius, R3D_
  * @param outPenetration Optional: receives penetration depth
  * @return true if depenetration occurred
  */
-R3DAPI bool R3D_DepenetrateCapsuleBoudningBox(R3D_Capsule* capsule, R3D_BoundingBox box, float* outPenetration);
+R3DAPI bool R3D_DepenetrateCapsuleBoundingBox(R3D_Capsule* capsule, R3D_BoundingBox box, float* outPenetration);
 
 /**
  * @brief Check if a sphere is supported by a bounding box in a given direction
