@@ -90,7 +90,7 @@
             .distanceFalloff = 1.0f,                    \
             .normalRejection = 0.0f,                    \
             .intensity = 1.0f,                          \
-            .denoiseSteps = 5,                          \
+            .denoiseSteps = 4,                          \
             .enabled = false,                           \
         },                                              \
         .ssr = {                                        \
