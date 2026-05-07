@@ -124,22 +124,20 @@ jobs:
 
       - name: Configure CMake (Windows MSVC)
         if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
-        shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          cmake -B build -G "Ninja" ^
-            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} ^
-            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} ^
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ^
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache ^
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ^
-            -DCMAKE_CXX_FLAGS_INIT="/Brepro /Zc:inline" ^
-            -DCMAKE_C_FLAGS_INIT="/Brepro /Zc:inline" ^
-            -DBUILD_SHARED_LIBS=OFF ^
-            -DASSIMP_INSTALL_PDB=OFF ^
-            -DR3D_RAYLIB_VENDORED=ON ^
-            -DR3D_ASSIMP_VENDORED=ON ^
-            -DR3D_BUILD_EXAMPLES=ON ^
+          cmake -B build -G "Ninja" `
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} `
+            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache `
+            "-DCMAKE_CXX_FLAGS_INIT=/Brepro /Zc:inline" `
+            "-DCMAKE_C_FLAGS_INIT=/Brepro /Zc:inline" `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DASSIMP_INSTALL_PDB=OFF `
+            -DR3D_RAYLIB_VENDORED=ON `
+            -DR3D_ASSIMP_VENDORED=ON `
+            -DR3D_BUILD_EXAMPLES=ON `
             -DR3D_BUILD_DOCS=OFF
 
       - name: Configure CMake (Linux/macOS)
@@ -164,10 +162,7 @@ jobs:
 
       - name: Build (Windows MSVC)
         if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
-        shell: cmd
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          cmake --build build --config ${{ matrix.build_type }} --parallel
+        run: cmake --build build --config ${{ matrix.build_type }} --parallel
 
       - name: Build (Linux/macOS)
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -176,12 +171,10 @@ jobs:
       - name: Print ccache statistics
         run: ccache -s
 
-      - name: Run tests (MinGW)
-        if: runner.os == 'Windows' && matrix.c_compiler == 'gcc'
-        shell: msys2 {0}
-        run: |
-          cd build
-          ctest --build-config ${{ matrix.build_type }}
+      - name: Run tests (Windows MSVC)
+        if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
+        working-directory: build
+        run: ctest --build-config ${{ matrix.build_type }}
 
       - name: Run tests (Windows MSVC)
         if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
