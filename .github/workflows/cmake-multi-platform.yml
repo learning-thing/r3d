@@ -91,6 +91,12 @@ jobs:
         if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
         run: choco install ninja
 
+      - name: Setup MSVC
+        if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Setup MinGW-w64
         if: runner.os == 'Windows' && matrix.c_compiler == 'gcc'
         uses: msys2/setup-msys2@v2
@@ -135,11 +141,11 @@ jobs:
         if: runner.os == 'Windows' && matrix.c_compiler == 'cl'
         run: |
           cmake -B build -G "Ninja" `
-            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} `
-            -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache `
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
             "-DCMAKE_CXX_FLAGS_INIT=/Brepro /Zc:inline" `
             "-DCMAKE_C_FLAGS_INIT=/Brepro /Zc:inline" `
             -DBUILD_SHARED_LIBS=OFF `
