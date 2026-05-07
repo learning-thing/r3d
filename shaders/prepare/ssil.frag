@@ -129,8 +129,16 @@ void main()
     vec3 gi = giSum * (4.0 / float(uSampleCount)) * radiusScale;
 
     // 1-pixel bilateral filter using derivatives (almost free)
-	if (abs(dFdx(depth)) < 0.2) ao -= dFdx(ao) * (float(pixelCoord.x & 1) - 0.5);
-    if (abs(dFdy(depth)) < 0.2) ao -= dFdy(ao) * (float(pixelCoord.y & 1) - 0.5);
+    if (abs(dFdx(depth)) < 0.2) {
+        float dx = float(pixelCoord.x & 1) - 0.5;
+        ao -= dFdx(ao) * dx;
+        gi -= dFdx(gi) * dx;
+    }
+    if (abs(dFdy(depth)) < 0.2) {
+        float dy = float(pixelCoord.y & 1) - 0.5;
+        ao -= dFdy(ao) * dy;
+        gi -= dFdy(gi) * dy;
+    }
 
     FragColor = vec4(gi, ao);
 }
