@@ -9,6 +9,7 @@
 #include <r3d/r3d_vertex.h>
 #include <math.h>
 
+#include "./common/r3d_helper.h"
 #include "./common/r3d_half.h"
 
 // ========================================
@@ -42,35 +43,35 @@ Vector2 R3D_DecodeTexCoord(const uint16_t* src)
 
 void R3D_EncodeNormal(int8_t* dst, Vector3 src)
 {
-    dst[0] = (int8_t)roundf(src.x * 127.0f);
-    dst[1] = (int8_t)roundf(src.y * 127.0f);
-    dst[2] = (int8_t)roundf(src.z * 127.0f);
+    dst[0] = (int8_t)roundf(CLAMP(src.x, -1.0f, 1.0f) * 127.0f);
+    dst[1] = (int8_t)roundf(CLAMP(src.y, -1.0f, 1.0f) * 127.0f);
+    dst[2] = (int8_t)roundf(CLAMP(src.z, -1.0f, 1.0f) * 127.0f);
     dst[3] = 0;
 }
 
 Vector3 R3D_DecodeNormal(const int8_t* src)
 {
     return (Vector3){
-        src[0] / 127.0f,
-        src[1] / 127.0f,
-        src[2] / 127.0f
+        (src[0] == -128) ? -1.0f : src[0] / 127.0f,
+        (src[1] == -128) ? -1.0f : src[1] / 127.0f,
+        (src[2] == -128) ? -1.0f : src[2] / 127.0f
     };
 }
 
 void R3D_EncodeTangent(int8_t* dst, Vector4 src)
 {
-    dst[0] = (int8_t)roundf(src.x * 127.0f);
-    dst[1] = (int8_t)roundf(src.y * 127.0f);
-    dst[2] = (int8_t)roundf(src.z * 127.0f);
+    dst[0] = (int8_t)roundf(CLAMP(src.x, -1.0f, 1.0f) * 127.0f);
+    dst[1] = (int8_t)roundf(CLAMP(src.y, -1.0f, 1.0f) * 127.0f);
+    dst[2] = (int8_t)roundf(CLAMP(src.z, -1.0f, 1.0f) * 127.0f);
     dst[3] = (src.w >= 0.0f) ? 127 : -127;
 }
 
 Vector4 R3D_DecodeTangent(const int8_t* src)
 {
     return (Vector4){
-        src[0] / 127.0f,
-        src[1] / 127.0f,
-        src[2] / 127.0f,
+        (src[0] == -128) ? -1.0f : src[0] / 127.0f,
+        (src[1] == -128) ? -1.0f : src[1] / 127.0f,
+        (src[2] == -128) ? -1.0f : src[2] / 127.0f,
         (src[3] >= 0) ? 1.0f : -1.0f
     };
 }
