@@ -583,11 +583,22 @@ typedef struct {
     r3d_shader_uniform_sampler_t uSourceTex;
     r3d_shader_uniform_sampler_t uNormalTex;
     r3d_shader_uniform_sampler_t uDepthTex;
-    r3d_shader_uniform_float_t uInvNormalSharp;
-    r3d_shader_uniform_float_t uInvDepthSharp;
+    r3d_shader_uniform_float_t uNormalSharpness;
+    r3d_shader_uniform_float_t uDepthSharpness;
     r3d_shader_uniform_float_t uInvStepWidth2;
     r3d_shader_uniform_int_t uStepWidth;
-} r3d_shader_prepare_atrous_wavelet_t;
+} r3d_shader_prepare_denoiser_atrous_t;
+
+typedef struct {
+    GLuint id;
+    r3d_shader_uniform_sampler_t uSourceTex;
+    r3d_shader_uniform_sampler_t uNormalTex;
+    r3d_shader_uniform_sampler_t uDepthTex;
+    r3d_shader_uniform_float_t uNormalSharpness;
+    r3d_shader_uniform_float_t uDepthSharpness;
+    r3d_shader_uniform_float_t uInvBlurRadius2;
+    r3d_shader_uniform_float_t uBlurRadius;
+} r3d_shader_prepare_denoiser_sparse_t;
 
 typedef struct {
     GLuint id;
@@ -1151,8 +1162,8 @@ extern struct r3d_mod_shader {
 
     // Prepare shaders
     struct {
-        r3d_shader_prepare_atrous_wavelet_t atrousWaveletSmart;
-        r3d_shader_prepare_atrous_wavelet_t atrousWaveletFast;
+        r3d_shader_prepare_denoiser_atrous_t denoiserAtrous;
+        r3d_shader_prepare_denoiser_sparse_t denoiserSparse;
         r3d_shader_prepare_blur_down_t blurDown;
         r3d_shader_prepare_blur_up_t blurUp;
         r3d_shader_prepare_depth_pyramid_t depthPyramid;
@@ -1225,8 +1236,8 @@ extern struct r3d_mod_shader {
 
 typedef bool (*r3d_shader_loader_func)(r3d_shader_custom_t* custom);
 
-bool r3d_shader_load_prepare_atrous_wavelet_smart(r3d_shader_custom_t* custom);
-bool r3d_shader_load_prepare_atrous_wavelet_fast(r3d_shader_custom_t* custom);
+bool r3d_shader_load_prepare_denoiser_atrous(r3d_shader_custom_t* custom);
+bool r3d_shader_load_prepare_denoiser_sparse(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_blur_down(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_blur_up(r3d_shader_custom_t* custom);
 bool r3d_shader_load_prepare_depth_pyramid(r3d_shader_custom_t* custom);
@@ -1292,8 +1303,8 @@ static const struct r3d_shader_loader {
 
     // Prepare shaders
     struct {
-        r3d_shader_loader_func atrousWaveletSmart;
-        r3d_shader_loader_func atrousWaveletFast;
+        r3d_shader_loader_func denoiserAtrous;
+        r3d_shader_loader_func denoiserSparse;
         r3d_shader_loader_func blurDown;
         r3d_shader_loader_func blurUp;
         r3d_shader_loader_func depthPyramid;
@@ -1364,8 +1375,8 @@ static const struct r3d_shader_loader {
 } R3D_MOD_SHADER_LOADER = {
 
     .prepare = {
-        .atrousWaveletSmart = r3d_shader_load_prepare_atrous_wavelet_smart,
-        .atrousWaveletFast = r3d_shader_load_prepare_atrous_wavelet_fast,
+        .denoiserAtrous = r3d_shader_load_prepare_denoiser_atrous,
+        .denoiserSparse = r3d_shader_load_prepare_denoiser_sparse,
         .blurDown = r3d_shader_load_prepare_blur_down,
         .blurUp = r3d_shader_load_prepare_blur_up,
         .depthPyramid = r3d_shader_load_prepare_depth_pyramid,

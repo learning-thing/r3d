@@ -307,7 +307,8 @@ embed_shaders(${PROJECT_NAME}
     "${R3D_ROOT_PATH}/shaders/generic/screen.vert"
     "${R3D_ROOT_PATH}/shaders/generic/cubemap.vert"
     # Prepare
-    "${R3D_ROOT_PATH}/shaders/prepare/atrous_wavelet.frag"
+    "${R3D_ROOT_PATH}/shaders/prepare/denoiser_atrous.frag"
+    "${R3D_ROOT_PATH}/shaders/prepare/denoiser_sparse.frag"
     "${R3D_ROOT_PATH}/shaders/prepare/smaa_blending_weigths.vert"
     "${R3D_ROOT_PATH}/shaders/prepare/smaa_blending_weigths.frag"
     "${R3D_ROOT_PATH}/shaders/prepare/smaa_edge_detection.vert"
