@@ -114,7 +114,7 @@
 /*
  * Initial number of vertex slots pre-allocated in the global VBO at startup.
  */
-#define R3D_RENDER_INITIAL_VERTICES_RESERVE (1 << 16)   // 65 536 vertices (~5.5 MB)
+#define R3D_RENDER_INITIAL_VERTICES_RESERVE (1 << 16)   // 65 536 vertices (~2.3 MB)
 
 /*
  * Initial number of index slots pre-allocated in the global EBO at startup.
