@@ -24,7 +24,8 @@
 #include <shaders/color.frag.h>
 #include <shaders/screen.vert.h>
 #include <shaders/cubemap.vert.h>
-#include <shaders/atrous_wavelet.frag.h>
+#include <shaders/denoiser_atrous.frag.h>
+#include <shaders/denoiser_sparse.frag.h>
 #include <shaders/blur_down.frag.h>
 #include <shaders/blur_up.frag.h>
 #include <shaders/depth_pyramid.frag.h>
@@ -252,44 +253,42 @@ static GLuint load_shader(const char* vsCode, const char* fsCode)
 // SHADER LOADING FUNCTIONS
 // ========================================
 
-bool r3d_shader_load_prepare_atrous_wavelet_smart(r3d_shader_custom_t* custom)
+bool r3d_shader_load_prepare_denoiser_atrous(r3d_shader_custom_t* custom)
 {
-    DECL_SHADER(r3d_shader_prepare_atrous_wavelet_t, prepare, atrousWaveletSmart);
+    DECL_SHADER(r3d_shader_prepare_denoiser_atrous_t, prepare, denoiserAtrous);
+    LOAD_SHADER(denoiserAtrous, SCREEN_VERT, DENOISER_ATROUS_FRAG);
 
-    const char* FS_DEFINES[] = {"SMART_FILTER"};
-    char* fragCode = inject_defines(ATROUS_WAVELET_FRAG, FS_DEFINES, ARRAY_SIZE(FS_DEFINES));
-    LOAD_SHADER(atrousWaveletSmart, SCREEN_VERT, fragCode);
-    RL_FREE(fragCode);
+    SET_UNIFORM_BUFFER(denoiserAtrous, ViewBlock, R3D_SHADER_BLOCK_SLOT_VIEW);
 
-    SET_UNIFORM_BUFFER(atrousWaveletSmart, ViewBlock, R3D_SHADER_BLOCK_SLOT_VIEW);
+    GET_LOCATION(denoiserAtrous, uNormalSharpness);
+    GET_LOCATION(denoiserAtrous, uDepthSharpness);
+    GET_LOCATION(denoiserAtrous, uInvStepWidth2);
+    GET_LOCATION(denoiserAtrous, uStepWidth);
 
-    GET_LOCATION(atrousWaveletSmart, uInvNormalSharp);
-    GET_LOCATION(atrousWaveletSmart, uInvDepthSharp);
-    GET_LOCATION(atrousWaveletSmart, uInvStepWidth2);
-    GET_LOCATION(atrousWaveletSmart, uStepWidth);
-
-    USE_SHADER(atrousWaveletSmart);
-    SET_SAMPLER(atrousWaveletSmart, uSourceTex, R3D_SHADER_SAMPLER_SOURCE_2D_0);
-    SET_SAMPLER(atrousWaveletSmart, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
-    SET_SAMPLER(atrousWaveletSmart, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
+    USE_SHADER(denoiserAtrous);
+    SET_SAMPLER(denoiserAtrous, uSourceTex, R3D_SHADER_SAMPLER_SOURCE_2D_0);
+    SET_SAMPLER(denoiserAtrous, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
+    SET_SAMPLER(denoiserAtrous, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
 
     return true;
 }
 
-bool r3d_shader_load_prepare_atrous_wavelet_fast(r3d_shader_custom_t* custom)
+bool r3d_shader_load_prepare_denoiser_sparse(r3d_shader_custom_t* custom)
 {
-    DECL_SHADER(r3d_shader_prepare_atrous_wavelet_t, prepare, atrousWaveletFast);
-    LOAD_SHADER(atrousWaveletFast, SCREEN_VERT, ATROUS_WAVELET_FRAG);
+    DECL_SHADER(r3d_shader_prepare_denoiser_sparse_t, prepare, denoiserSparse);
+    LOAD_SHADER(denoiserSparse, SCREEN_VERT, DENOISER_SPARSE_FRAG);
 
-    GET_LOCATION(atrousWaveletFast, uInvNormalSharp);
-    GET_LOCATION(atrousWaveletFast, uInvDepthSharp);
-    GET_LOCATION(atrousWaveletFast, uInvStepWidth2);
-    GET_LOCATION(atrousWaveletFast, uStepWidth);
+    SET_UNIFORM_BUFFER(denoiserSparse, ViewBlock, R3D_SHADER_BLOCK_SLOT_VIEW);
 
-    USE_SHADER(atrousWaveletFast);
-    SET_SAMPLER(atrousWaveletFast, uSourceTex, R3D_SHADER_SAMPLER_SOURCE_2D_0);
-    SET_SAMPLER(atrousWaveletFast, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
-    SET_SAMPLER(atrousWaveletFast, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
+    GET_LOCATION(denoiserSparse, uNormalSharpness);
+    GET_LOCATION(denoiserSparse, uDepthSharpness);
+    GET_LOCATION(denoiserSparse, uInvBlurRadius2);
+    GET_LOCATION(denoiserSparse, uBlurRadius);
+
+    USE_SHADER(denoiserSparse);
+    SET_SAMPLER(denoiserSparse, uSourceTex, R3D_SHADER_SAMPLER_SOURCE_2D_0);
+    SET_SAMPLER(denoiserSparse, uNormalTex, R3D_SHADER_SAMPLER_BUFFER_NORMAL);
+    SET_SAMPLER(denoiserSparse, uDepthTex, R3D_SHADER_SAMPLER_BUFFER_DEPTH);
 
     return true;
 }
@@ -1580,8 +1579,8 @@ void r3d_shader_quit()
 {
     glDeleteBuffers(R3D_SHADER_BLOCK_COUNT, R3D_MOD_SHADER.uniformBuffers);
 
-    UNLOAD_SHADER(prepare.atrousWaveletSmart);
-    UNLOAD_SHADER(prepare.atrousWaveletFast);
+    UNLOAD_SHADER(prepare.denoiserAtrous);
+    UNLOAD_SHADER(prepare.denoiserSparse);
     UNLOAD_SHADER(prepare.blurDown);
     UNLOAD_SHADER(prepare.blurUp);
     UNLOAD_SHADER(prepare.depthPyramid);
