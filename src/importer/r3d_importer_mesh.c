@@ -18,6 +18,7 @@
 
 #include "../common/r3d_helper.h"
 #include "../common/r3d_math.h"
+#include "raymath.h"
 
 // ========================================
 // CONSTANTS
@@ -57,7 +58,7 @@ static inline void process_vertex_normal(int8_t* normal, const struct aiMesh* ai
         if (!hasBones) {
             vec = r3d_vector3_transform_linear(vec, normalMatrix);
         }
-        R3D_EncodeNormal(normal, vec);
+        R3D_EncodeNormal(normal, Vector3Normalize(vec));
     }
     else {
         R3D_EncodeNormal(normal, (Vector3){0.0f, 0.0f, 1.0f});
@@ -67,18 +68,27 @@ static inline void process_vertex_normal(int8_t* normal, const struct aiMesh* ai
 static inline void process_vertex_tangent(R3D_Vertex* vertex, const struct aiMesh* aiMesh, int index, const Matrix* normalMatrix, bool hasBones)
 {
     if (aiMesh->mNormals && aiMesh->mTangents && aiMesh->mBitangents) {
-        Vector3 normal = R3D_DecodeNormal(vertex->normal);
+        Vector3 normal = r3d_importer_cast(aiMesh->mNormals[index]);
         Vector3 tangent = r3d_importer_cast(aiMesh->mTangents[index]);
         Vector3 bitangent = r3d_importer_cast(aiMesh->mBitangents[index]);
 
         if (!hasBones) {
+            normal = r3d_vector3_transform_linear(normal, normalMatrix);
             tangent = r3d_vector3_transform_linear(tangent, normalMatrix);
             bitangent = r3d_vector3_transform_linear(bitangent, normalMatrix);
         }
 
+        normal = Vector3Normalize(tangent);
+        tangent = Vector3Normalize(tangent);
+        bitangent = Vector3Normalize(bitangent);
+
         Vector3 reconstructedBitangent = Vector3CrossProduct(normal, tangent);
         float handedness = Vector3DotProduct(reconstructedBitangent, bitangent);
-        R3D_EncodeTangent(vertex->tangent, (Vector4){tangent.x, tangent.y, tangent.z, copysignf(1.0f, handedness)});
+
+        R3D_EncodeTangent(vertex->tangent, (Vector4){
+            tangent.x, tangent.y, tangent.z,
+            copysignf(1.0f, handedness)
+        });
     }
     else {
         R3D_EncodeTangent(vertex->tangent, (Vector4){1.0f, 0.0f, 0.0f, 1.0f});
