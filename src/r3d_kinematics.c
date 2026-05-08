@@ -195,16 +195,24 @@ bool R3D_CheckSphereSupportMesh(Vector3 center, float radius, Vector3 direction,
 
 bool R3D_CheckCapsuleSupportBoundingBox(R3D_Capsule capsule, Vector3 direction, float distance, R3D_BoundingBox box, RayCollision* outHit)
 {
-    RayCollision hit = R3D_RaycastBoundingBox((Ray) {capsule.start, direction}, box);
-    bool supported = hit.hit && hit.distance <= (capsule.radius + distance);
+    Vector3 dir = Vector3Normalize(direction);
+    Vector3 axis = Vector3Subtract(capsule.end, capsule.start);
+    Vector3 base = Vector3DotProduct(axis, dir) > 0.0f ? capsule.end : capsule.start;
+    Vector3 origin = Vector3Add(base, Vector3Scale(dir, capsule.radius));
+    RayCollision hit = R3D_RaycastBoundingBox((Ray) { origin, dir }, box);
+    bool supported = hit.hit && hit.distance <= distance;
     if (outHit) *outHit = hit;
     return supported;
 }
 
 bool R3D_CheckCapsuleSupportMesh(R3D_Capsule capsule, Vector3 direction, float distance, R3D_MeshData mesh, Matrix transform, RayCollision* outHit)
 {
-    RayCollision hit = R3D_RaycastMesh((Ray) {capsule.start, direction}, mesh, transform);
-    bool supported = hit.hit && hit.distance <= (capsule.radius + distance);
+    Vector3 dir = Vector3Normalize(direction);
+    Vector3 axis = Vector3Subtract(capsule.end, capsule.start);
+    Vector3 base = Vector3DotProduct(axis, dir) > 0.0f ? capsule.end : capsule.start;
+    Vector3 origin = Vector3Add(base, Vector3Scale(dir, capsule.radius));
+    RayCollision hit = R3D_RaycastMesh((Ray) { origin, dir }, mesh, transform);
+    bool supported = hit.hit && hit.distance <= distance;
     if (outHit) *outHit = hit;
     return supported;
 }
