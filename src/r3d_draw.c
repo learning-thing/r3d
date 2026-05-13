@@ -2189,7 +2189,7 @@ r3d_target_t pass_post_bloom(r3d_target_t sceneTarget)
     /* --- Calculate bloom prefilter --- */
 
     float threshold = R3D.environment.bloom.threshold;
-    float softThreshold = R3D.environment.bloom.threshold;
+    float softThreshold = R3D.environment.bloom.softThreshold;
 
     float knee = threshold * softThreshold;
 
