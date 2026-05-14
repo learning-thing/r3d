@@ -1757,7 +1757,7 @@ r3d_target_t pass_prepare_ssgi(void)
     R3D_SHADER_BIND_SAMPLER(prepare.ssgi, uDepthTex, r3d_target_get_level(R3D_TARGET_DEPTH, 1));
 
     R3D_SHADER_SET_INT(prepare.ssgi, uSliceCount, R3D.environment.ssgi.sliceCount);
-    R3D_SHADER_SET_INT(prepare.ssgi, uEdgeFade, R3D.environment.ssgi.edgeFade);
+    R3D_SHADER_SET_FLOAT(prepare.ssgi, uEdgeFade, R3D.environment.ssgi.edgeFade);
     R3D_SHADER_SET_FLOAT(prepare.ssgi, uDistanceFalloff, R3D.environment.ssgi.distanceFalloff);
     R3D_SHADER_SET_FLOAT(prepare.ssgi, uNormalRejection, R3D.environment.ssgi.normalRejection);
 
