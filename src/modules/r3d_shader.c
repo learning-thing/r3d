@@ -1783,7 +1783,7 @@ bool r3d_shader_custom_set_sampler(r3d_shader_custom_t* shader, const char* name
 
     for (int i = 0; i < R3D_MAX_SHADER_SAMPLERS && shader->data.samplers[i].name[0] != '\0'; i++) {
         if (strcmp(shader->data.samplers[i].name, name) == 0) {
-            shader->data.samplers->texture = texture.id;
+            shader->data.samplers[i].texture = texture.id;
             return true;
         }
     }
